@@ -1,0 +1,92 @@
+name: Build and Deploy App
+run-name: Pipeline started by ${{ github.actor }}
+
+on:
+  workflow_call:
+    inputs:
+      ghcr_namespace:
+        description: "The namespace to push the image to"
+        required: false
+        type: string
+        default: joelyoung01
+
+      image_name:
+        description: "The name of the Docker image to deploy"
+        required: true
+        type: string
+
+    secrets:
+      GOOGLE_CLIENT_ID:
+        description: "Google client ID of app"
+        required: true
+
+permissions:
+  packages: write
+
+jobs:
+  Build-Vite:
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Build Vue App
+        env:
+          VITE_APP_TITLE: ${{ vars.APP_TITLE }}
+          VITE_API_URL: ${{ vars.API_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          pnpm i
+          pnpm build
+
+      - name: Upload Vue build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-build
+          path: ./dist
+
+  Build-Fastapi:
+    name: Build Docker Image
+    runs-on: [ubuntu-latest]
+    needs: Build-Vite
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Download Vite Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-build
+          path: ./dist
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ inputs.ghcr_namespace }}/${{ inputs.image_name }}:latest

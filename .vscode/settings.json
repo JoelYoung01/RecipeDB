@@ -1,0 +1,10 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "LocalSqlite",
+            "database": "${workspaceFolder}/api/database.db"
+        }
+    ]
+}

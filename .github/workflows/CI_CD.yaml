@@ -1,0 +1,14 @@
+name: Deploy to PROD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  BuildApp:
+    uses: ./.github/workflows/BuildApp.yml
+    with:
+      image_name: recipe-db
+    secrets:
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
