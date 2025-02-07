@@ -1,10 +1,12 @@
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
+
+from api.models import Base
 
 
 # from api.models.permission import Permission
 
 
-class User(SQLModel, table=True):
+class User(Base, table=True):
     id: int | None = Field(default=None, index=True, primary_key=True)
     avatar_url: str | None
     username: str

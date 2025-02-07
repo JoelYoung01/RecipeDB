@@ -12,5 +12,6 @@ ENVIRONMENT=development
 # Redirect Urls
 VITE_GOOGLE_CLIENT_ID=
 
-# App's Backend Secret
+# App Backend Secrets
 SECRET_KEY=
+SUPERUSER_GID=

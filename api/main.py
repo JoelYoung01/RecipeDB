@@ -6,12 +6,9 @@ from fastapi.staticfiles import StaticFiles
 
 from api.core.config import settings
 from api.routes import (
-    app_definition_routes,
-    app_submission_routes,
+    recipe_routes,
     auth_routes,
-    requirement_routes,
 )
-from api.core.database import create_db_and_tables
 
 
 app = FastAPI(docs_url="/api/docs", redoc_url="/api/redoc")
@@ -20,22 +17,16 @@ app = FastAPI(docs_url="/api/docs", redoc_url="/api/redoc")
 if settings.ENVIRONMENT == "development":
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.FRONTEND_HOST],  # Default Vite dev server port
+        allow_origins=[settings.FRONTEND_HOST],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
 
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-
-
 api_router = APIRouter()
-api_router.include_router(app_definition_routes.router)
-api_router.include_router(requirement_routes.router)
-api_router.include_router(app_submission_routes.router)
+api_router.include_router(recipe_routes.router)
+api_router.include_router(recipe_routes.unauth_router)
 api_router.include_router(auth_routes.router)
 
 

@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import create_engine
-from sqlmodel import SQLModel, Session
+from sqlmodel import Session
 
 from api.core.config import settings
 
@@ -15,8 +15,24 @@ def get_session():
         yield session
 
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
 SessionDep = Annotated[Session, Depends(get_session)]
+
+
+def init_db(session: Session) -> None:
+    # Tables should be created with Alembic migrations
+    # But if you don't want to use migrations, create
+    # the tables un-commenting the next lines
+    # from sqlmodel import SQLModel
+
+    # This works because the models are already imported and registered from app.models
+    # SQLModel.metadata.create_all(engine)
+
+    # user = session.exec(
+    #     select(User).where(User.email == settings.FIRST_SUPERUSER)
+    # ).first()
+    # if not user:
+    #     user_in = UserCreate(
+    #         username=settings.FIRST_SUPERUSER,
+    #     )
+    #     user = create_user(session=session, user_create=user_in)
+    pass

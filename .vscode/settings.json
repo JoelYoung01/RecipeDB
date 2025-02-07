@@ -3,8 +3,8 @@
         {
             "previewLimit": 50,
             "driver": "SQLite",
-            "name": "LocalSqlite",
-            "database": "${workspaceFolder}/api/database.db"
+            "name": "Local SQLite",
+            "database": "./api/data/database.db"
         }
     ]
 }
