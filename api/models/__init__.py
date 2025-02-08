@@ -19,3 +19,4 @@ from api.models.user import User
 from api.models.permission import Permission
 from api.models.ingredient import Ingredient
 from api.models.recipe import Recipe
+from api.models.planned_recipe import PlannedRecipe
