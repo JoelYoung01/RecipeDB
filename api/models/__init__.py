@@ -1,13 +1,21 @@
-from sqlmodel import SQLModel
+# ruff: noqa: F401, E402
+from sqlmodel import SQLModel, Field
 
 
 # Create common Base to be used by all models
-class Base(SQLModel):
-    pass
+class BaseDbModel(SQLModel):
+    __abstract__ = True
 
 
-from api.models.authentication import *  # noqa: E402, F403
-from api.models.user import *  # noqa: E402, F403
-from api.models.permission import *  # noqa: E402, F403
-from api.models.ingredient import *  # noqa: E402, F403
-from api.models.recipe import *  # noqa: E402, F403
+class BaseIndexedDbModel(BaseDbModel):
+    __abstract__ = True
+    id: int | None = Field(default=None, index=True, primary_key=True)
+
+
+# Models in this app.
+# Must be imported so that Alembic can scan the Base class metadata to generate migrations.
+from api.models.authentication import Token
+from api.models.user import User
+from api.models.permission import Permission
+from api.models.ingredient import Ingredient
+from api.models.recipe import Recipe

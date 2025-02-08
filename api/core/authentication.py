@@ -69,6 +69,7 @@ def get_or_create_user_from_google_token(google_token, session: SessionDep):
             "display_name": google_token["name"],
             "google_user_id": google_token["sub"],
             "avatar_url": google_token["picture"],
+            "last_login": datetime.now(tz=timezone.utc),
         }
         db_user = User.model_validate(new_user)
         session.add(db_user)
@@ -100,7 +101,13 @@ def create_access_token(google_token, session: SessionDep):
             "user_id": user.id,
         }
     )
+
     session.add(db_token)
+
+    # Update last_login timestamp
+    user.last_login = datetime.now(timezone.utc)
+    session.add(user)
+
     session.commit()
     session.refresh(db_token)
 

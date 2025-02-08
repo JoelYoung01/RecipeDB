@@ -7,6 +7,8 @@ const sessionStore = useSessionStore();
 const router = useRouter();
 const route = useRoute();
 
+// TODO: Add support for when login fails
+
 watch(
   () => sessionStore.currentUser,
   (value) => {

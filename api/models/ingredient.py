@@ -1,14 +1,12 @@
-from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field
 
-from api.models import Base
+from api.models import BaseIndexedDbModel
 
 
-class Ingredient(Base, table=True):
-    id: int | None = Field(default=None, index=True, primary_key=True)
+class Ingredient(BaseIndexedDbModel, table=True):
     name: str
     amount: float
     units: str
     details: str | None
 
-    recipe_id: int = Field(sa_column=Column(ForeignKey("recipe.id")))
+    recipe_id: int = Field(foreign_key="recipe.id")

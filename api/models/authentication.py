@@ -1,17 +1,15 @@
 from enum import Enum
-from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship
 
-from . import Base
+from api.models import BaseIndexedDbModel
 
 
 class TokenType(Enum):
     Access = 10
 
 
-class Token(Base, table=True):
-    id: int | None = Field(default=None, index=True, primary_key=True)
-    user_id: int = Field(sa_column=Column(ForeignKey("user.id")))
+class Token(BaseIndexedDbModel, table=True):
+    user_id: int = Field(foreign_key="user.id")
     access_token: str
     token_type: TokenType
 

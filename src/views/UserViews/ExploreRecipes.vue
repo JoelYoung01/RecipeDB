@@ -5,6 +5,7 @@ import { get } from "@/utils";
 // const sessionStore = useSessionStore();
 
 const recipes = ref<any[]>();
+const searchText = ref<string>();
 
 async function getPublicRecipes() {
   recipes.value = await get("/recipe/public/");
@@ -14,7 +15,17 @@ getPublicRecipes();
 </script>
 
 <template>
-  <v-container> EXPLORE RECIPES VIEW </v-container>
+  <v-container>
+    <v-text-field
+      v-model="searchText"
+      variant="outlined"
+      prepend-inner-icon="mdi-magnify"
+      clearable
+      hide-details
+      placeholder="Search for a Recipe"
+      rounded
+    />
+  </v-container>
 </template>
 
 <style scoped>

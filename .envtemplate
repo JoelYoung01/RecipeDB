@@ -19,9 +19,6 @@ VITE_GOOGLE_CLIENT_ID=
 # Deployment Environment
 ENVIRONMENT=development
 
-# Vite Location
-VUE_STATIC_DIR="dist"
-
 # Secret key
 # - Used to generate authentication tokens
 SECRET_KEY=

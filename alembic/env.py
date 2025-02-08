@@ -22,9 +22,9 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from api.models import Base  # noqa
+from api.models import BaseDbModel  # noqa: E402
 
-target_metadata = Base.metadata
+target_metadata = BaseDbModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
