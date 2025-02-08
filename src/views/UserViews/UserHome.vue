@@ -14,7 +14,7 @@ getPublicRecipes();
 </script>
 
 <template>
-  <v-container> CONTENT </v-container>
+  <v-container> HOME VIEW </v-container>
 </template>
 
 <style scoped>

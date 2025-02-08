@@ -1,19 +1,45 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "@/views/HomeView.vue";
+import UserHome from "@/views/UserViews/UserHome.vue";
 import NotFound from "@/views/NotFound.vue";
 import LoginView from "@/views/LoginView.vue";
 import { useSessionStore } from "@/stores/session";
+import UserView from "@/views/UserView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",
-      name: "Home",
-      component: HomeView,
-      meta: {
-        noAuthReq: true
-      }
+      name: "UserView",
+      component: UserView,
+      redirect: "/home",
+      children: [
+        {
+          path: "home",
+          component: UserHome,
+          name: "Home"
+        },
+        {
+          path: "discover",
+          component: () => import("@/views/UserViews/ExploreRecipes.vue"),
+          name: "Explore"
+        },
+        {
+          path: "my-recipes",
+          component: () => import("@/views/UserViews/MyRecipes.vue"),
+          name: "MyRecipes"
+        },
+        {
+          path: "add-recipe",
+          component: () => import("@/views/UserViews/AddRecipe.vue"),
+          name: "AddRecipe"
+        },
+        {
+          path: "my-account",
+          component: () => import("@/views/UserViews/MyAccount.vue"),
+          name: "MyAccount"
+        }
+      ]
     },
     {
       path: "/login",
@@ -22,45 +48,6 @@ const router = createRouter({
       meta: {
         noAuthReq: true
       }
-    },
-    {
-      path: "/app-definition",
-      children: [
-        {
-          path: "list",
-          name: "AppDefinitionList",
-          component: () => import("@/views/AppDefinitions/ListView.vue")
-        },
-        {
-          path: "create",
-          name: "AppDefinitionCreate",
-          meta: {
-            useShadedBackground: true
-          },
-          component: () => import("@/views/AppDefinitions/UpdateView.vue")
-        },
-        {
-          path: ":app_definition_id(\\d+)",
-          children: [
-            {
-              name: "AppDefinitionDetail",
-              path: "detail",
-              meta: {
-                useShadedBackground: true
-              },
-              component: () => import("@/views/AppDefinitions/DetailView.vue")
-            },
-            {
-              path: "update",
-              name: "AppDefinitionUpdate",
-              meta: {
-                useShadedBackground: true
-              },
-              component: () => import("@/views/AppDefinitions/UpdateView.vue")
-            }
-          ]
-        }
-      ]
     },
     {
       path: "/:pathMatch(.*)*",
