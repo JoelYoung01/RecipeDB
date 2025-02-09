@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY dist ./dist
 COPY api ./api
+COPY alembic ./alembic
 
 # Wire up db location
 RUN mkdir -p /app/api/data
