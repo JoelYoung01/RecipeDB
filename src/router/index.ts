@@ -42,14 +42,6 @@ const router = createRouter({
       ]
     },
     {
-      path: "/test",
-      name: "Testing",
-      component: () => import("@/views/TestApi.vue"),
-      meta: {
-        noAuthReq: true
-      }
-    },
-    {
       path: "/login",
       name: "Login",
       component: LoginView,

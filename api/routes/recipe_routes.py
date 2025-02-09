@@ -5,7 +5,7 @@ from sqlmodel import or_, select
 
 from api.core.authentication import CurrentUserDep, get_admin_user, verify_access_token
 from api.core.database import SessionDep
-from api.models.recipe import Recipe
+from api.models import Recipe
 from api.schemas.recipe import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
 
 router = APIRouter(

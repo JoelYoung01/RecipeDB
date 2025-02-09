@@ -8,8 +8,7 @@ from sqlmodel import select
 
 
 from api.core.database import SessionDep
-from api.models.authentication import Token, TokenType
-from api.models.user import User
+from api.models import Token, TokenType, User
 from api.core.config import settings
 
 

@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models.planned_recipe import PlannedRecipe
+from api.models import PlannedRecipe
 from api.schemas.planned_recipe import PlannedRecipeDetail, TimeFrameRequest
 
 router = APIRouter(

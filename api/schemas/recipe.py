@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlmodel import SQLModel
 
-from api.models.user import User
+from api.models import User
 from api.schemas.ingredient import IngredientDetail
 
 
