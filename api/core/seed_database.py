@@ -15,7 +15,7 @@ def init_users(session: Session):
 
     existing = session.exec(
         select(User).where(User.google_user_id == settings.SUPERUSER_GID)
-    )
+    ).first()
 
     if existing is not None:
         logger.warn("Superuser already exsits, skipping add.")
