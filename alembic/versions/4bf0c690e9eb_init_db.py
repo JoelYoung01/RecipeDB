@@ -1,8 +1,8 @@
-"""init_database
+"""init_db
 
-Revision ID: 11a37aead4f7
+Revision ID: 4bf0c690e9eb
 Revises: 8a9ec8cf53ba
-Create Date: 2025-02-08 17:35:00.429714
+Create Date: 2025-02-09 21:08:40.253352
 
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import api
 
 
 # revision identifiers, used by Alembic.
-revision: str = '11a37aead4f7'
+revision: str = '4bf0c690e9eb'
 down_revision: Union[str, None] = '8a9ec8cf53ba'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -50,6 +50,8 @@ def upgrade() -> None:
     sa.Column('instructions', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('notes', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('public', sa.Boolean(), nullable=False),
+    sa.Column('prep_time', sa.Float(), nullable=True),
+    sa.Column('cover_image', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.ForeignKeyConstraint(['created_by_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

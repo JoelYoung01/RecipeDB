@@ -1,5 +1,5 @@
 // Vuetify
-import "vuetify/styles";
+import "@/assets/styles/custom-vuetify.scss";
 import "@mdi/font/css/materialdesignicons.css";
 import { createVuetify, type ThemeDefinition } from "vuetify";
 
@@ -11,7 +11,8 @@ const MainTheme: ThemeDefinition = {
     // Add color overrides here
   },
   variables: {
-    // Add variable overrides here
+    // Add CSS Variables here
+    // https://github.com/vuetifyjs/vuetify/discussions/18883#discussioncomment-7868798
   }
 };
 

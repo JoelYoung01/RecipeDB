@@ -9,8 +9,21 @@
       "type": "debugpy",
       "request": "launch",
       "module": "fastapi",
-      "args": ["dev", "api/main.py"],
+      "args": [
+        "dev",
+        "api/main.py"
+      ],
       "jinja": true
-    }
+    },
+    {
+      "name": "Py: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
   ]
 }

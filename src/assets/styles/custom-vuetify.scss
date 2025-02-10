@@ -1,0 +1,3 @@
+$rubik-font-family: 'Rubik', sans-serif !default;
+
+@use 'vuetify' with ($body-font-family: $rubik-font-family);

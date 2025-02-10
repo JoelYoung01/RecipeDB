@@ -2,23 +2,14 @@ import { inject, ref } from "vue";
 import { defineStore } from "pinia";
 import { AuthLoginEvent, checkSessionToken } from "@/utils";
 import { googleAccountsLoadedKey } from "@/plugins/googleAuth";
+import type { UserResponse } from "@/types/User";
 
 export const TOKEN_STORAGE_KEY = "access_token";
-
-interface CurrentUser {
-  id: number;
-  username: string;
-  email: string;
-  display_name: string;
-  admin: boolean;
-  disabled: boolean;
-  avatar_url?: string;
-}
 
 export const useSessionStore = defineStore("session", () => {
   const googleLibraryLoaded = inject(googleAccountsLoadedKey, ref(false));
   const access_token = ref<string | null>(localStorage.getItem(TOKEN_STORAGE_KEY));
-  const currentUser = ref<CurrentUser | null>(null);
+  const currentUser = ref<UserResponse | null>(null);
   const loading = ref(false);
 
   async function checkSession() {

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlmodel import Relationship, SQLModel, Field
 
@@ -23,14 +23,16 @@ class User_Permission(BaseDbModel, table=True):
 
 
 class User(BaseIndexedDbModel, table=True):
-    avatar_url: str | None
+    avatar_url: str | None = None
     username: str
     email: str
     display_name: str
     admin: bool = False
     disabled: bool = False
     google_user_id: str | None = None
-    last_login: datetime | None = Field(sa_type=UTCDateTime)
+    last_login: datetime | None = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc), sa_type=UTCDateTime
+    )
 
     tokens: list["Token"] = Relationship(back_populates="user")
     permissions: list["Permission"] = Relationship(link_model=User_Permission)
@@ -60,6 +62,8 @@ class Recipe(BaseIndexedDbModel, table=True):
     instructions: str
     notes: str | None
     public: bool = False
+    prep_time: float | None = None
+    cover_image: str | None = None
 
     created_by: "User" = Relationship()
     ingredients: list["Ingredient"] = Relationship(back_populates="recipe")
@@ -69,7 +73,7 @@ class Ingredient(BaseIndexedDbModel, table=True):
     name: str
     amount: float
     units: str
-    details: str | None
+    details: str | None = None
     recipe_id: int = Field(foreign_key="recipe.id")
 
     recipe: "Recipe" = Relationship(back_populates="ingredients")
@@ -81,5 +85,5 @@ class PlannedRecipe(BaseIndexedDbModel, table=True):
     created_on: datetime = Field(sa_type=UTCDateTime)
     planned_for: datetime = Field(sa_type=UTCDateTime)
 
-    created_by: User = Relationship()
-    recipe: Recipe = Relationship()
+    created_by: "User" = Relationship()
+    recipe: "Recipe" = Relationship()

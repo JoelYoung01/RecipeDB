@@ -10,7 +10,7 @@ from api.core.authentication import (
 from api.core.config import settings
 from api.core.database import SessionDep
 from api.models import Token, User
-from api.schemas.authentication import GoogleLoginPayload, TokenResponse
+from api.schemas import GoogleLoginPayload, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

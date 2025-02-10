@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     VITE_GOOGLE_CLIENT_ID: str
     VUE_STATIC_DIR: str = "dist"
+    UPLOAD_DIR: str = "uploads"
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)

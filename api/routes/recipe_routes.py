@@ -6,7 +6,7 @@ from sqlmodel import or_, select
 from api.core.authentication import CurrentUserDep, get_admin_user, verify_access_token
 from api.core.database import SessionDep
 from api.models import Recipe
-from api.schemas.recipe import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
+from api.schemas import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
 
 router = APIRouter(
     prefix="/recipe",
@@ -46,9 +46,20 @@ def get_all_recipes(
 
 
 @router.get("/user/", response_model=list[RecipeSlim])
-def get_active_apps(current_user: CurrentUserDep, session: SessionDep):
+def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe).where(Recipe.created_by == current_user)
+    ).all()
+    return recipes
+
+
+@router.get("/user/recent/", response_model=list[RecipeSlim])
+def get_users_recently_added_recipes(current_user: CurrentUserDep, session: SessionDep):
+    recipes = session.exec(
+        select(Recipe)
+        .where(Recipe.created_by == current_user)
+        .order_by(Recipe.created_on.desc())
+        .limit(5)
     ).all()
     return recipes
 

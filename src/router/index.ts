@@ -30,6 +30,11 @@ const router = createRouter({
           name: "MyRecipes"
         },
         {
+          path: "meal-planning",
+          component: () => import("@/views/UserViews/MealPlanning.vue"),
+          name: "MealPlanning"
+        },
+        {
           path: "add-recipe",
           component: () => import("@/views/UserViews/AddRecipe.vue"),
           name: "AddRecipe"
