@@ -48,9 +48,10 @@ class RecipeCreate(BaseModel):
     description: str
     instructions: str
     notes: str | None
-    created_by_id: int
     created_on: datetime
     public: bool
+    prep_time: float | None
+    cover_image: str | None
 
 
 class RecipeUpdate(BaseModel):
@@ -58,9 +59,10 @@ class RecipeUpdate(BaseModel):
     description: str | None
     instructions: str | None
     notes: str | None
-    created_by_id: int | None
     created_on: datetime | None
     public: bool | None
+    prep_time: float | None
+    cover_image: str | None
 
 
 class TimeFrameRequest(BaseModel):

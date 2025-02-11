@@ -40,6 +40,26 @@ const router = createRouter({
           name: "AddRecipe"
         },
         {
+          path: "recipe",
+          children: [
+            {
+              path: ":recipeId(\\d+)",
+              children: [
+                {
+                  path: "detail",
+                  name: "RecipeDetail",
+                  component: () => import("@/views/Recipe/RecipeDetail.vue")
+                },
+                {
+                  path: "edit",
+                  name: "RecipeEdit",
+                  component: () => import("@/views/Recipe/RecipeEdit.vue")
+                }
+              ]
+            }
+          ]
+        },
+        {
           path: "my-account",
           component: () => import("@/views/UserViews/MyAccount.vue"),
           name: "MyAccount"

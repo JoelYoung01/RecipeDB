@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import RecipeCard from "@/components/RecipeCard.vue";
 import type { RecipeSlim } from "@/types";
 import { get, post } from "@/utils";
 import { onMounted } from "vue";
-import defaultImage from "@/assets/default-recipe.jpg";
 
 const todayRecipes = ref<RecipeSlim[]>([]);
 const recentRecipes = ref<RecipeSlim[]>([]);
@@ -37,17 +37,7 @@ onMounted(() => {
   <v-container>
     <section>
       <h2>Today's Menu</h2>
-      <v-card v-for="recipe in todayRecipes" :key="recipe.id">
-        <v-row>
-          <v-col cols="4">image</v-col>
-          <v-col cols="8">
-            <div>{{ recipe.name }}</div>
-            <div>
-              <v-icon icon="mdi-clock" class="me-2" /> {{ recipe.prep_time ?? "-" }} minutes
-            </div>
-          </v-col>
-        </v-row>
-      </v-card>
+      <RecipeCard v-for="recipe in todayRecipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
 
       <div v-if="todayRecipes.length == 0" class="my-3">
         You don't have any recipes planned for today!
@@ -58,23 +48,7 @@ onMounted(() => {
     </section>
     <section>
       <h2>Recently Added</h2>
-      <v-card v-for="recipe in recentRecipes" :key="recipe.id" class="mb-3">
-        <v-row>
-          <v-col cols="5">
-            <v-img :src="defaultImage" cover aspect-ratio="1">
-              <template #placeholder>
-                <v-icon icon="mdi-chef-hat" />
-              </template>
-            </v-img>
-          </v-col>
-          <v-col>
-            <div>{{ recipe.name }}</div>
-            <div>
-              <v-icon icon="mdi-clock" class="me-2" /> {{ recipe.prep_time ?? "-" }} minutes
-            </div>
-          </v-col>
-        </v-row>
-      </v-card>
+      <RecipeCard v-for="recipe in recentRecipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
 
       <div v-if="recentRecipes.length == 0" class="my-3">
         You don't have any recipes added yet!

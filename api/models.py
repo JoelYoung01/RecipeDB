@@ -67,6 +67,7 @@ class Recipe(BaseIndexedDbModel, table=True):
 
     created_by: "User" = Relationship()
     ingredients: list["Ingredient"] = Relationship(back_populates="recipe")
+    planned: list["PlannedRecipe"] = Relationship(back_populates="recipe")
 
 
 class Ingredient(BaseIndexedDbModel, table=True):
