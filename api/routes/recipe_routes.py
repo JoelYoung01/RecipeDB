@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import update
 from sqlmodel import or_, select
 
@@ -95,25 +95,36 @@ def create_recipe(recipe: RecipeCreate, session: SessionDep):
 @router.put(
     "/{recipe_id:int}/",
     response_model=RecipeDetail,
-    dependencies=[Depends(get_admin_user)],
 )
-def update_recipe(recipe_id: int, recipe: RecipeUpdate, session: SessionDep):
+def update_recipe(
+    recipe_id: int,
+    recipe: RecipeUpdate,
+    currentUser: CurrentUserDep,
+    session: SessionDep,
+):
     existing_recipe = session.exec(select(Recipe).where(Recipe.id == recipe_id)).first()
-    if existing_recipe:
-        update_stmt = (
-            update(Recipe)
-            .where(Recipe.id == recipe_id)
-            .values(**recipe.model_dump(exclude_unset=True))
-            .execution_options(synchronize_session="fetch")
-        )
-        session.exec(update_stmt)
-        session.commit()
-        session.refresh(existing_recipe)
-        return existing_recipe
-    else:
+
+    if not existing_recipe:
         raise HTTPException(
             status_code=404, detail=f"Recipe with id {recipe_id} not found."
         )
+
+    if currentUser.id != existing_recipe.created_by_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not the creator of this recipe.",
+        )
+
+    update_stmt = (
+        update(Recipe)
+        .where(Recipe.id == recipe_id)
+        .values(**recipe.model_dump(exclude_unset=True))
+        .execution_options(synchronize_session="fetch")
+    )
+    session.exec(update_stmt)
+    session.commit()
+    session.refresh(existing_recipe)
+    return existing_recipe
 
 
 @router.delete("/{recipe_id:int}/", dependencies=[Depends(get_admin_user)])

@@ -71,13 +71,16 @@ class Recipe(BaseIndexedDbModel, table=True):
 
 
 class Ingredient(BaseIndexedDbModel, table=True):
+    created_by_id: int = Field(foreign_key="user.id")
+    created_on: datetime = Field(sa_type=UTCDateTime)
     name: str
     amount: float
-    units: str
+    units: str | None = None
     details: str | None = None
     recipe_id: int = Field(foreign_key="recipe.id")
 
     recipe: "Recipe" = Relationship(back_populates="ingredients")
+    created_by: "User" = Relationship()
 
 
 class PlannedRecipe(BaseIndexedDbModel, table=True):

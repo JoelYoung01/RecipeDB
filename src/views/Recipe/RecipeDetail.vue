@@ -26,6 +26,16 @@ const formattedTime = computed(() => {
   }
 });
 
+const returnUrl = computed(() => {
+  const back = window.history.state.back;
+
+  if (back.includes("/login")) return false;
+
+  if (back.includes("edit")) return "/home";
+
+  return back;
+});
+
 async function getRecipeDetails() {
   try {
     recipe.value = await get(`/recipe/${route.params.recipeId}/`);
@@ -36,11 +46,6 @@ async function getRecipeDetails() {
       console.error(er);
     }
   }
-}
-
-function canReturn() {
-  const back = window.history.state.back;
-  return back && !back.includes("/login?");
 }
 
 function scrollToIngredients() {
@@ -60,11 +65,11 @@ onMounted(() => {
     <v-img :src="defaultImage" class="background" cover />
     <div class="image-spacer d-flex pa-2">
       <v-btn
-        v-if="canReturn()"
+        v-if="returnUrl"
+        :to="returnUrl"
         icon="mdi-arrow-left"
         variant="tonal"
         size="x-small"
-        @click="router.back()"
       />
       <v-spacer />
       <v-btn
@@ -106,9 +111,9 @@ onMounted(() => {
 
       <section id="ingredients">
         <h4>Ingredients</h4>
-        <v-row v-for="ingredient in recipe.ingredients" :key="ingredient.id">
-          <v-col>Some Ingredient {{ ingredient.name }}</v-col>
-        </v-row>
+        <div v-for="ingredient in recipe.ingredients" :key="ingredient.id">
+          {{ ingredient.amount }} {{ ingredient.units }} - {{ ingredient.name }}
+        </div>
       </section>
 
       <section>

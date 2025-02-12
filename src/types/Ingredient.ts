@@ -11,3 +11,11 @@ export interface IngredientSlim {
 export interface IngredientDetail extends IngredientSlim {
   recipe: RecipeSlim;
 }
+
+export interface IngredientCreate {
+  name: string;
+  amount: number;
+  units: string;
+  details?: string;
+  recipe_id: number;
+}

@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from api.core.config import settings
 from api.routes import (
+    ingredient_routes,
     planned_recipe_routes,
     recipe_routes,
     auth_routes,
@@ -31,6 +32,7 @@ api_router.include_router(recipe_routes.router)
 api_router.include_router(recipe_routes.unauth_router)
 api_router.include_router(auth_routes.router)
 api_router.include_router(planned_recipe_routes.router)
+api_router.include_router(ingredient_routes.router)
 api_router.include_router(upload_routes.router)
 
 

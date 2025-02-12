@@ -23,6 +23,7 @@ getPublicRecipes();
       clearable
       hide-details
       placeholder="Search for a Recipe"
+      type="search"
       rounded
     />
   </v-container>

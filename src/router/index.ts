@@ -53,7 +53,10 @@ const router = createRouter({
                 {
                   path: "edit",
                   name: "RecipeEdit",
-                  component: () => import("@/views/Recipe/RecipeEdit.vue")
+                  component: () => import("@/views/Recipe/RecipeEdit.vue"),
+                  meta: {
+                    useShadedBackground: true
+                  }
                 }
               ]
             }

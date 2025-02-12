@@ -1,8 +1,8 @@
 """init_db
 
-Revision ID: 4bf0c690e9eb
+Revision ID: 13d1451cac94
 Revises: 8a9ec8cf53ba
-Create Date: 2025-02-09 21:08:40.253352
+Create Date: 2025-02-11 21:30:13.875770
 
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import api
 
 
 # revision identifiers, used by Alembic.
-revision: str = '4bf0c690e9eb'
+revision: str = '13d1451cac94'
 down_revision: Union[str, None] = '8a9ec8cf53ba'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -74,11 +74,14 @@ def upgrade() -> None:
     )
     op.create_table('ingredient',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_on', api.core.timezone_handler.UTCDateTime(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
-    sa.Column('units', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('units', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('details', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('recipe_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['created_by_id'], ['user.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -98,7 +98,7 @@ class IngredientCreate(BaseModel):
     name: str
     amount: float
     units: str
-    details: str | None
+    details: str | None = None
     recipe_id: int
 
 
