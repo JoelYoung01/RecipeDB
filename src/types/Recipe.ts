@@ -26,5 +26,5 @@ export interface RecipeCreate {
   created_on: string;
   public: boolean;
   prep_time?: number;
-  cover_image?: string;
+  cover_image_id?: number;
 }

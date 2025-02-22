@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from sqlalchemy import MetaData
 from sqlmodel import Relationship, SQLModel, Field
 
 from api.core.timezone_handler import UTCDateTime
@@ -7,6 +8,16 @@ from api.core.timezone_handler import UTCDateTime
 
 # Create common Base to be used by all models
 class BaseDbModel(SQLModel):
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_`%(constraint_name)s`",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
+
     __abstract__ = True
 
 
@@ -54,6 +65,14 @@ class Permission(BaseIndexedDbModel, table=True):
     name: str
 
 
+class Upload(BaseIndexedDbModel, table=True):
+    created_by_id: int = Field(foreign_key="user.id")
+    created_on: datetime = Field(sa_type=UTCDateTime)
+    file_path: str
+
+    created_by: "User" = Relationship()
+
+
 class Recipe(BaseIndexedDbModel, table=True):
     created_by_id: int = Field(foreign_key="user.id")
     created_on: datetime = Field(sa_type=UTCDateTime)
@@ -63,7 +82,7 @@ class Recipe(BaseIndexedDbModel, table=True):
     notes: str | None
     public: bool = False
     prep_time: float | None = None
-    cover_image: str | None = None
+    cover_image_id: int | None = Field(foreign_key="upload.id", default=None)
 
     created_by: "User" = Relationship()
     ingredients: list["Ingredient"] = Relationship(
@@ -71,6 +90,7 @@ class Recipe(BaseIndexedDbModel, table=True):
         cascade_delete=True,
     )
     planned: list["PlannedRecipe"] = Relationship(back_populates="recipe")
+    cover_image: "Upload" = Relationship()
 
 
 class Ingredient(BaseIndexedDbModel, table=True):
