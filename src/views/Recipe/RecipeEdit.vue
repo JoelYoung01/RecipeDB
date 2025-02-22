@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { RecipeCreate, RecipeDetail, IngredientCreate } from "@/types";
-import { ApiError, get, post, put, required } from "@/utils";
+import { ApiError, get, post, put, required, isNumber } from "@/utils";
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -61,6 +61,8 @@ async function saveChanges() {
 
   saving.value = true;
   try {
+    if (!form.prep_time && form.prep_time !== 0) form.prep_time = undefined;
+
     let recipeId = null;
     if (creating.value) {
       const result = await post(`/recipe/`, form);
@@ -149,7 +151,13 @@ onMounted(() => {
         label="Instructions"
       />
       <v-textarea v-model="form.notes" auto-grow variant="solo" label="Notes" />
-      <v-text-field v-model="form.prep_time" variant="solo" type="number" label="Prep Time (min)" />
+      <v-text-field
+        v-model.number="form.prep_time"
+        :rules="[isNumber]"
+        variant="solo"
+        type="number"
+        label="Prep Time (min)"
+      />
       <v-checkbox v-model="form.public" label="Public Recipe" density="compact" />
 
       <div class="d-flex align-center">

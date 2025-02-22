@@ -125,7 +125,7 @@ def update_recipe(
     update_stmt = (
         update(Recipe)
         .where(Recipe.id == recipe_id)
-        .values(**recipe.model_dump(exclude_unset=True))
+        .values(**recipe.model_dump())
         .execution_options(synchronize_session="fetch")
     )
     session.exec(update_stmt)

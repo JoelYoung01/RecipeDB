@@ -15,7 +15,7 @@ const deleteModal = ref(false);
 const loading = ref(false);
 
 const formattedTime = computed(() => {
-  if (!recipe.value || !recipe.value.prep_time) return "-";
+  if (!recipe.value || (!recipe.value.prep_time && recipe.value.prep_time !== 0)) return "-";
 
   const hours = Math.floor(recipe.value.prep_time / 60);
   const minutes = recipe.value.prep_time % 60;
