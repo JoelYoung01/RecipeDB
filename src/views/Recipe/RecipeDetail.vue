@@ -2,7 +2,7 @@
 import defaultImage from "@/assets/default-recipe.jpg";
 import { useSessionStore } from "@/stores/session";
 import type { RecipeDetail } from "@/types";
-import { ApiError, get } from "@/utils";
+import { ApiError, del, get } from "@/utils";
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -11,6 +11,8 @@ const router = useRouter();
 const route = useRoute();
 
 const recipe = ref<RecipeDetail>();
+const deleteModal = ref(false);
+const loading = ref(false);
 
 const formattedTime = computed(() => {
   if (!recipe.value || !recipe.value.prep_time) return "-";
@@ -26,17 +28,10 @@ const formattedTime = computed(() => {
   }
 });
 
-const returnUrl = computed(() => {
-  const back = window.history.state.back;
-
-  if (back.includes("/login")) return false;
-
-  if (back.includes("edit")) return "/home";
-
-  return back;
-});
+const returnUrl = computed(() => `/home`);
 
 async function getRecipeDetails() {
+  loading.value = true;
   try {
     recipe.value = await get(`/recipe/${route.params.recipeId}/`);
   } catch (er) {
@@ -46,6 +41,18 @@ async function getRecipeDetails() {
       console.error(er);
     }
   }
+  loading.value = false;
+}
+
+async function deleteRecipe() {
+  loading.value = true;
+  try {
+    await del(`/recipe/${route.params.recipeId}/`);
+    router.push(returnUrl.value);
+  } catch (er) {
+    console.error(er);
+  }
+  loading.value = false;
 }
 
 function scrollToIngredients() {
@@ -125,8 +132,29 @@ onMounted(() => {
         <h4>Notes</h4>
         <pre>{{ recipe.notes }}</pre>
       </section>
+
+      <section class="mt-5">
+        <div class="d-flex">
+          <v-btn color="error" size="small" @click="deleteModal = true">Delete Recipe</v-btn>
+        </div>
+      </section>
     </v-container>
   </div>
+
+  <div v-else-if="loading" class="loading-container">
+    <v-progress-circular indeterminate color="primary" size="large" />
+  </div>
+
+  <v-dialog v-model="deleteModal">
+    <v-card>
+      <v-card-text>Are you sure you would like to delete this recipe?</v-card-text>
+      <v-card-actions>
+        <v-btn variant="tonal" :disabled="loading" @click="deleteModal = false">Cancel</v-btn>
+        <v-spacer />
+        <v-btn variant="flat" :loading="loading" color="error" @click="deleteRecipe">Delete</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <style scoped>
@@ -179,5 +207,10 @@ pre {
   bottom: 5rem;
   left: 0;
   width: 100%;
+}
+
+.loading-container {
+  text-align: center;
+  margin-top: 10rem;
 }
 </style>

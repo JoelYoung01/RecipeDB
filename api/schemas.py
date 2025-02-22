@@ -31,11 +31,11 @@ class RecipeSlim(BaseModel):
     name: str
     description: str
     instructions: str
-    notes: str | None
+    notes: str | None = None
     created_on: datetime
     public: bool
-    prep_time: float | None
-    cover_image: str | None
+    prep_time: float | None = None
+    cover_image: str | None = None
 
 
 class RecipeDetail(RecipeSlim):
@@ -47,22 +47,21 @@ class RecipeCreate(BaseModel):
     name: str
     description: str
     instructions: str
-    notes: str | None
-    created_on: datetime
+    notes: str | None = None
     public: bool
-    prep_time: float | None
-    cover_image: str | None
+    prep_time: float | None = None
+    cover_image: str | None = None
 
 
 class RecipeUpdate(BaseModel):
-    name: str | None
-    description: str | None
-    instructions: str | None
-    notes: str | None
-    created_on: datetime | None
-    public: bool | None
-    prep_time: float | None
-    cover_image: str | None
+    name: str | None = None
+    description: str | None = None
+    instructions: str | None = None
+    notes: str | None = None
+    created_on: datetime | None = None
+    public: bool | None = None
+    prep_time: float | None = None
+    cover_image: str | None = None
 
 
 class TimeFrameRequest(BaseModel):
@@ -85,9 +84,9 @@ class PlannedRecipeDetail(PlannedRecipeSlim):
 class IngredientSlim(BaseModel):
     id: int
     name: str
-    amount: float
-    units: str
-    details: str | None
+    amount: float | None = None
+    units: str | None = None
+    details: str | None = None
 
 
 class IngredientDetail(IngredientSlim):
@@ -96,14 +95,14 @@ class IngredientDetail(IngredientSlim):
 
 class IngredientCreate(BaseModel):
     name: str
-    amount: float
-    units: str
+    amount: float | None = None
+    units: str | None = None
     details: str | None = None
     recipe_id: int
 
 
 class IngredientUpdate(BaseModel):
-    name: str | None
-    amount: float | None
-    units: str | None
-    details: str | None
+    name: str | None = None
+    amount: float | None = None
+    units: str | None = None
+    details: str | None = None

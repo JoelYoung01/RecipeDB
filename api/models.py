@@ -66,7 +66,10 @@ class Recipe(BaseIndexedDbModel, table=True):
     cover_image: str | None = None
 
     created_by: "User" = Relationship()
-    ingredients: list["Ingredient"] = Relationship(back_populates="recipe")
+    ingredients: list["Ingredient"] = Relationship(
+        back_populates="recipe",
+        cascade_delete=True,
+    )
     planned: list["PlannedRecipe"] = Relationship(back_populates="recipe")
 
 
@@ -74,7 +77,7 @@ class Ingredient(BaseIndexedDbModel, table=True):
     created_by_id: int = Field(foreign_key="user.id")
     created_on: datetime = Field(sa_type=UTCDateTime)
     name: str
-    amount: float
+    amount: float | None = None
     units: str | None = None
     details: str | None = None
     recipe_id: int = Field(foreign_key="recipe.id")

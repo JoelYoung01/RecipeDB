@@ -1,9 +1,10 @@
+from datetime import UTC, datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import update
 from sqlmodel import or_, select
 
-from api.core.authentication import CurrentUserDep, get_admin_user, verify_access_token
+from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.models import Recipe
 from api.schemas import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
@@ -84,8 +85,14 @@ def get_recipe_by_id(
     "/",
     response_model=RecipeDetail,
 )
-def create_recipe(recipe: RecipeCreate, session: SessionDep):
-    db_app_dev = Recipe.model_validate(recipe)
+def create_recipe(
+    recipe: RecipeCreate, currentUser: CurrentUserDep, session: SessionDep
+):
+    rec_dict = recipe.model_dump()
+    rec_dict["created_on"] = datetime.now(UTC)
+    rec_dict["created_by_id"] = currentUser.id
+
+    db_app_dev = Recipe.model_validate(rec_dict)
     session.add(db_app_dev)
     session.commit()
     session.refresh(db_app_dev)
@@ -127,13 +134,21 @@ def update_recipe(
     return existing_recipe
 
 
-@router.delete("/{recipe_id:int}/", dependencies=[Depends(get_admin_user)])
-def delete_recipe(recipe_id: int, session: SessionDep):
+@router.delete("/{recipe_id:int}/")
+def delete_recipe(recipe_id: int, currentUser: CurrentUserDep, session: SessionDep):
     existing_recipe = session.exec(select(Recipe).where(Recipe.id == recipe_id)).first()
-    if existing_recipe:
-        session.delete(existing_recipe)
-        session.commit()
-    else:
+
+    if not existing_recipe:
         raise HTTPException(
-            status_code=404, detail=f"Recipe with id {recipe_id} not found."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recipe with id {recipe_id} not found.",
         )
+
+    if existing_recipe.created_by_id != currentUser.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not the creator of this recipe.",
+        )
+
+    session.delete(existing_recipe)
+    session.commit()
