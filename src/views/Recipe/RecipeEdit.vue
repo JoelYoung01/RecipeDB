@@ -33,20 +33,15 @@ const form = reactive<Partial<RecipeCreate>>({
 });
 const ingredientForms = reactive<IngredientForm[]>([]);
 
-const canSave = computed(() => {
-  return validForm.value && ingredientForms.length > 0 && !saving.value && !loading.value;
-});
-
-const backPath = computed(() => {
-  const back = window.history.state.back;
-  if (back && !back.includes("/login?")) {
-    return back;
-  }
-
-  return `/home`;
-});
+const creating = computed(() => route.params.recipeId === undefined);
+const backPath = computed(() => `/home`);
+const canSave = computed(
+  () => validForm.value && ingredientForms.length > 0 && !saving.value && !loading.value
+);
 
 async function getRecipeDetails() {
+  if (creating.value) return;
+
   loading.value = true;
   try {
     recipeDetail.value = await get(`/recipe/${route.params.recipeId}/`);
@@ -62,26 +57,34 @@ async function getRecipeDetails() {
 }
 
 async function saveChanges() {
-  if (!recipeDetail.value || saving.value) return;
+  if (saving.value) return;
 
   saving.value = true;
   try {
-    const result = await put(`/recipe/${route.params.recipeId}/`, form);
+    let recipeId = null;
+    if (creating.value) {
+      const result = await post(`/recipe/`, form);
+      recipeId = result.id;
+    } else {
+      const result = await put(`/recipe/${route.params.recipeId}/`, form);
+      recipeId = result.id;
+    }
 
-    await saveIngredients(result.id);
+    await saveIngredients(recipeId);
 
-    router.push(`/recipe/${route.params.recipeId}/detail`);
+    router.push(`/recipe/${recipeId}/detail`);
   } catch (er) {
     console.error(er);
   }
+  saving.value = false;
 }
 
 async function saveIngredients(recipeId: number) {
-  if (!recipeDetail.value) return;
+  const existingIngredients = recipeDetail.value?.ingredients ?? [];
 
   const newIngredients = ingredientForms.filter((ingredient) => !ingredient.id);
   const updateIngredients = ingredientForms.filter((ingredient) => ingredient.id);
-  const deleteIngredients = recipeDetail.value.ingredients.filter(
+  const deleteIngredients = existingIngredients.filter(
     (ingredient) => !ingredientForms.some((formIngredient) => formIngredient.id === ingredient.id)
   );
 
@@ -203,7 +206,7 @@ onMounted(() => {
             />
           </v-col>
           <v-col cols="1">
-            <v-btn icon="mdi-delete" size="30" color="red" @click="removeIngredient(index)" />
+            <v-btn icon="mdi-delete" size="30" color="error" @click="removeIngredient(index)" />
           </v-col>
         </v-row>
       </section>

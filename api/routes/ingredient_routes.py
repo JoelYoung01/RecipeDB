@@ -22,7 +22,7 @@ router = APIRouter(
 def create_ingredient(
     ingredient: IngredientCreate, currentUser: CurrentUserDep, session: SessionDep
 ):
-    ingredient_data = ingredient.model_dump()
+    ingredient_data = ingredient.model_dump(exclude_unset=True)
     ingredient_data["created_on"] = datetime.now(timezone.utc)
     ingredient_data["created_by_id"] = currentUser.id
     db_ingredient = Ingredient.model_validate(ingredient_data)

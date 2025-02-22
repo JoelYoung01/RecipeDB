@@ -1,8 +1,8 @@
 """init_db
 
-Revision ID: 13d1451cac94
+Revision ID: 6ed4121addba
 Revises: 8a9ec8cf53ba
-Create Date: 2025-02-11 21:30:13.875770
+Create Date: 2025-02-21 16:23:04.120452
 
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import api
 
 
 # revision identifiers, used by Alembic.
-revision: str = '13d1451cac94'
+revision: str = '6ed4121addba'
 down_revision: Union[str, None] = '8a9ec8cf53ba'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -77,7 +77,7 @@ def upgrade() -> None:
     sa.Column('created_by_id', sa.Integer(), nullable=False),
     sa.Column('created_on', api.core.timezone_handler.UTCDateTime(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=True),
     sa.Column('units', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('details', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('recipe_id', sa.Integer(), nullable=False),
