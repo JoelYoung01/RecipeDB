@@ -4,7 +4,7 @@ import { del, get, postFile } from "@/utils";
 import { useTemplateRef } from "vue";
 
 interface Props {
-  maxSizeMb?: number
+  maxSizeMb?: number;
 }
 
 const model = defineModel<number>();
@@ -15,7 +15,7 @@ const loading = ref(false);
 const uploading = ref(false);
 const deleting = ref(false);
 const dialog = ref(false);
-const errorMsg = ref<string>('');
+const errorMsg = ref<string>("");
 const fileUpload = ref();
 const fileDetail = ref<UploadSlim>();
 const btnText = computed(() => (model.value ? "Change Image" : "Upload Image"));
@@ -35,12 +35,12 @@ function triggerFileInput() {
 }
 
 function handleFileUpload(evt: any) {
-  processFile(evt.target.files[0])
+  processFile(evt.target.files[0]);
 }
 
 async function processFile(file: any) {
-  errorMsg.value = '';
-  
+  errorMsg.value = "";
+
   // Check file size
   const fileSizeMB = file.size / (1024 * 1024);
   if (fileSizeMB > props.maxSizeMb) {
@@ -49,10 +49,10 @@ async function processFile(file: any) {
   }
 
   // Clear existing file if necessary
-  clearFile()
-  
+  clearFile();
+
   fileUpload.value = file;
-};
+}
 
 async function clearFile() {
   if (!model.value) return;
@@ -79,7 +79,7 @@ watch(
     if (!val) {
       fileDetail.value = undefined;
       if (inputRef.value) {
-        inputRef.value.value = '';
+        inputRef.value.value = "";
       }
       return;
     }
@@ -107,28 +107,19 @@ watch(
     {{ btnText }}
     <v-dialog v-model="dialog">
       <v-card>
-        <div
-          class="upload-area"
-          @click="triggerFileInput"
-        >
-          <v-img
-            v-if="fileDetail"
-            :src="imageUrl"
-            cover
-            height="250"
-            class="rounded"
-          >
-            <template v-slot:placeholder>
+        <div class="upload-area" @click="triggerFileInput">
+          <v-img v-if="fileDetail" :src="imageUrl" cover height="250" class="rounded">
+            <template #placeholder>
               <v-row class="fill-height ma-0" align="center" justify="center">
                 <v-progress-circular indeterminate color="primary" />
               </v-row>
             </template>
           </v-img>
-          
+
           <v-container v-else class="d-flex flex-column align-center justify-center py-8">
-            <v-icon 
-              icon="mdi-cloud-upload-outline" 
-              size="large" 
+            <v-icon
+              icon="mdi-cloud-upload-outline"
+              size="large"
               color="primary"
               class="mb-2"
             ></v-icon>
@@ -143,16 +134,15 @@ watch(
             </div>
           </v-container>
         </div>
-        
+
         <input
-          type="file"
           ref="fileInput"
+          type="file"
           class="d-none"
           accept="image/*"
           @change="handleFileUpload"
         />
 
-        
         <v-card-actions>
           <v-btn
             v-if="model"
@@ -175,9 +165,8 @@ watch(
           </v-btn>
         </v-card-actions>
       </v-card>
-      
-      <v-card class="recipe-image-uploader" variant="outlined">
-      </v-card>
+
+      <v-card class="recipe-image-uploader" variant="outlined"> </v-card>
     </v-dialog>
   </v-btn>
 </template>

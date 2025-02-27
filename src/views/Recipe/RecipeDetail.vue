@@ -16,16 +16,16 @@ const loading = ref(false);
 
 const returnUrl = computed(() => `/home`);
 const imageUrl = computed(() => {
-  if (!recipe.value?.cover_image) return defaultImage
+  if (!recipe.value?.cover_image) return defaultImage;
 
-  let url = recipe.value.cover_image.url
+  let url = recipe.value.cover_image.url;
 
   if (import.meta.env.DEV) {
-    url = `http://localhost:8000${url}`
+    url = `http://localhost:8000${url}`;
   }
 
-  return url
-})
+  return url;
+});
 
 const formattedTime = computed(() => {
   if (!recipe.value || (!recipe.value.prep_time && recipe.value.prep_time !== 0)) return "-";

@@ -14,30 +14,30 @@ const upload = ref<UploadSlim>();
 
 const imageUrl = computed(() => {
   if (loading.value) return "";
-  if (!upload.value) return defaultImage
+  if (!upload.value) return defaultImage;
 
-  let url = upload.value.url
+  let url = upload.value.url;
 
   if (import.meta.env.DEV) {
-    url = `http://localhost:8000${url}`
+    url = `http://localhost:8000${url}`;
   }
 
-  return url
-})
+  return url;
+});
 
 async function getImageDetails() {
-  if (!props.recipe.cover_image_id) return
+  if (!props.recipe.cover_image_id) return;
 
-  loading.value = true
+  loading.value = true;
   try {
-    upload.value = await get(`/upload/${props.recipe.cover_image_id}/`)
+    upload.value = await get(`/upload/${props.recipe.cover_image_id}/`);
   } catch (er) {
-    console.error(er)
+    console.error(er);
   }
-  loading.value = false
+  loading.value = false;
 }
 
-watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true})
+watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true });
 </script>
 
 <template>
