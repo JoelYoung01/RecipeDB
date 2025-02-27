@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     VITE_GOOGLE_CLIENT_ID: str
     VUE_STATIC_DIR: str = "dist"
-    UPLOAD_DIR: str = "uploads"
+    UPLOAD_DIR: str = "data/uploads"
+    LOGS_DIR: str = "data/logs"
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
@@ -56,7 +57,7 @@ class Settings(BaseSettings):
     # POSTGRES_USER: str
     # POSTGRES_PASSWORD: str = ""
     # POSTGRES_DB: str = ""
-    SQLITE_FILE_NAME: str = "api/data/database.db"
+    SQLITE_FILE_NAME: str = "data/database.db"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

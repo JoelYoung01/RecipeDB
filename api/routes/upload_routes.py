@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 import os
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
@@ -5,6 +6,9 @@ from pathlib import Path
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.config import settings
+from api.core.logging import logger
+from api.core.database import SessionDep
+from api.models import Upload
 from api.schemas import UploadFileResponse
 
 router = APIRouter(
@@ -19,23 +23,54 @@ UPLOAD_PATH.mkdir(exist_ok=True)
 async def upload_file(
     file: UploadFile,
     current_user: CurrentUserDep,
+    session: SessionDep,
 ):
     # Create user-specific directory
     user_dir = UPLOAD_PATH / str(current_user.id)
     user_dir.mkdir(exist_ok=True)
 
-    # Save file with original filename and add a hash to avoid collision
+    # Build file path with hash to avoid collision
     file_hash = secrets.token_hex(8)  # Generate a random hash
-    file_path = user_dir / f"{file.filename}_{file_hash}"
+    original_file_name = ".".join(file.filename.split(".")[:-1])
+    file_name = f"{original_file_name}_{file_hash}.{file.filename.split('.')[-1]}"
 
+    # Set path and url
+    file_path = user_dir / file_name
+    file_url = f"/uploads/{current_user.id}/{file_name}"
+
+    # Write file contents to disk
+    file_saved = False
     try:
         contents = await file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
+
+        file_saved = True
+    except Exception as e:
+        logger.error(f"An error occurred while saving: {str(e)}")
     finally:
         await file.close()
 
-    return {"filename": file.filename, "path": str(file_path)}
+    if not file_saved:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while saving the file.",
+        )
+
+    # Build corresponding db entry for file
+    db_file = Upload(
+        created_by_id=current_user.id,
+        created_on=datetime.now(UTC),
+        url=file_url,
+        file_path=str(file_path),
+        name=file.filename,
+    )
+
+    session.add(db_file)
+    session.commit()
+    session.refresh(db_file)
+
+    return db_file
 
 
 @router.post("/avatar/")

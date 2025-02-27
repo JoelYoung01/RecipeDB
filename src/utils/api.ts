@@ -22,13 +22,15 @@ export async function doFetch(url: string, options?: RequestInit) {
     url = `${import.meta.env.VITE_API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   }
 
-  const response = await fetch(url, {
+  const builtOptions = {
     ...options,
     headers: {
       ...options?.headers,
       ...headers
     }
-  });
+  };
+
+  const response = await fetch(url, builtOptions);
 
   if (!response.ok) {
     const json = await response.json();
@@ -44,11 +46,16 @@ export async function get<T = any>(url: string): Promise<T> {
   return doFetch(url);
 }
 
-export async function post<T = any>(url: string, body?: object): Promise<T> {
+export async function post<T = any>(
+  url: string,
+  body?: object,
+  headers?: Record<string, string>
+): Promise<T> {
   const options = {
     method: "POST",
     headers: {
-      "content-type": "application/json"
+      "Content-Type": "application/json",
+      ...headers
     },
     body: JSON.stringify(body)
   };
@@ -56,11 +63,16 @@ export async function post<T = any>(url: string, body?: object): Promise<T> {
   return doFetch(url, options);
 }
 
-export async function put<T = any>(url: string, body?: object): Promise<T> {
+export async function put<T = any>(
+  url: string,
+  body?: object,
+  headers?: Record<string, string>
+): Promise<T> {
   const options = {
     method: "PUT",
     headers: {
-      "content-type": "application/json"
+      "Content-Type": "application/json",
+      ...headers
     },
     body: JSON.stringify(body)
   };
@@ -68,11 +80,16 @@ export async function put<T = any>(url: string, body?: object): Promise<T> {
   return doFetch(url, options);
 }
 
-export async function patch<T = any>(url: string, body?: object): Promise<T> {
+export async function patch<T = any>(
+  url: string,
+  body?: object,
+  headers?: Record<string, string>
+): Promise<T> {
   const options = {
     method: "PATCH",
     headers: {
-      "content-type": "application/json"
+      "Content-Type": "application/json",
+      ...headers
     },
     body: JSON.stringify(body)
   };
@@ -84,5 +101,14 @@ export async function del(url: string): Promise<any> {
   const options = {
     method: "DELETE"
   };
+  return doFetch(url, options);
+}
+
+export async function postFile(url: string, file: FormData) {
+  const options = {
+    method: "POST",
+    body: file
+  };
+
   return doFetch(url, options);
 }

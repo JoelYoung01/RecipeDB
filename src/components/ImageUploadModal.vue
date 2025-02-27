@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { postFile } from "@/utils";
+
 const model = defineModel<number>();
 
 const loading = ref(false);
+const uploading = ref(false);
 const dialog = ref(false);
+const fileUpload = ref();
 const btnText = computed(() => (model.value ? "Change Image" : "Upload Image"));
 const btnVariant = computed(() => (model.value ? "flat" : "outlined"));
 const btnColor = computed(() => (model.value ? "primary" : undefined));
@@ -11,6 +15,17 @@ const btnColor = computed(() => (model.value ? "primary" : undefined));
 // mounted => fetch existing detail if exists => preview
 
 // upload image => immediately uploaded => previewed => on 'save', emit id
+
+watch(fileUpload, async (val) => {
+  if (!val) return;
+
+  uploading.value = true;
+  const payload = new FormData();
+  payload.append("file", val);
+  const result = await postFile(`upload/`, payload);
+  model.value = result.id;
+  uploading.value = false;
+});
 
 async function saveImage() {
   loading.value = true;
@@ -34,7 +49,13 @@ async function saveImage() {
     <v-dialog v-model="dialog">
       <v-card>
         <v-card-text>
-          <v-file-input variant="outlined" prepend-icon="" label="Select Image" />
+          <v-file-input
+            v-model="fileUpload"
+            variant="outlined"
+            :loading="uploading"
+            prepend-icon=""
+            label="Select Image"
+          />
         </v-card-text>
         <v-card-actions>
           <v-btn :disabled="loading" @click="dialog = false">Cancel</v-btn>

@@ -22,8 +22,11 @@ class TokenResponse(BaseModel):
 
 
 class UploadFileResponse(BaseModel):
-    filename: str
-    path: str
+    id: int
+    name: str
+    file_path: str
+    created_on: datetime
+    created_by_id: int
 
 
 class RecipeSlim(BaseModel):

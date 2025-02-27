@@ -33,4 +33,4 @@ coverage
 # Python
 venv/
 **/__pycache__/
-api/data
+data

@@ -38,6 +38,9 @@ api_router.include_router(upload_routes.router)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Add Uploads dir
+app.mount("/uploads/", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
 
 # Add the static frontend files if not in development
 if settings.ENVIRONMENT != "development":
