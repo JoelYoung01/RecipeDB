@@ -7,4 +7,4 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./api/data:/app/api/data
+      - ./data:/app/data

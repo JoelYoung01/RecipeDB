@@ -1,19 +1,50 @@
 <script setup lang="ts">
-import type { RecipeSlim } from "@/types";
+import type { UploadSlim, RecipeSlim } from "@/types";
 import defaultImage from "@/assets/default-recipe.jpg";
+import { get } from "@/utils";
 
 interface Props {
   recipe: RecipeSlim;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+const loading = ref(false);
+const upload = ref<UploadSlim>();
+
+const imageUrl = computed(() => {
+  if (loading.value) return "";
+  if (!upload.value) return defaultImage
+
+  let url = upload.value.url
+
+  if (import.meta.env.DEV) {
+    url = `http://localhost:8000${url}`
+  }
+
+  return url
+})
+
+async function getImageDetails() {
+  if (!props.recipe.cover_image_id) return
+
+  loading.value = true
+  try {
+    upload.value = await get(`/upload/${props.recipe.cover_image_id}/`)
+  } catch (er) {
+    console.error(er)
+  }
+  loading.value = false
+}
+
+watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true})
 </script>
 
 <template>
   <v-card :to="`/recipe/${recipe.id}/detail`">
     <v-row>
       <v-col cols="5">
-        <v-img :src="defaultImage" cover aspect-ratio="1">
+        <v-img :src="imageUrl" cover aspect-ratio="1">
           <template #placeholder>
             <v-icon icon="mdi-chef-hat" />
           </template>

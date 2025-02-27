@@ -1,4 +1,5 @@
 import type { IngredientSlim } from "./Ingredient";
+import type { UploadSlim } from "./Upload";
 import type { UserResponse } from "./User";
 
 export interface RecipeSlim {
@@ -10,12 +11,13 @@ export interface RecipeSlim {
   created_on: string;
   public: boolean;
   prep_time?: number;
-  cover_image?: string;
+  cover_image_id?: number;
 }
 
 export interface RecipeDetail extends RecipeSlim {
   created_by: UserResponse;
   ingredients: IngredientSlim[];
+  cover_image?: UploadSlim;
 }
 
 export interface RecipeCreate {
@@ -26,5 +28,5 @@ export interface RecipeCreate {
   created_on: string;
   public: boolean;
   prep_time?: number;
-  cover_image?: string;
+  cover_image_id?: number;
 }

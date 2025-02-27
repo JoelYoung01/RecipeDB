@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImageUploadModal from "@/components/ImageUploadModal.vue";
 import type { RecipeCreate, RecipeDetail, IngredientCreate } from "@/types";
 import { ApiError, get, post, put, required, isNumber } from "@/utils";
 import { onMounted } from "vue";
@@ -29,9 +30,10 @@ const form = reactive<Partial<RecipeCreate>>({
   created_on: undefined,
   public: false,
   prep_time: undefined,
-  cover_image: undefined
+  cover_image_id: undefined
 });
 const ingredientForms = reactive<IngredientForm[]>([]);
+const imageModal = ref(false);
 
 const creating = computed(() => route.params.recipeId === undefined);
 const backPath = computed(() => `/home`);
@@ -135,6 +137,8 @@ onMounted(() => {
 <template>
   <v-container>
     <v-form v-model="validForm" :disabled="loading">
+      <ImageUploadModal v-model="form.cover_image_id" class="mb-3" />
+
       <v-text-field v-model="form.name" variant="solo" :rules="[required]" label="Name" />
       <v-textarea
         v-model="form.description"

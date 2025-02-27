@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 
 class UserResponse(BaseModel):
@@ -22,8 +22,16 @@ class TokenResponse(BaseModel):
 
 
 class UploadFileResponse(BaseModel):
-    filename: str
-    path: str
+    id: int
+    name: str
+    file_path: str
+    created_on: datetime
+    created_by_id: int
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"/uploads/{self.file_path}"
 
 
 class RecipeSlim(BaseModel):
@@ -35,12 +43,13 @@ class RecipeSlim(BaseModel):
     created_on: datetime
     public: bool
     prep_time: float | None = None
-    cover_image: str | None = None
+    cover_image_id: int | None = None
 
 
 class RecipeDetail(RecipeSlim):
     created_by: "UserResponse"
     ingredients: list["IngredientDetail"]
+    cover_image: UploadFileResponse | None
 
 
 class RecipeCreate(BaseModel):
@@ -50,7 +59,7 @@ class RecipeCreate(BaseModel):
     notes: str | None = None
     public: bool
     prep_time: float | None = None
-    cover_image: str | None = None
+    cover_image_id: int | None = None
 
 
 class RecipeUpdate(BaseModel):
@@ -61,7 +70,7 @@ class RecipeUpdate(BaseModel):
     created_on: datetime | None = None
     public: bool | None = None
     prep_time: float | None = None
-    cover_image: str | None = None
+    cover_image_id: int | None = None
 
 
 class TimeFrameRequest(BaseModel):

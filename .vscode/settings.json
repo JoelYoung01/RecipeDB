@@ -4,7 +4,7 @@
             "previewLimit": 50,
             "driver": "SQLite",
             "name": "Local SQLite",
-            "database": "./api/data/database.db"
+            "database": "./data/database.db"
         }
     ]
 }

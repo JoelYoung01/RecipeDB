@@ -17,8 +17,8 @@ COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
 
 # Wire up db location
-RUN mkdir -p /app/api/data
-VOLUME /app/api/data
+RUN mkdir -p /app/data
+VOLUME /app/data
 
 EXPOSE 8000
 
