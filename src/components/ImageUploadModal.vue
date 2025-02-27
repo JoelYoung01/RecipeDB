@@ -135,6 +135,8 @@ watch(
           </v-container>
         </div>
 
+        <v-alert v-if="errorMsg" type="error" class="mx-2">{{ errorMsg }}</v-alert>
+
         <input
           ref="fileInput"
           type="file"
