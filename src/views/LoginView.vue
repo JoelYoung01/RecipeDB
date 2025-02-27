@@ -38,7 +38,8 @@ watch(
       </div>
     </template>
     <template v-else>
-      <h2 class="mt-5 text-center">Sign in to use the app!</h2>
+      <h1 class="mt-5 text-center">Welcome!</h1>
+      <h3 class="text-center">Sign in to use the app</h3>
       <div class="d-flex mt-10 justify-center">
         <GoogleLoginButton />
       </div>
