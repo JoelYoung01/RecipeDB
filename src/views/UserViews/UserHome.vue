@@ -4,6 +4,7 @@ import type { RecipeSlim } from "@/types";
 import { get, post } from "@/utils";
 import { onMounted } from "vue";
 
+const loading = ref(true);
 const todayRecipes = ref<RecipeSlim[]>([]);
 const recentRecipes = ref<RecipeSlim[]>([]);
 
@@ -27,9 +28,10 @@ async function getRecentRecipes() {
   }
 }
 
-onMounted(() => {
-  getTodaysRecipes();
-  getRecentRecipes();
+onMounted(async () => {
+  await Promise.all([getTodaysRecipes(), getRecentRecipes()]);
+
+  loading.value = false;
 });
 </script>
 
@@ -39,7 +41,11 @@ onMounted(() => {
       <h2>Today's Menu</h2>
       <RecipeCard v-for="recipe in todayRecipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
 
-      <div v-if="todayRecipes.length == 0" class="my-3">
+      <div v-if="loading" class="d-flex justify-center">
+        <v-progress-circular indeterminate color="primary" />
+      </div>
+
+      <div v-else-if="todayRecipes.length == 0" class="my-3">
         You don't have any recipes planned for today!
         <v-btn color="primary" to="/meal-planning" class="mt-2" prepend-icon="mdi-calendar">
           Plan Meals
@@ -50,7 +56,11 @@ onMounted(() => {
       <h2>Recently Added</h2>
       <RecipeCard v-for="recipe in recentRecipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
 
-      <div v-if="recentRecipes.length == 0" class="my-3">
+      <div v-if="loading" class="d-flex justify-center">
+        <v-progress-circular indeterminate color="primary" />
+      </div>
+
+      <div v-else-if="recentRecipes.length == 0" class="my-3">
         You don't have any recipes added yet!
         <v-btn color="primary" to="/add-recipe" class="mt-2" prepend-icon="mdi-plus">
           Add Recipe
