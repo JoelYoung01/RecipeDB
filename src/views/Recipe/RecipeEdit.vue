@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ImageUploadModal from "@/components/ImageUploadModal.vue";
 import type { RecipeCreate, RecipeDetail, IngredientCreate } from "@/types";
-import { ApiError, get, post, put, required, isNumber } from "@/utils";
+import { ApiError, get, post, put, required, isNumber, del } from "@/utils";
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -19,7 +19,6 @@ const defaultIngredient: IngredientForm = {
 };
 
 const recipeDetail = ref<RecipeDetail>();
-const validForm = ref(false);
 const saving = ref(false);
 const loading = ref(false);
 const form = reactive<Partial<RecipeCreate>>({
@@ -36,9 +35,15 @@ const ingredientForms = reactive<IngredientForm[]>([]);
 
 const creating = computed(() => route.params.recipeId === undefined);
 const backPath = computed(() => `/home`);
-const canSave = computed(
-  () => validForm.value && ingredientForms.length > 0 && !saving.value && !loading.value
+const validForm = computed(
+  () =>
+    form.name &&
+    form.description &&
+    form.instructions &&
+    ingredientForms.length > 0 &&
+    ingredientForms.every((ing) => ing.name)
 );
+const canSave = computed(() => validForm.value && !saving.value && !loading.value);
 
 async function getRecipeDetails() {
   if (creating.value) return;
@@ -58,7 +63,7 @@ async function getRecipeDetails() {
 }
 
 async function saveChanges() {
-  if (saving.value) return;
+  if (saving.value || !canSave.value) return;
 
   saving.value = true;
   try {
@@ -97,7 +102,7 @@ async function saveIngredients(recipeId: number) {
     ...newIngredients.map((ing) => post(`/ingredient/`, { ...ing, recipe_id: recipeId }))
   );
   promises.push(...updateIngredients.map((ing) => put(`/ingredient/${ing.id}/`, ing)));
-  promises.push(...deleteIngredients.map((ing) => put(`/ingredient/${ing.id}/`)));
+  promises.push(...deleteIngredients.map((ing) => del(`/ingredient/${ing.id}/`)));
 
   await Promise.all(promises);
 }
@@ -135,7 +140,7 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <v-form v-model="validForm" :disabled="loading">
+    <v-form :disabled="loading" @submit.prevent="saveChanges()">
       <ImageUploadModal v-model="form.cover_image_id" class="mb-3" />
 
       <v-text-field v-model="form.name" variant="solo" :rules="[required]" label="Name" />
@@ -251,6 +256,6 @@ onMounted(() => {
 #ingredients-inputs :deep(input) {
   padding: 0.25rem 0.25rem;
   min-height: 1rem;
-  font-size: 0.75rem;
+  /* font-size: 0.75rem; */
 }
 </style>

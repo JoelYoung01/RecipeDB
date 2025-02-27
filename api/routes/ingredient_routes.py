@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import update
 from sqlmodel import select
 
-from api.core.authentication import CurrentUserDep, get_admin_user, verify_access_token
+from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.models import Ingredient
 from api.schemas import IngredientCreate, IngredientDetail, IngredientUpdate
@@ -69,14 +69,22 @@ def update_ingredient(
     return existing_ingredient
 
 
-@router.delete("/{ingredient_id:int}/", dependencies=[Depends(get_admin_user)])
-def delete_ingredient(ingredient_id: int, session: SessionDep):
+@router.delete("/{ingredient_id:int}/")
+def delete_ingredient(
+    ingredient_id: int, current_user: CurrentUserDep, session: SessionDep
+):
     existing_ingredient = session.exec(
         select(Ingredient).where(Ingredient.id == ingredient_id)
     ).first()
     if not existing_ingredient:
         raise HTTPException(
             status_code=404, detail=f"Ingredient with id {ingredient_id} not found."
+        )
+
+    if existing_ingredient.created_by_id != current_user.id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "You did not create this ingredient, therefore you cannot destroy it.",
         )
 
     session.delete(existing_ingredient)
