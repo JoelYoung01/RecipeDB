@@ -33,7 +33,6 @@ const form = reactive<Partial<RecipeCreate>>({
   cover_image_id: undefined
 });
 const ingredientForms = reactive<IngredientForm[]>([]);
-const imageModal = ref(false);
 
 const creating = computed(() => route.params.recipeId === undefined);
 const backPath = computed(() => `/home`);
