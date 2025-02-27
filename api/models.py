@@ -69,7 +69,6 @@ class Upload(BaseIndexedDbModel, table=True):
     created_by_id: int = Field(foreign_key="user.id")
     created_on: datetime = Field(sa_type=UTCDateTime)
     file_path: str
-    url: str
     name: str
 
     created_by: "User" = Relationship()

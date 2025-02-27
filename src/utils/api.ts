@@ -39,6 +39,8 @@ export async function doFetch(url: string, options?: RequestInit) {
     throw new ApiError(message, response);
   }
 
+  if (response.status === 204) return;
+
   return await response.json();
 }
 
@@ -104,7 +106,7 @@ export async function del(url: string): Promise<any> {
   return doFetch(url, options);
 }
 
-export async function postFile(url: string, file: FormData) {
+export async function postFile<T = any>(url: string, file: FormData): Promise<T> {
   const options = {
     method: "POST",
     body: file

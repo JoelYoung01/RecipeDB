@@ -30,7 +30,7 @@ const form = reactive<Partial<RecipeCreate>>({
   created_on: undefined,
   public: false,
   prep_time: undefined,
-  cover_image: undefined
+  cover_image_id: undefined
 });
 const ingredientForms = reactive<IngredientForm[]>([]);
 const imageModal = ref(false);
