@@ -6,4 +6,5 @@ export interface UserResponse {
   admin: boolean;
   disabled: boolean;
   avatar_url?: string;
+  last_login?: string;
 }

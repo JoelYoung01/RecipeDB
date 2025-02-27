@@ -10,6 +10,7 @@ class UserResponse(BaseModel):
     admin: bool
     disabled: bool
     avatar_url: str | None
+    last_login: datetime | None
 
 
 class GoogleLoginPayload(BaseModel):
@@ -119,3 +120,7 @@ class IngredientUpdate(BaseModel):
     amount: float | None = None
     units: str | None = None
     details: str | None = None
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = None
