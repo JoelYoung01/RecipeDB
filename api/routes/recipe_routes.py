@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import update
-from sqlmodel import or_, select
+from sqlmodel import and_, or_, select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models import Recipe
+from api.models import Recipe, Ingredient
 from api.schemas import (
     RecipeCreate,
     RecipeDashboard,
@@ -85,6 +85,47 @@ def get_recipe_by_id(
             status_code=404, detail=f"Recipe with id {recipe_id} not found."
         )
     return recipe
+
+
+@router.get("/search/", response_model=list[RecipeDashboard])
+def search_recipes(
+    searchText: str,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    offset=0,
+    limit: Annotated[int, Query(le=100)] = 100,
+):
+    if not searchText:
+        recipes = session.exec(select(Recipe).where(Recipe.public).limit(25)).all()
+        return recipes
+
+    query = (
+        select(Recipe)
+        .distinct()
+        .join(Recipe.ingredients, isouter=True)
+        .where(
+            and_(
+                or_(Recipe.public, Recipe.created_by == current_user),
+                or_(
+                    Recipe.name.ilike(f"%{searchText}%"),
+                    Recipe.description.ilike(f"%{searchText}%"),
+                    Recipe.instructions.ilike(f"%{searchText}%"),
+                    Recipe.notes.ilike(f"%{searchText}%"),
+                    Recipe.ingredients.any(
+                        or_(
+                            Ingredient.name.ilike(f"%{searchText}%"),
+                            Ingredient.details.ilike(f"%{searchText}%"),
+                        )
+                    ),
+                ),
+            )
+        )
+        .offset(offset)
+        .limit(limit)
+    )
+
+    recipes = session.exec(query).all()
+    return recipes
 
 
 @router.post(
