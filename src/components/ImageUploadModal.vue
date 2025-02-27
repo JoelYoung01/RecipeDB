@@ -66,10 +66,15 @@ watch(fileUpload, async (val) => {
   if (!val) return;
 
   uploading.value = true;
-  const payload = new FormData();
-  payload.append("file", val);
-  fileDetail.value = await postFile<UploadSlim>(`upload/`, payload);
-  model.value = fileDetail.value.id;
+  try {
+    const payload = new FormData();
+    payload.append("file", val);
+    fileDetail.value = await postFile<UploadSlim>(`upload/`, payload);
+    model.value = fileDetail.value.id;
+  } catch (er) {
+    console.error(er);
+    errorMsg.value = `${er}`;
+  }
   uploading.value = false;
 });
 
@@ -89,6 +94,7 @@ watch(
       fileDetail.value = await get(`/upload/${val}/`);
     } catch (er) {
       console.error(er);
+      errorMsg.value = `${er}`;
     }
     loading.value = false;
   },
