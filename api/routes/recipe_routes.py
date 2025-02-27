@@ -7,7 +7,13 @@ from sqlmodel import or_, select
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.models import Recipe
-from api.schemas import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
+from api.schemas import (
+    RecipeCreate,
+    RecipeDashboard,
+    RecipeDetail,
+    RecipeSlim,
+    RecipeUpdate,
+)
 
 router = APIRouter(
     prefix="/recipe",
@@ -46,7 +52,7 @@ def get_all_recipes(
     return recipes
 
 
-@router.get("/user/", response_model=list[RecipeSlim])
+@router.get("/user/", response_model=list[RecipeDashboard])
 def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe).where(Recipe.created_by == current_user)
@@ -54,7 +60,7 @@ def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
     return recipes
 
 
-@router.get("/user/recent/", response_model=list[RecipeSlim])
+@router.get("/user/recent/", response_model=list[RecipeDashboard])
 def get_users_recently_added_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe)

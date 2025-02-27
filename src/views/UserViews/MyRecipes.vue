@@ -1,20 +1,38 @@
 <script setup lang="ts">
+import RecipeCard from "@/components/RecipeCard.vue";
+import type { RecipeDetail } from "@/types";
 import { get } from "@/utils";
-// import { useSessionStore } from "@/stores/session";
+import { onMounted } from "vue";
 
-// const sessionStore = useSessionStore();
+const recipes = ref<RecipeDetail[]>([]);
+const loading = ref(false);
 
-const recipes = ref<any[]>();
-
-async function getPublicRecipes() {
-  recipes.value = await get("/recipe/public/");
+async function getRecipes() {
+  loading.value = true;
+  try {
+    recipes.value = await get(`/recipe/user/`);
+    recipes.value.sort(
+      (a, b) => new Date(a.created_on).getTime() - new Date(b.created_on).getTime()
+    );
+  } catch (er) {
+    console.error(er);
+  }
 }
 
-getPublicRecipes();
+onMounted(() => getRecipes());
 </script>
 
 <template>
-  <v-container> MY RECIPES VIEW </v-container>
+  <v-container>
+    <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
+
+    <div v-if="recipes.length == 0" class="my-3">
+      You don't have any recipes added yet!
+      <v-btn color="primary" to="/add-recipe" class="mt-2" prepend-icon="mdi-plus">
+        Add Recipe
+      </v-btn>
+    </div>
+  </v-container>
 </template>
 
 <style scoped>

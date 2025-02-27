@@ -52,6 +52,10 @@ class RecipeDetail(RecipeSlim):
     cover_image: UploadFileResponse | None
 
 
+class RecipeDashboard(RecipeSlim):
+    cover_image: UploadFileResponse | None
+
+
 class RecipeCreate(BaseModel):
     name: str
     description: str
