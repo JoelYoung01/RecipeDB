@@ -46,7 +46,9 @@ watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true });
       <v-col cols="5">
         <v-img :src="imageUrl" cover aspect-ratio="1">
           <template #placeholder>
-            <v-icon icon="mdi-chef-hat" />
+            <v-row class="fill-height ma-0" align="center" justify="center">
+              <v-progress-circular indeterminate color="primary" />
+            </v-row>
           </template>
         </v-img>
       </v-col>
