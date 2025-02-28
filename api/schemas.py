@@ -9,8 +9,14 @@ class UserResponse(BaseModel):
     display_name: str
     admin: bool
     disabled: bool
-    avatar_url: str | None
-    last_login: datetime | None
+    avatar_url: str | None = None
+    last_login: datetime | None = None
+
+
+class UserPublic(BaseModel):
+    id: int
+    display_name: str
+    avatar_url: str | None = None
 
 
 class GoogleLoginPayload(BaseModel):

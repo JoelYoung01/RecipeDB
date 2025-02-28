@@ -10,6 +10,8 @@ type IngredientForm = Partial<IngredientCreate> & { id?: number };
 const router = useRouter();
 const route = useRoute();
 
+// TODO: Allow users to copy recipes
+
 const defaultIngredient: IngredientForm = {
   id: undefined,
   name: undefined,

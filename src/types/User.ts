@@ -8,3 +8,9 @@ export interface UserResponse {
   avatar_url?: string;
   last_login?: string;
 }
+
+export interface PublicUser {
+  id: number;
+  display_name: string;
+  avatar_url?: string;
+}

@@ -69,6 +69,11 @@ const router = createRouter({
           path: "my-account",
           component: () => import("@/views/UserViews/MyAccount.vue"),
           name: "MyAccount"
+        },
+        {
+          path: "user/:userId(\\d+)",
+          component: () => import("@/views/PublicUser.vue"),
+          name: "PublicUser"
         }
       ]
     },

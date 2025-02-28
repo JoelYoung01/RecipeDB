@@ -25,13 +25,19 @@ unauth_router = APIRouter(
 )
 
 
-@unauth_router.get("/public/")
+@unauth_router.get("/public/", response_model=list[RecipeDetail])
 def get_public_recipes(
-    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100
+    session: SessionDep,
+    user: int = None,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
 ):
-    recipes = session.exec(
-        select(Recipe).where(Recipe.public).offset(offset).limit(limit)
-    ).all()
+    stmt = select(Recipe).where(Recipe.public).offset(offset).limit(limit)
+
+    if user:
+        stmt = stmt.where(Recipe.created_by_id == user)
+
+    recipes = session.exec(stmt).all()
     return recipes
 
 

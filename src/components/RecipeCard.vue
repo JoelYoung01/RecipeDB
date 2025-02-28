@@ -3,7 +3,7 @@ import type { RecipeDetail } from "@/types";
 import defaultImage from "@/assets/default-recipe.jpg";
 
 type SizeOption = "sm" | "md" | "lg";
-type ModeOption = "default" | "public";
+type ModeOption = "default" | "public" | "copy";
 
 interface Props {
   recipe: Partial<RecipeDetail>;
@@ -45,7 +45,7 @@ const imageUrl = computed(() => {
           </template>
         </v-img>
       </v-col>
-      <v-col>
+      <v-col class="d-flex flex-column">
         <div class="text-truncate-2 mb-1 font-weight-bold">{{ recipe.name }}</div>
         <div v-if="size !== 'sm'" class="text-truncate-2 mb-2">{{ recipe.description }}</div>
         <div v-if="mode === 'default'" class="text-disabled d-flex align-center gap-1">
@@ -54,6 +54,17 @@ const imageUrl = computed(() => {
         </div>
         <div v-else-if="mode === 'public'" class="text-disabled created-by">
           Created by {{ recipe.created_by?.display_name ?? "-" }}
+        </div>
+        <div v-else-if="mode === 'copy'" class="mt-2">
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-content-copy"
+            size="small"
+            disabled
+            :to="`/recipe/create?copyExisting=${recipe.id}`"
+          >
+            Copy Recipe
+          </v-btn>
         </div>
       </v-col>
     </v-row>
