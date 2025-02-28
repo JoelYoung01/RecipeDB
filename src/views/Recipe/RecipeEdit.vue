@@ -141,7 +141,14 @@ onMounted(() => {
 <template>
   <v-container>
     <v-form :disabled="loading" @submit.prevent="saveChanges()">
-      <ImageUploadModal v-model="form.cover_image_id" class="mb-3" />
+      <div class="d-flex">
+        <ImageUploadModal v-model="form.cover_image_id" class="mb-3" />
+        <v-spacer />
+
+        <v-btn disabled color="secondary" variant="outlined" prepend-icon="mdi-import">
+          Import
+        </v-btn>
+      </div>
 
       <v-text-field v-model="form.name" variant="solo" :rules="[required]" label="Name" />
       <v-textarea
