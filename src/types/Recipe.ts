@@ -20,6 +20,10 @@ export interface RecipeDetail extends RecipeSlim {
   cover_image?: UploadSlim;
 }
 
+export interface RecipeDashboard extends RecipeSlim {
+  cover_image?: UploadSlim;
+}
+
 export interface RecipeCreate {
   name: string;
   description: string;
