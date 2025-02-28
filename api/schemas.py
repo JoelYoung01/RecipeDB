@@ -42,6 +42,7 @@ class RecipeSlim(BaseModel):
     instructions: str
     notes: str | None = None
     created_on: datetime
+    created_by_id: int
     public: bool
     prep_time: float | None = None
     cover_image_id: int | None = None

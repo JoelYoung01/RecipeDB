@@ -86,7 +86,7 @@ def get_recipe_by_id(
     return recipe
 
 
-@router.get("/search/", response_model=list[RecipeDashboard])
+@router.get("/search/", response_model=list[RecipeDetail])
 def search_recipes(
     searchText: str,
     current_user: CurrentUserDep,

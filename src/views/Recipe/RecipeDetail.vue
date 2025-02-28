@@ -14,6 +14,7 @@ const recipe = ref<RecipeDetail>();
 const deleteModal = ref(false);
 const loading = ref(false);
 
+const owned = computed(() => recipe.value?.created_by.id === sessionStore.currentUser?.id);
 const returnUrl = computed(() => `/home`);
 const imageUrl = computed(() => {
   if (!recipe.value?.cover_image) return defaultImage;
@@ -56,6 +57,8 @@ async function getRecipeDetails() {
 }
 
 async function deleteRecipe() {
+  if (!owned.value) return;
+
   loading.value = true;
   try {
     await del(`/recipe/${route.params.recipeId}/`);
@@ -91,11 +94,19 @@ onMounted(() => {
       />
       <v-spacer />
       <v-btn
-        v-if="recipe.created_by.id === sessionStore.currentUser?.id"
+        v-if="owned"
         icon="mdi-pencil"
         color="primary"
         size="x-small"
         :to="`/recipe/${route.params.recipeId}/edit`"
+      />
+      <v-btn
+        v-else
+        disabled
+        color="secondary"
+        icon="mdi-content-copy"
+        size="x-small"
+        :to="`/recipe/create/?copyExisting=${route.params.recipeId}`"
       />
     </div>
     <v-container class="content pa-5">
@@ -120,11 +131,21 @@ onMounted(() => {
             </v-card>
           </v-col>
         </v-row>
+
+        <div class="credits mt-2">
+          Created by
+          <RouterLink :to="`/user/${recipe.created_by_id}/`">{{
+            recipe.created_by.display_name
+          }}</RouterLink>
+        </div>
       </section>
 
       <section>
         <h4>About Recipe</h4>
         <p>{{ recipe.description }}</p>
+        <p v-if="recipe.public && owned" class="mt-2">
+          This recipe is <span class="font-weight-bold color-primary">public</span>.
+        </p>
       </section>
 
       <section id="ingredients">
@@ -144,7 +165,7 @@ onMounted(() => {
         <pre>{{ recipe.notes }}</pre>
       </section>
 
-      <section class="mt-5">
+      <section v-if="owned" class="mt-5">
         <div class="d-flex">
           <v-btn color="error" size="small" @click="deleteModal = true">Delete Recipe</v-btn>
         </div>
@@ -156,7 +177,7 @@ onMounted(() => {
     <v-progress-circular indeterminate color="primary" size="large" />
   </div>
 
-  <v-dialog v-model="deleteModal">
+  <v-dialog v-if="owned" v-model="deleteModal">
     <v-card>
       <v-card-text>Are you sure you would like to delete this recipe?</v-card-text>
       <v-card-actions>
@@ -223,5 +244,13 @@ pre {
 .loading-container {
   text-align: center;
   margin-top: 10rem;
+}
+
+.color-primary {
+  color: rgb(var(--v-theme-primary));
+}
+
+.credits {
+  font-size: 0.875rem;
 }
 </style>

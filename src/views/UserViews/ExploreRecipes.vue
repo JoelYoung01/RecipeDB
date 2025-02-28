@@ -47,7 +47,13 @@ async function getResults() {
     <section>
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
-      <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
+      <RecipeCard
+        v-for="recipe in recipes"
+        :key="recipe.id"
+        :recipe="recipe"
+        class="mb-3"
+        mode="public"
+      />
 
       <v-alert
         v-if="!recipes.length && searchText && !loading && searched"

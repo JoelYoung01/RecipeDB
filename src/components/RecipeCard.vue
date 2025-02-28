@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import type { RecipeDashboard } from "@/types";
+import type { RecipeDetail } from "@/types";
 import defaultImage from "@/assets/default-recipe.jpg";
 
 type SizeOption = "sm" | "md" | "lg";
+type ModeOption = "default" | "public";
 
 interface Props {
-  recipe: RecipeDashboard;
+  recipe: Partial<RecipeDetail>;
   size?: SizeOption;
+  mode?: ModeOption;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: "md"
+  size: "md",
+  mode: "default"
 });
 
 const loading = ref(false);
@@ -45,9 +48,12 @@ const imageUrl = computed(() => {
       <v-col>
         <div class="text-truncate-2 mb-1 font-weight-bold">{{ recipe.name }}</div>
         <div v-if="size !== 'sm'" class="text-truncate-2 mb-2">{{ recipe.description }}</div>
-        <div class="text-disabled d-flex align-center gap-1">
+        <div v-if="mode === 'default'" class="text-disabled d-flex align-center gap-1">
           <v-icon icon="mdi-clock" size="small" />
           {{ recipe.prep_time ?? "-" }} minutes
+        </div>
+        <div v-else-if="mode === 'public'" class="text-disabled created-by">
+          Created by {{ recipe.created_by?.display_name ?? "-" }}
         </div>
       </v-col>
     </v-row>
@@ -62,5 +68,9 @@ const imageUrl = computed(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.created-by {
+  font-size: small;
 }
 </style>

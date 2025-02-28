@@ -24,7 +24,14 @@ onMounted(() => getRecipes());
 
 <template>
   <v-container>
-    <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
+    <h1>My Recipes</h1>
+    <RecipeCard
+      v-for="recipe in recipes"
+      :key="recipe.id"
+      :recipe="recipe"
+      size="sm"
+      class="mb-3"
+    />
 
     <div v-if="recipes.length == 0" class="my-3">
       You don't have any recipes added yet!
