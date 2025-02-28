@@ -92,7 +92,17 @@ class PlannedRecipeSlim(BaseModel):
 
 class PlannedRecipeDetail(PlannedRecipeSlim):
     created_by: "UserResponse"
-    recipe: "RecipeSlim"
+    recipe: "RecipeDashboard"
+
+
+class PlannedRecipeCreate(BaseModel):
+    recipe_id: int
+    planned_for: str
+
+
+class PlannedRecipeUpdate(BaseModel):
+    recipe_id: int | None = None
+    planned_for: str | None = None
 
 
 class IngredientSlim(BaseModel):

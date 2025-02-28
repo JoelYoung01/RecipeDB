@@ -11,7 +11,6 @@ from api.schemas import (
     RecipeCreate,
     RecipeDashboard,
     RecipeDetail,
-    RecipeSlim,
     RecipeUpdate,
 )
 
@@ -36,7 +35,7 @@ def get_public_recipes(
     return recipes
 
 
-@router.get("/all/", response_model=list[RecipeSlim])
+@router.get("/all/", response_model=list[RecipeDashboard])
 def get_all_recipes(
     current_user: CurrentUserDep,
     session: SessionDep,
@@ -139,11 +138,11 @@ def create_recipe(
     rec_dict["created_on"] = datetime.now(UTC)
     rec_dict["created_by_id"] = currentUser.id
 
-    db_app_dev = Recipe.model_validate(rec_dict)
-    session.add(db_app_dev)
+    db_recipe = Recipe.model_validate(rec_dict)
+    session.add(db_recipe)
     session.commit()
-    session.refresh(db_app_dev)
-    return db_app_dev
+    session.refresh(db_recipe)
+    return db_recipe
 
 
 @router.put(

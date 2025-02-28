@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import defaultImage from "@/assets/default-recipe.jpg";
+import RecipeCard from "@/components/RecipeCard.vue";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
 import type { RecipeDashboard } from "@/types/Recipe";
-import { get, post } from "@/utils";
+import { del, get, post } from "@/utils";
 import { onMounted } from "vue";
 
 const selectedDate = ref(new Date());
@@ -36,12 +37,15 @@ async function getPlannedRecipes() {
     const date = selectedDate.value;
     const start = new Date(date.getFullYear(), date.getMonth(), 1);
     const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
 
     const response = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
       start: start.toISOString(),
       end: end.toISOString()
     });
     plannedRecipes.value = response;
+    selectedRecipes.value = response.map((p) => p.recipe);
   } catch (error) {
     console.error("Error fetching planned recipes:", error);
   }
@@ -58,19 +62,38 @@ async function getRecipes() {
 async function assignRecipe() {
   if (!selectedRecipes.value.length) return;
 
+  const existing = plannedRecipes.value.map((p) => p.recipe.id);
+  const selected = selectedRecipes.value.map((r) => r.id);
+  const added = selected.filter((id) => !existing.includes(id));
+  const removed = plannedRecipes.value.filter(
+    (pr) => !selectedRecipes.value.some((r) => r.id === pr.recipe.id)
+  );
+
   try {
-    const promises = selectedRecipes.value.map((sr) =>
-      post("/planned-recipe/", {
-        recipe_id: sr.id,
-        planned_for: selectedDate.value.toISOString()
-      })
-    );
+    const promises = [
+      ...added.map((id) =>
+        post("/planned-recipe/", {
+          recipe_id: id,
+          planned_for: selectedDate.value.toISOString()
+        })
+      ),
+      ...removed.map((pr) => del(`/planned-recipe/${pr.id}/`))
+    ];
     await Promise.all(promises);
     await getPlannedRecipes();
     showRecipeDialog.value = false;
-    selectedRecipes.value = [];
   } catch (error) {
     console.error("Error assigning recipe:", error);
+  }
+}
+
+async function removePlanned(planned: PlannedRecipeDetail) {
+  if (!planned) return;
+  try {
+    await del(`/planned-recipe/${planned.id}/`);
+    await getPlannedRecipes();
+  } catch (er) {
+    console.error(er);
   }
 }
 
@@ -94,26 +117,32 @@ onMounted(() => {
 <template>
   <h3 class="mt-2 mx-3 text-h4 mb-0">Meal Planning</h3>
 
-  <v-date-picker v-model="selectedDate" show-adjacent-months hide-header class="w-100" />
+  <v-date-picker
+    v-model="selectedDate"
+    show-adjacent-months
+    hide-header
+    weeks-in-month="dynamic"
+    class="w-100"
+  />
 
   <v-card class="mx-2">
     <v-card-title> Selected Date: {{ formattedSelectedDate }} </v-card-title>
-    <v-card-text>
+    <v-card-text class="pb-0">
       <div v-if="currentPlannedRecipes.length">
-        <h3>Planned Recipe(s):</h3>
-        <v-card
-          v-for="planned in currentPlannedRecipes"
-          :key="planned.id"
-          variant="outlined"
-          class="mt-2"
-        >
-          <v-card-title>
-            {{ planned.recipe.name }}
-          </v-card-title>
-          <v-card-text>
-            {{ planned.recipe.description }}
-          </v-card-text>
-        </v-card>
+        <h3 class="mb-1">Planned Recipe(s):</h3>
+        <v-row v-for="planned in currentPlannedRecipes" :key="planned.id" dense>
+          <v-col>
+            <RecipeCard :recipe="planned.recipe" size="sm" class="mb-1" />
+          </v-col>
+          <v-col cols="auto">
+            <v-btn
+              icon="mdi-delete"
+              variant="text"
+              color="error"
+              @click.stop="removePlanned(planned)"
+            />
+          </v-col>
+        </v-row>
       </div>
       <div v-else>
         <p>No recipes planned for this date</p>
@@ -121,7 +150,7 @@ onMounted(() => {
     </v-card-text>
     <v-card-actions>
       <v-btn color="primary" @click="showRecipeDialog = true">
-        {{ currentPlannedRecipes.length ? "Change Recipe" : "Add Recipe" }}
+        {{ currentPlannedRecipes.length ? "Change Recipes" : "Add Recipes" }}
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -159,7 +188,7 @@ onMounted(() => {
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="primary" :disabled="!selectedRecipes.length" @click="assignRecipe">
-          Assign Recipe
+          Assign Recipes
         </v-btn>
         <v-btn color="error" @click="showRecipeDialog = false">Cancel</v-btn>
       </v-card-actions>

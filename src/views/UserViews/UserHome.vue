@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import RecipeCard from "@/components/RecipeCard.vue";
-import type { RecipeSlim } from "@/types";
+import type { PlannedRecipeDetail, RecipeDashboard } from "@/types";
 import { get, post } from "@/utils";
 import { onMounted } from "vue";
 
 const loading = ref(true);
-const todayRecipes = ref<RecipeSlim[]>([]);
-const recentRecipes = ref<RecipeSlim[]>([]);
+const todayRecipes = ref<PlannedRecipeDetail[]>([]);
+const recentRecipes = ref<RecipeDashboard[]>([]);
 
 async function getTodaysRecipes() {
   try {
@@ -39,7 +39,12 @@ onMounted(async () => {
   <v-container>
     <section>
       <h2>Today's Menu</h2>
-      <RecipeCard v-for="recipe in todayRecipes" :key="recipe.id" :recipe="recipe" class="mb-3" />
+      <RecipeCard
+        v-for="planned in todayRecipes"
+        :key="planned.id"
+        :recipe="planned.recipe"
+        class="mb-3"
+      />
 
       <div v-if="loading" class="d-flex justify-center">
         <v-progress-circular indeterminate color="primary" />

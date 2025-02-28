@@ -1,22 +1,26 @@
 <script setup lang="ts">
-import type { UploadSlim, RecipeSlim } from "@/types";
+import type { RecipeDashboard } from "@/types";
 import defaultImage from "@/assets/default-recipe.jpg";
-import { get } from "@/utils";
+
+type SizeOption = "sm" | "md" | "lg";
 
 interface Props {
-  recipe: RecipeSlim;
+  recipe: RecipeDashboard;
+  size?: SizeOption;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  size: "md"
+});
 
 const loading = ref(false);
-const upload = ref<UploadSlim>();
 
+const imageCols = computed(() => ({ sm: 3, md: 5, lg: 6 })[props.size]);
 const imageUrl = computed(() => {
   if (loading.value) return "";
-  if (!upload.value) return defaultImage;
+  if (!props.recipe.cover_image?.url) return defaultImage;
 
-  let url = upload.value.url;
+  let url = props.recipe.cover_image.url;
 
   if (import.meta.env.DEV) {
     url = `http://localhost:8000${url}`;
@@ -24,27 +28,13 @@ const imageUrl = computed(() => {
 
   return url;
 });
-
-async function getImageDetails() {
-  if (!props.recipe.cover_image_id) return;
-
-  loading.value = true;
-  try {
-    upload.value = await get(`/upload/${props.recipe.cover_image_id}/`);
-  } catch (er) {
-    console.error(er);
-  }
-  loading.value = false;
-}
-
-watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true });
 </script>
 
 <template>
-  <v-card :to="`/recipe/${recipe.id}/detail`">
-    <v-row>
-      <v-col cols="5">
-        <v-img :src="imageUrl" cover aspect-ratio="1">
+  <v-card :to="`/recipe/${recipe.id}/detail`" flat>
+    <v-row dense>
+      <v-col :cols="imageCols">
+        <v-img :src="imageUrl" cover aspect-ratio="1" class="rounded">
           <template #placeholder>
             <v-row class="fill-height ma-0" align="center" justify="center">
               <v-progress-circular indeterminate color="primary" />
@@ -53,7 +43,8 @@ watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true });
         </v-img>
       </v-col>
       <v-col>
-        <div class="my-2">{{ recipe.name }}</div>
+        <div class="text-truncate-2 mb-1 font-weight-bold">{{ recipe.name }}</div>
+        <div v-if="size !== 'sm'" class="text-truncate-2 mb-2">{{ recipe.description }}</div>
         <div class="text-disabled d-flex align-center gap-1">
           <v-icon icon="mdi-clock" size="small" />
           {{ recipe.prep_time ?? "-" }} minutes
@@ -63,4 +54,13 @@ watch(() => props.recipe.cover_image_id, getImageDetails, { immediate: true });
   </v-card>
 </template>
 
-<style scoped></style>
+<style scoped>
+.text-truncate-2 {
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
