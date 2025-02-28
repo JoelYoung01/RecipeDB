@@ -9,7 +9,14 @@ class UserResponse(BaseModel):
     display_name: str
     admin: bool
     disabled: bool
-    avatar_url: str | None
+    avatar_url: str | None = None
+    last_login: datetime | None = None
+
+
+class UserPublic(BaseModel):
+    id: int
+    display_name: str
+    avatar_url: str | None = None
 
 
 class GoogleLoginPayload(BaseModel):
@@ -41,6 +48,7 @@ class RecipeSlim(BaseModel):
     instructions: str
     notes: str | None = None
     created_on: datetime
+    created_by_id: int
     public: bool
     prep_time: float | None = None
     cover_image_id: int | None = None
@@ -49,6 +57,10 @@ class RecipeSlim(BaseModel):
 class RecipeDetail(RecipeSlim):
     created_by: "UserResponse"
     ingredients: list["IngredientDetail"]
+    cover_image: UploadFileResponse | None
+
+
+class RecipeDashboard(RecipeSlim):
     cover_image: UploadFileResponse | None
 
 
@@ -87,7 +99,17 @@ class PlannedRecipeSlim(BaseModel):
 
 class PlannedRecipeDetail(PlannedRecipeSlim):
     created_by: "UserResponse"
-    recipe: "RecipeSlim"
+    recipe: "RecipeDashboard"
+
+
+class PlannedRecipeCreate(BaseModel):
+    recipe_id: int
+    planned_for: str
+
+
+class PlannedRecipeUpdate(BaseModel):
+    recipe_id: int | None = None
+    planned_for: str | None = None
 
 
 class IngredientSlim(BaseModel):
@@ -115,3 +137,7 @@ class IngredientUpdate(BaseModel):
     amount: float | None = None
     units: str | None = None
     details: str | None = None
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = None

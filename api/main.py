@@ -11,6 +11,7 @@ from api.routes import (
     recipe_routes,
     auth_routes,
     upload_routes,
+    user_routes,
 )
 
 
@@ -34,6 +35,7 @@ api_router.include_router(auth_routes.router)
 api_router.include_router(planned_recipe_routes.router)
 api_router.include_router(ingredient_routes.router)
 api_router.include_router(upload_routes.router)
+api_router.include_router(user_routes.router)
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

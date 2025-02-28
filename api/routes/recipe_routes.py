@@ -2,12 +2,17 @@ from datetime import UTC, datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import update
-from sqlmodel import or_, select
+from sqlmodel import and_, or_, select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models import Recipe
-from api.schemas import RecipeCreate, RecipeDetail, RecipeSlim, RecipeUpdate
+from api.models import Recipe, Ingredient
+from api.schemas import (
+    RecipeCreate,
+    RecipeDashboard,
+    RecipeDetail,
+    RecipeUpdate,
+)
 
 router = APIRouter(
     prefix="/recipe",
@@ -20,17 +25,23 @@ unauth_router = APIRouter(
 )
 
 
-@unauth_router.get("/public/")
+@unauth_router.get("/public/", response_model=list[RecipeDetail])
 def get_public_recipes(
-    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100
+    session: SessionDep,
+    user: int = None,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
 ):
-    recipes = session.exec(
-        select(Recipe).where(Recipe.public).offset(offset).limit(limit)
-    ).all()
+    stmt = select(Recipe).where(Recipe.public).offset(offset).limit(limit)
+
+    if user:
+        stmt = stmt.where(Recipe.created_by_id == user)
+
+    recipes = session.exec(stmt).all()
     return recipes
 
 
-@router.get("/all/", response_model=list[RecipeSlim])
+@router.get("/all/", response_model=list[RecipeDashboard])
 def get_all_recipes(
     current_user: CurrentUserDep,
     session: SessionDep,
@@ -46,7 +57,7 @@ def get_all_recipes(
     return recipes
 
 
-@router.get("/user/", response_model=list[RecipeSlim])
+@router.get("/user/", response_model=list[RecipeDashboard])
 def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe).where(Recipe.created_by == current_user)
@@ -54,7 +65,7 @@ def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
     return recipes
 
 
-@router.get("/user/recent/", response_model=list[RecipeSlim])
+@router.get("/user/recent/", response_model=list[RecipeDashboard])
 def get_users_recently_added_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe)
@@ -81,6 +92,47 @@ def get_recipe_by_id(
     return recipe
 
 
+@router.get("/search/", response_model=list[RecipeDetail])
+def search_recipes(
+    searchText: str,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    offset=0,
+    limit: Annotated[int, Query(le=100)] = 100,
+):
+    if not searchText:
+        recipes = session.exec(select(Recipe).where(Recipe.public).limit(25)).all()
+        return recipes
+
+    query = (
+        select(Recipe)
+        .distinct()
+        .join(Recipe.ingredients, isouter=True)
+        .where(
+            and_(
+                or_(Recipe.public, Recipe.created_by == current_user),
+                or_(
+                    Recipe.name.ilike(f"%{searchText}%"),
+                    Recipe.description.ilike(f"%{searchText}%"),
+                    Recipe.instructions.ilike(f"%{searchText}%"),
+                    Recipe.notes.ilike(f"%{searchText}%"),
+                    Recipe.ingredients.any(
+                        or_(
+                            Ingredient.name.ilike(f"%{searchText}%"),
+                            Ingredient.details.ilike(f"%{searchText}%"),
+                        )
+                    ),
+                ),
+            )
+        )
+        .offset(offset)
+        .limit(limit)
+    )
+
+    recipes = session.exec(query).all()
+    return recipes
+
+
 @router.post(
     "/",
     response_model=RecipeDetail,
@@ -92,11 +144,11 @@ def create_recipe(
     rec_dict["created_on"] = datetime.now(UTC)
     rec_dict["created_by_id"] = currentUser.id
 
-    db_app_dev = Recipe.model_validate(rec_dict)
-    session.add(db_app_dev)
+    db_recipe = Recipe.model_validate(rec_dict)
+    session.add(db_recipe)
     session.commit()
-    session.refresh(db_app_dev)
-    return db_app_dev
+    session.refresh(db_recipe)
+    return db_recipe
 
 
 @router.put(

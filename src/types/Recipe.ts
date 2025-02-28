@@ -9,6 +9,7 @@ export interface RecipeSlim {
   instructions: string;
   notes?: string;
   created_on: string;
+  created_by_id: number;
   public: boolean;
   prep_time?: number;
   cover_image_id?: number;
@@ -17,6 +18,10 @@ export interface RecipeSlim {
 export interface RecipeDetail extends RecipeSlim {
   created_by: UserResponse;
   ingredients: IngredientSlim[];
+  cover_image?: UploadSlim;
+}
+
+export interface RecipeDashboard extends RecipeSlim {
   cover_image?: UploadSlim;
 }
 

@@ -30,15 +30,21 @@ watch(
 </script>
 
 <template>
-  <template v-if="sessionStore.loading">
-    <h2 class="mt-5 text-center">Logging you in...</h2>
-    <div class="d-flex justify-center mt-3">
-      <v-progress-circular color="primary" indeterminate />
-    </div>
-  </template>
-  <div v-else class="d-flex mt-10 justify-center">
-    <GoogleLoginButton />
-  </div>
+  <v-container>
+    <template v-if="sessionStore.loading">
+      <h2 class="mt-5 text-center">Logging you in...</h2>
+      <div class="d-flex justify-center mt-3">
+        <v-progress-circular color="primary" indeterminate />
+      </div>
+    </template>
+    <template v-else>
+      <h1 class="mt-5 text-center">Welcome!</h1>
+      <h3 class="text-center">Sign in to use the app</h3>
+      <div class="d-flex mt-10 justify-center">
+        <GoogleLoginButton />
+      </div>
+    </template>
+  </v-container>
 </template>
 
 <style scoped></style>
