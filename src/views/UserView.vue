@@ -1,4 +1,8 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useRoute } from "vue-router";
+
+const route = useRoute();
+</script>
 
 <template>
   <RouterView />
@@ -14,7 +18,12 @@
         <v-menu activator="parent">
           <v-list density="compact">
             <v-list-item prepend-icon="mdi-account" to="/my-account"> My Account </v-list-item>
-            <v-list-item to="/add-recipe" prepend-icon="mdi-plus-box"> Add Recipe </v-list-item>
+            <v-list-item
+              :to="`/add-recipe?returnUrl=${route.fullPath}`"
+              prepend-icon="mdi-plus-box"
+            >
+              Add Recipe
+            </v-list-item>
           </v-list>
         </v-menu>
       </v-btn>

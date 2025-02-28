@@ -15,7 +15,16 @@ const deleteModal = ref(false);
 const loading = ref(false);
 
 const owned = computed(() => recipe.value?.created_by.id === sessionStore.currentUser?.id);
-const returnUrl = computed(() => `/home`);
+const returnUrl = computed(() => {
+  let param;
+  if (Array.isArray(route.query.returnUrl)) {
+    param = route.query.returnUrl.at(-1);
+  } else {
+    param = route.query.returnUrl;
+  }
+
+  return param || "/home";
+});
 const imageUrl = computed(() => {
   if (!recipe.value?.cover_image) return defaultImage;
 
@@ -98,7 +107,7 @@ onMounted(() => {
         icon="mdi-pencil"
         color="primary"
         size="x-small"
-        :to="`/recipe/${route.params.recipeId}/edit`"
+        :to="`/recipe/${route.params.recipeId}/edit?detailReturnUrl=${returnUrl}`"
       />
       <v-btn
         v-else

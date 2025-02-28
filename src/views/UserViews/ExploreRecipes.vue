@@ -76,6 +76,6 @@ watch(searchText, () => (searched.value = false));
 
 <style scoped>
 section {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 </style>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { RecipeDetail } from "@/types";
 import defaultImage from "@/assets/default-recipe.jpg";
+import { useSessionStore } from "@/stores/session";
+import { useRoute } from "vue-router";
 
 type SizeOption = "sm" | "md" | "lg";
 type ModeOption = "default" | "public" | "copy";
@@ -16,9 +18,16 @@ const props = withDefaults(defineProps<Props>(), {
   mode: "default"
 });
 
+const route = useRoute();
+const sessionStore = useSessionStore();
 const loading = ref(false);
 
 const imageCols = computed(() => ({ sm: 3, md: 5, lg: 6 })[props.size]);
+const createdBy = computed(() =>
+  sessionStore.currentUser?.id === props.recipe.created_by_id
+    ? "You"
+    : props.recipe.created_by?.display_name || "-"
+);
 const imageUrl = computed(() => {
   if (loading.value) return "";
   if (!props.recipe.cover_image?.url) return defaultImage;
@@ -34,7 +43,7 @@ const imageUrl = computed(() => {
 </script>
 
 <template>
-  <v-card :to="`/recipe/${recipe.id}/detail`" flat>
+  <v-card :to="`/recipe/${recipe.id}/detail?returnUrl=${route.fullPath}`" flat>
     <v-row dense>
       <v-col :cols="imageCols">
         <v-img :src="imageUrl" cover aspect-ratio="1" class="rounded">
@@ -53,7 +62,7 @@ const imageUrl = computed(() => {
           {{ recipe.prep_time ?? "-" }} minutes
         </div>
         <div v-else-if="mode === 'public'" class="text-disabled created-by">
-          Created by {{ recipe.created_by?.display_name ?? "-" }}
+          Created by {{ createdBy }}
         </div>
         <div v-else-if="mode === 'copy'" class="mt-2">
           <v-btn

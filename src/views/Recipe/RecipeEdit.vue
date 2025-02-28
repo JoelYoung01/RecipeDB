@@ -36,7 +36,23 @@ const form = reactive<Partial<RecipeCreate>>({
 const ingredientForms = reactive<IngredientForm[]>([]);
 
 const creating = computed(() => route.params.recipeId === undefined);
-const backPath = computed(() => `/home`);
+const returnUrl = computed(() => {
+  const param = Array.isArray(route.query.returnUrl)
+    ? route.query.returnUrl.at(-1)
+    : route.query.returnUrl;
+  if (param) return param;
+
+  if (creating.value) return "/home";
+
+  const detailParam = Array.isArray(route.query.detailReturnUrl)
+    ? route.query.detailReturnUrl.at(-1)
+    : route.query.detailReturnUrl;
+
+  let returnUrl = `/recipe/${route.params.recipeId}/detail`;
+  if (detailParam) returnUrl += `?returnUrl=${detailParam}`;
+
+  return returnUrl;
+});
 const validForm = computed(
   () =>
     form.name &&
@@ -82,7 +98,7 @@ async function saveChanges() {
 
     await saveIngredients(recipeId);
 
-    router.push(`/recipe/${recipeId}/detail`);
+    router.push(returnUrl.value);
   } catch (er) {
     console.error(er);
   }
@@ -240,7 +256,7 @@ onMounted(() => {
     <div class="actions-spacer"></div>
 
     <div class="actions d-flex gap-2">
-      <v-btn variant="tonal" :to="backPath" :disabled="saving">Cancel</v-btn>
+      <v-btn variant="tonal" :to="returnUrl" :disabled="saving">Cancel</v-btn>
       <v-btn color="success" :loading="saving" :disabled="!canSave" @click="saveChanges()">
         Save
       </v-btn>
