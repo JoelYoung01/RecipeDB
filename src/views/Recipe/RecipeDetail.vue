@@ -110,13 +110,19 @@ onMounted(() => {
       />
     </div>
     <v-container class="content pa-5">
-      <div class="d-flex align-center mb-2">
+      <div class="d-flex align-center">
         <h3>{{ recipe.name }}</h3>
         <v-spacer />
         <v-btn size="small" color="primary" @click="scrollToIngredients"> Cook Now </v-btn>
       </div>
+      <div v-if="!owned" class="credits mb-2">
+        Created by
+        <RouterLink :to="`/user/${recipe.created_by_id}/`">{{
+          recipe.created_by.display_name
+        }}</RouterLink>
+      </div>
 
-      <section>
+      <section class="mt-2">
         <v-row>
           <v-col>
             <v-card class="h-100 text-center text-body-2 pa-2">
@@ -131,13 +137,6 @@ onMounted(() => {
             </v-card>
           </v-col>
         </v-row>
-
-        <div class="credits mt-2">
-          Created by
-          <RouterLink :to="`/user/${recipe.created_by_id}/`">{{
-            recipe.created_by.display_name
-          }}</RouterLink>
-        </div>
       </section>
 
       <section>
