@@ -51,7 +51,7 @@ async function updateDisplayName() {
           alt="User Avatar"
           aspect-ratio="1"
           cover
-          round
+          rounded="circle"
         >
           <template #placeholder>
             <v-img :src="defaultUser" />
@@ -143,6 +143,6 @@ section {
 }
 
 .profile-image-container > * {
-  flex: 30% 0 0;
+  flex: 40% 0 0;
 }
 </style>
