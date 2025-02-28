@@ -43,10 +43,14 @@
     {
       "label": "fastapi: dev",
       "type": "shell",
-      "command": "venv/Scripts/fastapi.exe",
+      "command": "venv/Scripts/uvicorn.exe",
       "args": [
-        "dev",
-        "api/main.py"
+        "--reload",
+        "api.main:app",
+        "--reload-dir",
+        "api",
+        "--reload-dir",
+        "venv",
       ],
       "options": {
         "cwd": "${workspaceFolder}"
