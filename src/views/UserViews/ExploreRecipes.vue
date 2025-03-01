@@ -48,6 +48,7 @@ watch(searchText, () => (searched.value = false));
         v-if="!recipes.length && !searchText && !loading && !searched"
         type="info"
         variant="tonal"
+        color="secondary"
         class="mt-2"
       >
         Search Recipes by entering text in the search bar above!
@@ -56,6 +57,7 @@ watch(searchText, () => (searched.value = false));
         v-else-if="!recipes.length && searchText && !loading && searched"
         type="info"
         variant="tonal"
+        color="secondary"
         class="mt-2"
       >
         No recipes found matching your search.
