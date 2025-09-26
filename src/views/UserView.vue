@@ -8,7 +8,7 @@ const route = useRoute();
   <RouterView />
 
   <v-app-bar location="bottom" dense color="primary" :elevation="2">
-    <div class="flex-grow-1 d-flex justify-space-around">
+    <div class="flex-grow-1 d-flex justify-space-around max-width-480">
       <v-btn variant="text" icon="mdi-home" to="/home" />
       <v-btn variant="text" icon="mdi-magnify" to="/discover" />
       <v-btn variant="text" icon="mdi-notebook" to="/my-recipes" />
@@ -31,4 +31,9 @@ const route = useRoute();
   </v-app-bar>
 </template>
 
-<style scoped></style>
+<style scoped>
+.max-width-480 {
+  max-width: 480px;
+  margin: 0 auto;
+}
+</style>

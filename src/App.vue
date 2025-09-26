@@ -26,4 +26,9 @@ const mainClassList = computed(() => {
 .shaded-bg {
   background-color: whitesmoke;
 }
+
+main {
+  max-width: 480px;
+  margin: 0 auto;
+}
 </style>
