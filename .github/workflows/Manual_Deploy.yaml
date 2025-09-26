@@ -21,7 +21,7 @@ jobs:
     needs: BuildApp
     uses: JoelYoung01/Templates/.github/workflows/DeployWebhook.yaml@v0.1.2
     with:
-      app_name: Atmosphyr
+      app_name: RecipeDB
     secrets:
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
       WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
