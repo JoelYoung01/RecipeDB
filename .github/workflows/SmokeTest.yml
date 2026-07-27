@@ -1,0 +1,81 @@
+name: Smoke Test Deployed App
+
+on:
+  workflow_call:
+    inputs:
+      expected_version:
+        description: "Git SHA expected from /api/health/"
+        required: true
+        type: string
+      timeout_seconds:
+        description: "How long to wait for the expected version"
+        required: false
+        type: number
+        default: 180
+      interval_seconds:
+        description: "Seconds between health checks"
+        required: false
+        type: number
+        default: 5
+
+jobs:
+  SmokeTest:
+    name: Verify deployed health version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poll health endpoint for expected version
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
+          INTERVAL_SECONDS: ${{ inputs.interval_seconds }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ]; then
+            echo "APP_URL repository variable is not set."
+            echo "Set vars.APP_URL to the deployed app origin (e.g. https://recipes.example.com)."
+            exit 1
+          fi
+
+          HEALTH_URL="${APP_URL%/}/api/health/"
+          echo "Smoke testing ${HEALTH_URL}"
+          echo "Expecting version: ${EXPECTED_VERSION}"
+          echo "Timeout: ${TIMEOUT_SECONDS}s (interval ${INTERVAL_SECONDS}s)"
+
+          deadline=$((SECONDS + TIMEOUT_SECONDS))
+          last_body=""
+          last_code="000"
+
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            set +e
+            response="$(curl -sS -w '\n%{http_code}' --max-time 10 "${HEALTH_URL}" 2>&1)"
+            curl_status=$?
+            set -e
+
+            if [ "${curl_status}" -eq 0 ]; then
+              last_code="$(printf '%s' "${response}" | tail -n 1)"
+              last_body="$(printf '%s' "${response}" | sed '$d')"
+
+              if [ "${last_code}" = "200" ]; then
+                deployed_version="$(printf '%s' "${last_body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null || true)"
+                echo "HTTP 200 — version=${deployed_version:-<missing>}"
+
+                if [ "${deployed_version}" = "${EXPECTED_VERSION}" ]; then
+                  echo "Smoke test passed: deployed version matches ${EXPECTED_VERSION}"
+                  exit 0
+                fi
+              else
+                echo "HTTP ${last_code} — body: ${last_body}"
+              fi
+            else
+              echo "Request failed: ${response}"
+            fi
+
+            sleep "${INTERVAL_SECONDS}"
+          done
+
+          echo "Smoke test failed: did not observe version ${EXPECTED_VERSION} within ${TIMEOUT_SECONDS}s"
+          echo "Last HTTP status: ${last_code}"
+          echo "Last body: ${last_body}"
+          exit 1

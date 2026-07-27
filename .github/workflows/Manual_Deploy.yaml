@@ -25,3 +25,9 @@ jobs:
     secrets:
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
       WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+
+  SmokeTest:
+    needs: DeployApp
+    uses: ./.github/workflows/SmokeTest.yml
+    with:
+      expected_version: ${{ github.sha }}

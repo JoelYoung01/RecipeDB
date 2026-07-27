@@ -8,6 +8,9 @@ VITE_APP_TITLE=RecipeDB
 # Api Url
 VITE_API_URL=http://localhost:8000/api
 
+# Deployed app origin used by post-deploy smoke tests (no trailing path)
+# APP_URL=https://your-app.example.com
+
 # Google Auth
 VITE_GOOGLE_CLIENT_ID=
 

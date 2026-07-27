@@ -2,6 +2,11 @@ from datetime import datetime
 from pydantic import BaseModel, computed_field
 
 
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
