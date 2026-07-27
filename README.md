@@ -32,35 +32,29 @@ git push -u origin main
 
 ### Step 2 - Setup Environment
 
-Copy `.envtemplate` to a new file, `.env`, and fill out applicable values
+Copy `.envtemplate` to a new file, `.env`, and fill out applicable values.
 
-Setup the backend by creating a venv.
+The backend uses [uv](https://docs.astral.sh/uv/) to manage its Python environment. Install it (see the [uv install docs](https://docs.astral.sh/uv/getting-started/installation/)):
 
 ```bash
-# Add venv
-py -m venv venv
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
-
-When using VSCode, you should have the option to set this venv as your default python interpreter. If the option did not pop up, you can set this opening the cmd palette `Ctrl` + `Shift` + `P` and typing `Python: Select Interpreter` or something similar.
-
-> When setting your venv python as your default interpreter, you will have to reload VSCode before your terminals switch to using that python instance.
-
-Once your venv is active, `echo $env:VIRTUAL_ENV` should return your venv's path.
 
 ### Step 3 - Install Dependencies
 
-Install dependencies
-
 ```bash
-# Install Vite Deps
+# Install Vite deps
 pnpm i
 
-# Activate venv (only if not already active)
-./venv/Scripts/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
+# Create the virtual environment (.venv) and install Python deps from uv.lock
+uv sync
 ```
+
+`uv sync` reads `pyproject.toml` / `uv.lock` and creates a `.venv` in the project root. When using VSCode, select `.venv` as your Python interpreter (`Ctrl` + `Shift` + `P` -> `Python: Select Interpreter`).
 
 ### Run / Build / Deploy
 
@@ -70,8 +64,8 @@ pip install -r requirements.txt
 # Run Vite Dev Server
 pnpm dev
 
-# Run FastAPI Dev Server
-fastapi dev api/main.py
+# Run FastAPI Dev Server (uv run uses the project's .venv)
+uv run fastapi dev api/main.py
 ```
 
 #### Type-Check, Compile and Minify for Production

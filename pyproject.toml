@@ -1,3 +1,30 @@
+[project]
+name = "recipe-db"
+version = "0.0.1"
+description = "RecipeDB - FastAPI backend"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic==1.14.1",
+    "fastapi[standard]==0.115.6",
+    "google-auth==2.38.0",
+    "pydantic-settings==2.7.0",
+    "pyjwt==2.10.1",
+    "requests==2.32.3",
+    "sqlalchemy==2.0.36",
+    "sqlmodel==0.0.22",
+]
+
+[dependency-groups]
+dev = [
+    "black==24.10.0",
+    "flake8==7.1.1",
+    "isort==5.13.2",
+]
+
+[tool.uv]
+# This is a runnable application, not an installable package.
+package = false
+
 [tool.black]
 line-length = 88
 target-version = ['py38']

@@ -1,15 +1,17 @@
 FROM python:3.12-slim
 
+# Install uv (copy the static binary from the official image)
+COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /bin/
+
 WORKDIR /app
 
-# Setup system deps
-RUN apt-get update && apt-get install -y \
-  build-essential \
-  && rm -rf /var/lib/apt/lists/*
+# Compile bytecode and copy (rather than link) packages into the environment
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
-# Setup python
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install python dependencies from the lockfile (runtime only, no dev group)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 COPY dist ./dist
 COPY api ./api
@@ -22,4 +24,4 @@ VOLUME /app/data
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
