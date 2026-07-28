@@ -5,7 +5,7 @@ Detailed setup, run, and testing notes for Cursor Cloud agents working in this r
 This is a single repo containing two services that run together in development:
 
 - Backend: FastAPI app in `api/` (entry `api/main.py`), SQLite database (no external DB needed), migrations via Alembic. Python deps are managed with `uv` (`pyproject.toml` + `uv.lock`); `uv sync` creates a `.venv` in the repo root. Run backend commands with `uv run ...` (no manual venv activation needed).
-- Frontend: Vue 3 + Vite + Vuetify SPA in `src/` (dev server on port 5173).
+- Frontend: Vue 3 + Vite + Tailwind CSS + shadcn-vue SPA in `src/` (dev server on port 5173). See `DESIGN.md` and `SITE_MAP.md` for UI/routing.
 
 Standard commands live in `README.md`, `package.json`, and `pyproject.toml`. Below are only the non-obvious caveats.
 

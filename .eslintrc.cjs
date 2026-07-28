@@ -5,7 +5,6 @@ module.exports = {
   root: true,
   extends: [
     "plugin:vue/vue3-recommended",
-    "plugin:vuetify/recommended",
     "eslint:recommended",
     "@vue/eslint-config-typescript",
     "@vue/eslint-config-prettier/skip-formatting"
@@ -14,6 +13,7 @@ module.exports = {
     ecmaVersion: "latest"
   },
   rules: {
-    "prettier/prettier": "warn"
+    "prettier/prettier": "warn",
+    "vue/multi-word-component-names": "off"
   }
 };

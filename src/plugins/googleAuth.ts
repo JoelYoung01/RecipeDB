@@ -1,5 +1,6 @@
 import { loginWithGoogle } from "@/utils";
 import type { InjectionKey, Ref } from "vue";
+import { ref } from "vue";
 
 export const googleAccountsLoadedKey = Symbol() as InjectionKey<Ref<boolean>>;
 

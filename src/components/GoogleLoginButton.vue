@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { inject, nextTick, useTemplateRef } from "vue";
 import { googleAccountsLoadedKey } from "@/plugins/googleAuth";
+import { inject, nextTick, useTemplateRef, watch } from "vue";
 
 const loaded = inject(googleAccountsLoadedKey, ref(false));
 const button = useTemplateRef<HTMLDivElement>("button");
@@ -12,10 +12,11 @@ function render() {
 
   google.accounts.id.renderButton(button.value, {
     type: "standard",
-    theme: "outline",
+    theme: "filled_black",
     size: "large",
-    text: "signin",
-    shape: "rectangular"
+    text: "signin_with",
+    shape: "rectangular",
+    width: 280
   });
 }
 
@@ -31,5 +32,5 @@ watch(
 </script>
 
 <template>
-  <div ref="button"></div>
+  <div ref="button" class="flex justify-center"></div>
 </template>

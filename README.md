@@ -1,6 +1,6 @@
 # Vue + FastAPI Template
 
-This template should help get you started developing with a static Vue 3 web application built with Vite and styled with Vuetify.
+This template should help get you started developing with a static Vue 3 web application built with Vite and styled with Tailwind CSS + shadcn-vue. See `DESIGN.md` and `SITE_MAP.md` for the UI system and routes.
 
 ## Recommended IDE Setup
 

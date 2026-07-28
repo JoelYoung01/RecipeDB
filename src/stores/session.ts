@@ -1,8 +1,8 @@
-import { inject, ref } from "vue";
-import { defineStore } from "pinia";
-import { AuthLoginEvent, checkSessionToken } from "@/utils";
 import { googleAccountsLoadedKey } from "@/plugins/googleAuth";
 import type { UserResponse } from "@/types/User";
+import { AuthLoginEvent, checkSessionToken } from "@/utils";
+import { defineStore } from "pinia";
+import { inject, ref, watch } from "vue";
 
 export const TOKEN_STORAGE_KEY = "access_token";
 

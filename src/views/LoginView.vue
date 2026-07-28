@@ -1,50 +1,45 @@
 <script setup lang="ts">
 import GoogleLoginButton from "@/components/GoogleLoginButton.vue";
+import chefHat from "@/assets/chef-hat.png";
 import { useSessionStore } from "@/stores/session";
+import { paths } from "@/sitemap";
+import { watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const sessionStore = useSessionStore();
-const router = useRouter();
+const session = useSessionStore();
 const route = useRoute();
-
-// TODO: Add support for when login fails
+const router = useRouter();
+const appTitle = import.meta.env.VITE_APP_TITLE;
 
 watch(
-  () => sessionStore.currentUser,
-  (value) => {
-    if (!value) return;
-
-    const redirect = Array.isArray(route.query.redirectUrl)
-      ? route.query.redirectUrl[0]
-      : route.query.redirectUrl;
-    if (redirect) {
-      router.push(redirect);
-    } else {
-      router.push("/");
-    }
+  () => session.currentUser,
+  (user) => {
+    if (!user) return;
+    const redirect =
+      typeof route.query.redirectUrl === "string" ? route.query.redirectUrl : paths.home;
+    router.replace(redirect);
   },
-  {
-    immediate: true
-  }
+  { immediate: true }
 );
 </script>
 
 <template>
-  <v-container>
-    <template v-if="sessionStore.loading">
-      <h2 class="mt-5 text-center">Logging you in...</h2>
-      <div class="d-flex justify-center mt-3">
-        <v-progress-circular color="primary" indeterminate />
-      </div>
-    </template>
-    <template v-else>
-      <h1 class="mt-5 text-center">Welcome!</h1>
-      <h3 class="text-center">Sign in to use the app</h3>
-      <div class="d-flex mt-10 justify-center">
-        <GoogleLoginButton />
-      </div>
-    </template>
-  </v-container>
-</template>
+  <div
+    class="flex min-h-dvh flex-col items-center justify-center gap-8 bg-gradient-to-b from-[#111113] via-background to-background px-6"
+  >
+    <div class="flex flex-col items-center gap-3 text-center">
+      <img :src="chefHat" alt="" class="size-20 object-contain" />
+      <h1 class="text-3xl font-bold tracking-tight text-foreground">
+        {{ appTitle }}
+      </h1>
+      <p class="max-w-xs text-sm text-muted-foreground">
+        Save recipes, plan the week, and see what’s for dinner tonight.
+      </p>
+    </div>
 
-<style scoped></style>
+    <div class="flex w-full flex-col items-center gap-3">
+      <GoogleLoginButton />
+      <p class="text-xs text-faint">Sign in with Google to continue</p>
+    </div>
+  </div>
+</template>
