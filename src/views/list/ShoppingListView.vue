@@ -2,26 +2,26 @@
 import SwipeRow from "@/components/grocery/SwipeRow.vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { paths } from "@/sitemap";
-import type { GroceryItem, GroceryListResponse } from "@/types";
-import { get, put } from "@/utils";
+import { useGroceryStore } from "@/stores/grocery";
+import type { GroceryItem } from "@/types";
 import { EyeOff, ShoppingCart } from "@lucide/vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onActivated, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
-const router = useRouter();
+defineOptions({ name: "ShoppingListView" });
 
-const loading = ref(true);
-const error = ref<string | null>(null);
+const router = useRouter();
+const groceryStore = useGroceryStore();
+
 const showDismissed = ref(false);
-const items = ref<GroceryItem[]>([]);
-const windowLabel = ref("");
 
 const visibleItems = computed(() => {
   if (showDismissed.value) {
-    return items.value.filter((i) => !i.deleted);
+    return groceryStore.items.filter((i) => !i.deleted);
   }
-  return items.value.filter((i) => !i.dismissed && !i.deleted);
+  return groceryStore.items.filter((i) => !i.dismissed && !i.deleted);
 });
 
 const grouped = computed(() => {
@@ -37,62 +37,48 @@ const grouped = computed(() => {
   }));
 });
 
-const activeCount = computed(() => items.value.filter((i) => !i.dismissed && !i.deleted).length);
-const dismissedCount = computed(() => items.value.filter((i) => i.dismissed && !i.deleted).length);
+const activeCount = computed(
+  () =>
+    groceryStore.activeCount ?? groceryStore.items.filter((i) => !i.dismissed && !i.deleted).length
+);
+const dismissedCount = computed(
+  () => groceryStore.items.filter((i) => i.dismissed && !i.deleted).length
+);
 
-function formatWindow(startIso: string, endIso: string) {
-  const start = new Date(startIso);
-  const end = new Date(endIso);
+const windowLabel = computed(() => {
+  if (!groceryStore.windowStart || !groceryStore.windowEnd) return "";
+  const start = new Date(groceryStore.windowStart);
+  const end = new Date(groceryStore.windowEnd);
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
-}
+});
 
-async function load() {
-  loading.value = true;
-  error.value = null;
+const showSkeleton = computed(
+  () => groceryStore.loading && groceryStore.items.length === 0 && !groceryStore.error
+);
+
+async function load(force = false) {
   try {
-    const data = await get<GroceryListResponse>("/grocery/");
-    items.value = data.items;
-    windowLabel.value = formatWindow(data.window_start, data.window_end);
-  } catch (er) {
-    console.error(er);
-    error.value = "Couldn’t load your grocery list.";
-  }
-  loading.value = false;
-}
-
-function patchLocal(key: string, patch: Partial<GroceryItem>) {
-  items.value = items.value.map((item) => (item.key === key ? { ...item, ...patch } : item));
-}
-
-async function setStatus(item: GroceryItem, status: "dismissed" | "deleted" | null) {
-  const previous = { dismissed: item.dismissed, deleted: item.deleted };
-  patchLocal(item.key, {
-    dismissed: status === "dismissed",
-    deleted: status === "deleted"
-  });
-  try {
-    await put("/grocery/state/", { item_key: item.key, status });
-  } catch (er) {
-    console.error(er);
-    patchLocal(item.key, previous);
+    await groceryStore.ensureLoaded({ force });
+  } catch {
+    /* store sets error */
   }
 }
 
 function onCheck(item: GroceryItem, checked: boolean | "indeterminate") {
   if (checked === true) {
-    void setStatus(item, "dismissed");
+    void groceryStore.setStatus(item, "dismissed");
   } else {
-    void setStatus(item, null);
+    void groceryStore.setStatus(item, null);
   }
 }
 
 function onDismiss(item: GroceryItem) {
-  void setStatus(item, "dismissed");
+  void groceryStore.setStatus(item, "dismissed");
 }
 
 function onDelete(item: GroceryItem) {
-  void setStatus(item, "deleted");
+  void groceryStore.setStatus(item, "deleted");
 }
 
 function onViewRecipe(item: GroceryItem) {
@@ -104,7 +90,8 @@ function onViewRecipe(item: GroceryItem) {
   });
 }
 
-onMounted(load);
+onMounted(() => load());
+onActivated(() => load());
 </script>
 
 <template>
@@ -130,22 +117,40 @@ onMounted(load);
     </div>
 
     <p
-      v-if="!loading && dismissedCount > 0 && !showDismissed"
+      v-if="!showSkeleton && dismissedCount > 0 && !showDismissed"
       class="mt-2 text-[11.5px] text-faint"
     >
       {{ dismissedCount }} dismissed · {{ activeCount }} remaining
     </p>
 
-    <div v-if="loading" class="mt-10 text-center text-sm text-muted-foreground">
-      Loading grocery list…
+    <div v-if="showSkeleton" class="mt-5 flex flex-col gap-5">
+      <section v-for="n in 3" :key="n" class="flex flex-col gap-2">
+        <Skeleton class="h-3 w-20" />
+        <div class="flex flex-col gap-1.5">
+          <div
+            v-for="m in 3"
+            :key="m"
+            class="flex items-start gap-3 rounded-xl border border-border px-3 py-3"
+          >
+            <Skeleton class="mt-0.5 size-4 rounded" />
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="flex justify-between gap-2">
+                <Skeleton class="h-3.5 w-2/5" />
+                <Skeleton class="h-3 w-12" />
+              </div>
+              <Skeleton class="h-2.5 w-3/5" />
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div
-      v-else-if="error"
+      v-else-if="groceryStore.error"
       class="mt-8 rounded-xl border border-border bg-card px-4 py-6 text-center"
     >
-      <p class="text-sm text-muted-foreground">{{ error }}</p>
-      <Button class="mt-4" size="sm" @click="load">Retry</Button>
+      <p class="text-sm text-muted-foreground">{{ groceryStore.error }}</p>
+      <Button class="mt-4" size="sm" @click="load(true)">Retry</Button>
     </div>
 
     <div
@@ -158,10 +163,10 @@ onMounted(load);
         <ShoppingCart class="size-6 text-[#22c55e]" />
       </div>
       <p class="text-sm font-semibold">
-        {{ items.length === 0 ? "Nothing to shop for" : "All caught up" }}
+        {{ groceryStore.items.length === 0 ? "Nothing to shop for" : "All caught up" }}
       </p>
       <p class="mt-1 max-w-xs text-xs text-muted-foreground">
-        <template v-if="items.length === 0">
+        <template v-if="groceryStore.items.length === 0">
           Plan meals for the next week and ingredients will show up here automatically.
         </template>
         <template v-else>
@@ -175,7 +180,11 @@ onMounted(load);
           </button>
         </template>
       </p>
-      <Button v-if="items.length === 0" class="mt-5" @click="router.push(paths.planner)">
+      <Button
+        v-if="groceryStore.items.length === 0"
+        class="mt-5"
+        @click="router.push(paths.planner)"
+      >
         Open planner
       </Button>
     </div>

@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import update
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models import PlannedRecipe
+from api.models import PlannedRecipe, Recipe
 from api.schemas import (
     PlannedRecipeCreate,
     PlannedRecipeDetail,
@@ -20,6 +21,13 @@ router = APIRouter(
 )
 
 
+def _planned_recipe_options():
+    return (
+        selectinload(PlannedRecipe.created_by),
+        selectinload(PlannedRecipe.recipe).selectinload(Recipe.cover_image),
+    )
+
+
 @router.post("/time-frame/", response_model=list[PlannedRecipeDetail])
 def get_recipes_in_time_frame(
     body: TimeFrameRequest,
@@ -27,11 +35,13 @@ def get_recipes_in_time_frame(
     session: SessionDep,
 ):
     recipes = session.exec(
-        select(PlannedRecipe).where(
+        select(PlannedRecipe)
+        .where(
             PlannedRecipe.created_by == current_user,
             PlannedRecipe.planned_for >= body.start,
             PlannedRecipe.planned_for <= body.end,
         )
+        .options(*_planned_recipe_options())
     ).all()
     return recipes
 
@@ -50,7 +60,12 @@ def create_planned_recipe(
     session.add(db_planned_recipe)
     session.commit()
     session.refresh(db_planned_recipe)
-    return db_planned_recipe
+    # Re-fetch with relationships for the slim card payload.
+    return session.exec(
+        select(PlannedRecipe)
+        .where(PlannedRecipe.id == db_planned_recipe.id)
+        .options(*_planned_recipe_options())
+    ).one()
 
 
 @router.put("/{planned_recipe_id}", response_model=PlannedRecipeDetail)
@@ -76,8 +91,11 @@ def update_planned_recipe(
     )
     session.exec(update_stmt)
     session.commit()
-    session.refresh(db_planned_recipe)
-    return db_planned_recipe
+    return session.exec(
+        select(PlannedRecipe)
+        .where(PlannedRecipe.id == planned_recipe_id)
+        .options(*_planned_recipe_options())
+    ).one()
 
 
 @router.delete("/{planned_recipe_id}")

@@ -1,24 +1,32 @@
 <script setup lang="ts">
 import HomeWeekStrip from "@/components/HomeWeekStrip.vue";
 import { Button } from "@/components/ui/button";
-import { endOfDay, formatPrepTime, mediaUrl, startOfDay, toDateKey } from "@/lib/media";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrepTime, mediaUrl, startOfDay, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
+import { useGroceryStore } from "@/stores/grocery";
+import { usePlannerStore } from "@/stores/planner";
+import { useRecipesStore } from "@/stores/recipes";
 import { useSessionStore } from "@/stores/session";
-import type { GroceryListResponse, PlannedRecipeDetail } from "@/types";
-import { get, post } from "@/utils";
+import type { PlannedRecipeDetail } from "@/types";
 import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onActivated, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+
+defineOptions({ name: "HomeView" });
 
 const router = useRouter();
 const session = useSessionStore();
+const recipesStore = useRecipesStore();
+const groceryStore = useGroceryStore();
+const plannerStore = usePlannerStore();
 
 const loading = ref(true);
 const weekPlans = ref<PlannedRecipeDetail[]>([]);
-const tonightPlan = ref<PlannedRecipeDetail | null>(null);
 const recipeCount = ref(0);
 const groceryCount = ref(0);
 const visibleWeekDays = ref<Date[]>([]);
+const plansReady = ref(false);
 
 const today = startOfDay();
 
@@ -46,7 +54,7 @@ const gapDays = computed(() =>
 
 const tonight = computed(() => {
   const key = toDateKey(today);
-  return weekPlans.value.find((p) => p.planned_for.startsWith(key)) ?? tonightPlan.value ?? null;
+  return weekPlans.value.find((p) => p.planned_for.startsWith(key)) ?? null;
 });
 
 const tonightImage = computed(() => mediaUrl(tonight.value?.recipe.cover_image?.url));
@@ -56,43 +64,32 @@ const tonightMeta = computed(() => {
   return prep || "Tonight’s plan";
 });
 
+const showHeroSkeleton = computed(() => loading.value && !plansReady.value && !tonight.value);
+
 async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
   try {
-    weekPlans.value = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: rangeStart.toISOString(),
-      end: endOfDay(rangeEnd).toISOString()
-    });
+    await plannerStore.ensureRange(rangeStart, rangeEnd);
+    weekPlans.value = plannerStore.plansInRange(rangeStart, rangeEnd);
+    plansReady.value = true;
   } catch (er) {
     console.error(er);
+    plansReady.value = true;
+  } finally {
+    loading.value = false;
   }
 }
 
-async function loadTonight() {
-  try {
-    const plans = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: today.toISOString(),
-      end: endOfDay(today).toISOString()
-    });
-    tonightPlan.value = plans[0] ?? null;
-  } catch (er) {
-    console.error(er);
-  }
-}
-
-async function load() {
-  loading.value = true;
+async function loadBadges() {
   try {
     const [recipes, grocery] = await Promise.all([
-      get<{ id: number }[]>("/recipe/user/"),
-      get<GroceryListResponse>("/grocery/"),
-      loadTonight()
+      recipesStore.fetchCount(),
+      groceryStore.fetchSummary()
     ]);
-    recipeCount.value = recipes.length;
-    groceryCount.value = grocery.items.filter((i) => !i.dismissed && !i.deleted).length;
+    recipeCount.value = recipes;
+    groceryCount.value = grocery;
   } catch (er) {
     console.error(er);
   }
-  loading.value = false;
 }
 
 function onWeekChange(_weekStart: Date, days: Date[], rangeStart: Date, rangeEnd: Date) {
@@ -124,7 +121,12 @@ function cookTonight() {
   });
 }
 
-onMounted(load);
+onMounted(() => {
+  void loadBadges();
+});
+onActivated(() => {
+  void loadBadges();
+});
 </script>
 
 <template>
@@ -172,11 +174,13 @@ onMounted(load);
             </p>
             <p class="mt-0.5 text-xs text-white/80">{{ tonightMeta }}</p>
           </template>
+          <template v-else-if="showHeroSkeleton">
+            <Skeleton class="mt-1.5 h-6 w-40 bg-white/20" />
+            <Skeleton class="mt-2 h-3 w-28 bg-white/15" />
+          </template>
           <template v-else>
             <p class="mt-0.5 text-xl font-bold leading-tight text-white">Nothing planned</p>
-            <p class="mt-0.5 text-xs text-white/80">
-              {{ loading ? "Loading…" : "Pick something for tonight" }}
-            </p>
+            <p class="mt-0.5 text-xs text-white/80">Pick something for tonight</p>
           </template>
         </div>
         <Button
@@ -226,7 +230,12 @@ onMounted(load);
       >
         <Search class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Find a recipe</span>
-        <span class="text-[11.5px] text-faint"> {{ recipeCount }} saved </span>
+        <span class="text-[11.5px] text-faint">
+          <template v-if="recipeCount === 0 && recipesStore.count === null">
+            <Skeleton class="inline-block h-3 w-10 align-middle" />
+          </template>
+          <template v-else>{{ recipeCount }} saved</template>
+        </span>
       </button>
 
       <button
@@ -239,7 +248,8 @@ onMounted(load);
         <span
           class="rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"
         >
-          {{ groceryCount }}
+          <template v-if="groceryStore.activeCount === null">·</template>
+          <template v-else>{{ groceryCount }}</template>
         </span>
       </button>
     </section>

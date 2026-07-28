@@ -8,7 +8,12 @@ from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.core.grocery import aggregate_grocery_items, normalize_item_key, window_bounds
 from api.models import GroceryItemState, GroceryItemStatus, PlannedRecipe, Recipe
-from api.schemas import GroceryItem, GroceryItemStateUpdate, GroceryListResponse
+from api.schemas import (
+    GroceryItem,
+    GroceryItemStateUpdate,
+    GroceryListResponse,
+    GrocerySummaryResponse,
+)
 
 router = APIRouter(
     prefix="/grocery",
@@ -17,12 +22,12 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=GroceryListResponse)
-def get_grocery_list(
+def _build_grocery_items(
     current_user: CurrentUserDep,
     session: SessionDep,
+    *,
     include_deleted: bool = False,
-):
+) -> tuple[datetime, datetime, list[GroceryItem]]:
     start, end = window_bounds(datetime.now(UTC))
 
     planned = session.exec(
@@ -63,10 +68,37 @@ def get_grocery_list(
             )
         )
 
+    return start, end, items
+
+
+@router.get("/", response_model=GroceryListResponse)
+def get_grocery_list(
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    include_deleted: bool = False,
+):
+    start, end, items = _build_grocery_items(
+        current_user, session, include_deleted=include_deleted
+    )
     return GroceryListResponse(
         window_start=start,
         window_end=end,
         items=items,
+    )
+
+
+@router.get("/summary/", response_model=GrocerySummaryResponse)
+def get_grocery_summary(
+    current_user: CurrentUserDep,
+    session: SessionDep,
+):
+    """Lightweight badge payload for Home — skips shipping the full item list."""
+    start, end, items = _build_grocery_items(current_user, session)
+    active_count = sum(1 for i in items if not i.dismissed and not i.deleted)
+    return GrocerySummaryResponse(
+        window_start=start,
+        window_end=end,
+        active_count=active_count,
     )
 
 

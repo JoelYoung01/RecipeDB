@@ -26,3 +26,9 @@ export interface GroceryListResponse {
   window_end: string;
   items: GroceryItem[];
 }
+
+export interface GrocerySummaryResponse {
+  window_start: string;
+  window_end: string;
+  active_count: number;
+}

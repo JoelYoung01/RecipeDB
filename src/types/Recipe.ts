@@ -25,6 +25,23 @@ export interface RecipeDashboard extends RecipeSlim {
   cover_image?: UploadSlim;
 }
 
+/** List/card payload — omits instructions/notes for faster first paint. */
+export interface RecipeCard {
+  id: number;
+  name: string;
+  description: string;
+  created_on: string;
+  created_by_id: number;
+  public: boolean;
+  prep_time?: number;
+  cover_image_id?: number;
+  cover_image?: UploadSlim;
+}
+
+export interface CountResponse {
+  count: number;
+}
+
 export interface RecipeCreate {
   name: string;
   description: string;

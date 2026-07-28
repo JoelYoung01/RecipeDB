@@ -8,17 +8,23 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { addDays, endOfDay, mediaUrl, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
+import { usePlannerStore } from "@/stores/planner";
+import { useRecipesStore } from "@/stores/recipes";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
-import type { RecipeDashboard } from "@/types/Recipe";
-import { del, get, post } from "@/utils";
+import { del, post } from "@/utils";
 import { ChevronRight, Sparkles, Trash2 } from "@lucide/vue";
-import { computed, onMounted, watch } from "vue";
+import { computed, onActivated, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+
+defineOptions({ name: "PlannerView" });
 
 const route = useRoute();
 const router = useRouter();
+const plannerStore = usePlannerStore();
+const recipesStore = useRecipesStore();
 
 const WEEK_COUNT = 8;
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -33,11 +39,9 @@ function fromQueryOrToday(): Date {
 }
 
 const selectedDate = ref(fromQueryOrToday());
-const plannedRecipes = ref<PlannedRecipeDetail[]>([]);
-const recipes = ref<RecipeDashboard[]>([]);
 const showRecipeDialog = ref(false);
 const selectedIds = ref<number[]>([]);
-const loading = ref(true);
+const dialogLoading = ref(false);
 
 const today = startOfDay();
 const currentWeekStart = startOfWeekMonday(today);
@@ -55,7 +59,7 @@ const rangeEnd = computed(() => endOfDay(addDays(currentWeekStart, WEEK_COUNT * 
 
 const plannedByDay = computed(() => {
   const map = new Map<string, PlannedRecipeDetail[]>();
-  for (const p of plannedRecipes.value) {
+  for (const p of plannerStore.plannedRecipes) {
     const key = p.planned_for.slice(0, 10);
     const list = map.get(key) ?? [];
     list.push(p);
@@ -84,6 +88,10 @@ const formattedSelectedDate = computed(() => {
   return `${weekday} · ${datePart}`;
 });
 
+const showDaySkeletons = computed(
+  () => plannerStore.loading && plannerStore.plannedRecipes.length === 0
+);
+
 function weekLabel(weekStart: Date, weekIndex: number): string {
   if (weekIndex === 0) return "This week";
   if (weekIndex === 1) return "Next week";
@@ -111,29 +119,26 @@ function openPlanWeek(weekDays: Date[]) {
   });
 }
 
-async function getPlannedRecipes() {
+async function getPlannedRecipes(force = false) {
   try {
-    plannedRecipes.value = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: rangeStart.value.toISOString(),
-      end: rangeEnd.value.toISOString()
-    });
+    await plannerStore.ensureRange(rangeStart.value, rangeEnd.value, { force });
     selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
   } catch (error) {
     console.error("Error fetching planned recipes:", error);
   }
 }
 
-async function getRecipes() {
-  try {
-    recipes.value = await get("/recipe/user/");
-  } catch (error) {
-    console.error("Error fetching recipes:", error);
-  }
-}
-
-function openAssign() {
+async function openAssign() {
   selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
   showRecipeDialog.value = true;
+  if (!recipesStore.loaded) {
+    dialogLoading.value = true;
+    try {
+      await recipesStore.ensureLoaded();
+    } finally {
+      dialogLoading.value = false;
+    }
+  }
 }
 
 function toggleRecipe(id: number) {
@@ -160,7 +165,8 @@ async function assignRecipe() {
       ),
       ...removed.map((pr) => del(`/planned-recipe/${pr.id}/`))
     ]);
-    await getPlannedRecipes();
+    plannerStore.invalidate();
+    await getPlannedRecipes(true);
     showRecipeDialog.value = false;
   } catch (error) {
     console.error("Error assigning recipe:", error);
@@ -170,7 +176,8 @@ async function assignRecipe() {
 async function removePlanned(planned: PlannedRecipeDetail) {
   try {
     await del(`/planned-recipe/${planned.id}/`);
-    await getPlannedRecipes();
+    plannerStore.invalidate();
+    await getPlannedRecipes(true);
   } catch (er) {
     console.error(er);
   }
@@ -180,10 +187,11 @@ watch(selectedDate, () => {
   selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
 });
 
-onMounted(async () => {
-  loading.value = true;
-  await Promise.all([getPlannedRecipes(), getRecipes()]);
-  loading.value = false;
+onMounted(() => {
+  void getPlannedRecipes();
+});
+onActivated(() => {
+  void getPlannedRecipes();
 });
 </script>
 
@@ -197,7 +205,7 @@ onMounted(async () => {
       <Button
         size="sm"
         class="shrink-0 gap-1.5"
-        :disabled="!currentWeekGapDays.length && loading"
+        :disabled="!currentWeekGapDays.length && plannerStore.loading"
         @click="openFillGaps()"
       >
         <Sparkles class="size-3.5" />
@@ -256,7 +264,16 @@ onMounted(async () => {
             </div>
 
             <div class="min-w-0 flex-1">
-              <template v-if="(plannedByDay.get(toDateKey(day)) ?? []).length">
+              <template v-if="showDaySkeletons && week.weekIndex === 0">
+                <div class="flex items-center gap-2">
+                  <Skeleton class="size-9 rounded-lg" />
+                  <div class="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton class="h-3.5 w-2/3" />
+                    <Skeleton class="h-2.5 w-1/3" />
+                  </div>
+                </div>
+              </template>
+              <template v-else-if="(plannedByDay.get(toDateKey(day)) ?? []).length">
                 <div class="flex items-center gap-2">
                   <img
                     v-for="planned in (plannedByDay.get(toDateKey(day)) ?? []).slice(0, 1)"
@@ -330,33 +347,51 @@ onMounted(async () => {
           <DialogTitle>Select recipes</DialogTitle>
         </DialogHeader>
         <div class="max-h-[50dvh] space-y-2 overflow-y-auto pr-1">
-          <button
-            v-for="recipe in recipes"
-            :key="recipe.id"
-            type="button"
-            class="flex w-full items-center gap-3 rounded-xl border px-2 py-2 text-left transition-colors"
-            :class="
-              selectedIds.includes(recipe.id)
-                ? 'border-[rgba(34,197,94,0.45)] bg-[rgba(34,197,94,0.12)]'
-                : 'border-border bg-secondary/40'
-            "
-            @click="toggleRecipe(recipe.id)"
-          >
-            <img
-              :src="mediaUrl(recipe.cover_image?.url)"
-              :alt="recipe.name"
-              class="size-12 shrink-0 rounded-lg object-cover"
-            />
-            <span class="min-w-0">
-              <span class="block truncate text-sm font-semibold">{{ recipe.name }}</span>
-              <span class="block truncate text-xs text-muted-foreground">{{
-                recipe.description
-              }}</span>
-            </span>
-          </button>
-          <p v-if="!recipes.length" class="py-6 text-center text-sm text-muted-foreground">
-            Add recipes first.
-          </p>
+          <template v-if="dialogLoading">
+            <div
+              v-for="n in 4"
+              :key="n"
+              class="flex items-center gap-3 rounded-xl border border-border px-2 py-2"
+            >
+              <Skeleton class="size-12 rounded-lg" />
+              <div class="min-w-0 flex-1 space-y-1.5">
+                <Skeleton class="h-3.5 w-2/3" />
+                <Skeleton class="h-2.5 w-full" />
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <button
+              v-for="recipe in recipesStore.sorted"
+              :key="recipe.id"
+              type="button"
+              class="flex w-full items-center gap-3 rounded-xl border px-2 py-2 text-left transition-colors"
+              :class="
+                selectedIds.includes(recipe.id)
+                  ? 'border-[rgba(34,197,94,0.45)] bg-[rgba(34,197,94,0.12)]'
+                  : 'border-border bg-secondary/40'
+              "
+              @click="toggleRecipe(recipe.id)"
+            >
+              <img
+                :src="mediaUrl(recipe.cover_image?.url)"
+                :alt="recipe.name"
+                class="size-12 shrink-0 rounded-lg object-cover"
+              />
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-semibold">{{ recipe.name }}</span>
+                <span class="block truncate text-xs text-muted-foreground">{{
+                  recipe.description
+                }}</span>
+              </span>
+            </button>
+            <p
+              v-if="!recipesStore.sorted.length"
+              class="py-6 text-center text-sm text-muted-foreground"
+            >
+              Add recipes first.
+            </p>
+          </template>
         </div>
         <DialogFooter class="gap-2">
           <Button variant="outline" @click="showRecipeDialog = false">Cancel</Button>
