@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
+
 from sqlalchemy import MetaData
-from sqlmodel import Relationship, SQLModel, Field
+from sqlmodel import Field, Relationship, SQLModel
 
 from api.core.timezone_handler import UTCDateTime
 
@@ -36,17 +38,37 @@ class User_Permission(BaseDbModel, table=True):
 class User(BaseIndexedDbModel, table=True):
     avatar_url: str | None = None
     username: str
-    email: str
+    email: str = Field(index=True, unique=True)
     display_name: str
     admin: bool = False
     disabled: bool = False
-    google_user_id: str | None = None
+    email_verified: bool = False
+    hashed_password: str | None = None
+    google_user_id: str | None = Field(default=None, index=True)
     last_login: datetime | None = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc), sa_type=UTCDateTime
     )
 
     tokens: list["Token"] = Relationship(back_populates="user")
     permissions: list["Permission"] = Relationship(link_model=User_Permission)
+    email_verification: Optional["EmailVerificationChallenge"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"uselist": False, "cascade": "all, delete-orphan"},
+    )
+
+
+class EmailVerificationChallenge(BaseIndexedDbModel, table=True):
+    """Hashed one-time code used to verify a password user's email."""
+
+    user_id: int = Field(foreign_key="user.id", unique=True)
+    otp_hash: str
+    expires_at: datetime = Field(sa_type=UTCDateTime)
+    attempts: int = 0
+    last_sent_at: datetime = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc), sa_type=UTCDateTime
+    )
+
+    user: User = Relationship(back_populates="email_verification")
 
 
 class TokenType(Enum):

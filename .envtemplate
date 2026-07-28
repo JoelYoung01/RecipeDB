@@ -20,9 +20,27 @@ VITE_GOOGLE_CLIENT_ID=
 ENVIRONMENT=development
 
 # Secret key
-# - Used to generate authentication tokens
+# - Used to generate authentication tokens and HMAC email OTPs
 SECRET_KEY=
 
 # Superuser GID
 # - The Google ID of the user that can be automatically promoted to superuser.
+# - Also attached to the seeded admin password user when present.
 SUPERUSER_GID=
+
+# Optional: override seeded local password users (defaults shown)
+# SEED_ADMIN_EMAIL=admin@example.com
+# SEED_ADMIN_PASSWORD=adminpass123
+# SEED_TEST_EMAIL=test@example.com
+# SEED_TEST_PASSWORD=testpass123
+
+# Optional SMTP for verification emails (when unset, OTP is logged; in
+# development the API also returns `dev_otp` in JSON responses)
+# SMTP_HOST=
+# SMTP_PORT=587
+# SMTP_TLS=true
+# SMTP_SSL=false
+# SMTP_USER=
+# SMTP_PASSWORD=
+# EMAILS_FROM_EMAIL=
+# EMAILS_FROM_NAME=RecipeDB

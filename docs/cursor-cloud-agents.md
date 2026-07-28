@@ -17,18 +17,42 @@ Standard commands live in `README.md`, `package.json`, and `pyproject.toml`. Bel
 
 ## Database setup (not part of the dependency update script)
 
-- The SQLite DB lives at `data/database.db`. Create dirs and run migrations + seed once: `mkdir -p data/uploads data/logs && set -a && . ./.env && set +a && uv run alembic upgrade head && uv run python -m api.scripts.load_data`. The seed creates one admin user (from `SUPERUSER_GID`) and 10 sample recipes. This is state setup, so it is intentionally NOT in the startup update script.
+- The SQLite DB lives at `data/database.db`. Create dirs and run migrations + seed once: `mkdir -p data/uploads data/logs && set -a && . ./.env && set +a && uv run alembic upgrade head && uv run python -m api.scripts.load_data`. The seed creates verified admin + test password users and 10 sample recipes. This is state setup, so it is intentionally NOT in the startup update script.
 
 ## Running the services
 
 - Backend: `set -a && . ./.env && set +a && uv run fastapi dev api/main.py --host 0.0.0.0 --port 8000` (docs at `/api/docs`).
 - Frontend: `set -a && . ./.env && set +a && pnpm dev --host 0.0.0.0 --port 5173`.
 
-## Authentication (local dev bypass)
+## Authentication
 
-- Production login remains Google OAuth only (`/auth/login-google/`).
-- In local Vite dev (`pnpm dev`), the SPA **auto-logs in** via `POST /api/auth/dev-login/` as the seeded admin user (`SUPERUSER_GID`). That endpoint is only registered for use when `ENVIRONMENT=development` (returns 404 otherwise). The login page also shows a “Continue as test user” button as a manual fallback.
-- Ensure the DB is seeded first (`uv run python -m api.scripts.load_data`) so a test user exists.
+Password auth and Google OAuth are both supported.
+
+### Password flow
+
+- `POST /api/auth/register/` — create email/password user (unverified); response includes `redirect_to` (`/verify-email?email=...`) and sets `Location`. In `ENVIRONMENT=development`, response also includes `dev_otp`.
+- `POST /api/auth/verify-email/` — confirm OTP, then mint session JWT.
+- `POST /api/auth/resend-verification/` — resend OTP (rate-limited; generic response).
+- `POST /api/auth/login/` — email/password. If the account exists but is unverified, the API returns **403** with `detail.redirect_to` / `Location: /verify-email?email=...` so the SPA must follow the server-directed page (and may refresh the OTP).
+- `POST /api/auth/login-google/` — unchanged Google ID token exchange; Google users are treated as email-verified (and can link to an existing password account with the same email).
+
+OTP codes are HMAC-hashed at rest, expire after `EMAIL_OTP_EXPIRE_MINUTES` (default 15), and attempt-limited. Without SMTP env vars the backend logs the OTP; configure `SMTP_*` + `EMAILS_FROM_EMAIL` to send real mail.
+
+### Seeded local users
+
+`uv run python -m api.scripts.load_data` creates two verified password users (overridable via env):
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@example.com` | `adminpass123` |
+| Test | `test@example.com` | `testpass123` |
+
+The admin seed also receives `SUPERUSER_GID` when set.
+
+### Local Vite auto-login bypass
+
+- In local Vite dev (`pnpm dev`), the SPA **auto-logs in** via `POST /api/auth/dev-login/` as the seeded admin (`admin@example.com`). That endpoint returns 404 unless `ENVIRONMENT=development`. The login page also has “Continue as seeded admin”.
+- Ensure the DB is seeded first so those users exist.
 - Google One Tap is skipped while `import.meta.env.DEV` is true.
 
 ## Lint / test / build
