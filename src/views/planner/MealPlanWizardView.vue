@@ -77,6 +77,20 @@ const canContinueSelect = computed(
   () => selectedIdeaIds.value.length === selectCount.value && selectCount.value > 0
 );
 
+const selectionFull = computed(
+  () => selectedIdeaIds.value.length >= selectCount.value && selectCount.value > 0
+);
+
+function isIdeaSelected(id: string) {
+  return selectedIdeaIds.value.includes(id);
+}
+
+function isIdeaDisabled(id: string) {
+  // Once the quota is filled, lock unselected ideas so it's obvious you're done.
+  // Selected ones stay clickable so the user can swap.
+  return selectionFull.value && !isIdeaSelected(id);
+}
+
 const STEP_ORDER: UiStep[] = ["days", "prefs", "ideate", "select", "build", "review"];
 
 const stepIndex = computed(() => STEP_ORDER.indexOf(uiStep.value));
@@ -279,7 +293,8 @@ async function runIdeate(refinement?: string) {
 }
 
 function toggleIdea(id: string) {
-  if (selectedIdeaIds.value.includes(id)) {
+  if (isIdeaDisabled(id)) return;
+  if (isIdeaSelected(id)) {
     selectedIdeaIds.value = selectedIdeaIds.value.filter((x) => x !== id);
     return;
   }
@@ -666,10 +681,18 @@ onUnmounted(() => {
     <section v-else-if="uiStep === 'select'" class="mt-5 space-y-4">
       <div class="flex items-end justify-between gap-2">
         <p class="text-sm text-muted-foreground">
-          Choose <span class="font-semibold text-foreground">{{ selectCount }}</span> of
-          {{ session?.ideas.length ?? 0 }} ideas
+          <template v-if="selectionFull">
+            All set — deselect one if you want to swap.
+          </template>
+          <template v-else>
+            Choose <span class="font-semibold text-foreground">{{ selectCount }}</span> of
+            {{ session?.ideas.length ?? 0 }} ideas
+          </template>
         </p>
-        <p class="text-xs tabular-nums text-faint">
+        <p
+          class="text-xs tabular-nums"
+          :class="selectionFull ? 'font-semibold text-[#86efac]' : 'text-faint'"
+        >
           {{ selectedIdeaIds.length }} / {{ selectCount }}
         </p>
       </div>
@@ -681,21 +704,25 @@ onUnmounted(() => {
           type="button"
           class="flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors"
           :class="
-            selectedIdeaIds.includes(idea.id)
+            isIdeaSelected(idea.id)
               ? 'border-[rgba(34,197,94,0.45)] bg-[rgba(34,197,94,0.12)]'
-              : 'border-border bg-card'
+              : isIdeaDisabled(idea.id)
+                ? 'cursor-not-allowed border-border/60 bg-card/40 opacity-40'
+                : 'border-border bg-card'
           "
+          :disabled="isIdeaDisabled(idea.id)"
+          :aria-disabled="isIdeaDisabled(idea.id)"
           @click="toggleIdea(idea.id)"
         >
           <span
             class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border"
             :class="
-              selectedIdeaIds.includes(idea.id)
+              isIdeaSelected(idea.id)
                 ? 'border-[#16a34a] bg-[#16a34a] text-white'
                 : 'border-border'
             "
           >
-            <Check v-if="selectedIdeaIds.includes(idea.id)" class="size-3.5" />
+            <Check v-if="isIdeaSelected(idea.id)" class="size-3.5" />
           </span>
           <span class="min-w-0">
             <span class="block text-sm font-semibold leading-snug">{{ idea.title }}</span>
