@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
 import { loginAsDevUser } from "@/utils";
-import { watch } from "vue";
+import { ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const session = useSessionStore();
