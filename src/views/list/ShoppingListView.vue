@@ -130,7 +130,7 @@ onActivated(() => load());
           <div
             v-for="m in 3"
             :key="m"
-            class="flex items-start gap-3 rounded-xl border border-border px-3 py-3"
+            class="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3"
           >
             <Skeleton class="mt-0.5 size-4 rounded" />
             <div class="min-w-0 flex-1 space-y-2">
