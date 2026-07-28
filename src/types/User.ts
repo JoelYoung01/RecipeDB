@@ -5,6 +5,7 @@ export interface UserResponse {
   display_name: string;
   admin: boolean;
   disabled: boolean;
+  email_verified: boolean;
   avatar_url?: string;
   last_login?: string;
 }

@@ -5,6 +5,8 @@
 
 export type SiteRouteName =
   | "login"
+  | "register"
+  | "verify-email"
   | "home"
   | "recipes"
   | "recipe-new"
@@ -29,6 +31,8 @@ export interface TabItem {
 
 export const paths = {
   login: "/login",
+  register: "/register",
+  verifyEmail: "/verify-email",
   home: "/home",
   recipes: "/recipes",
   recipeNew: "/recipes/new",

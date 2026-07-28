@@ -6,9 +6,13 @@ Canonical map of routes, layouts, and page modules. The TypeScript module [`src/
 
 | Path | Name | Page | Auth | Notes |
 |------|------|------|------|-------|
-| `/login` | `login` | `views/LoginView.vue` | Public | Google OAuth; redirects to `redirectUrl` or home |
+| `/login` | `login` | `views/LoginView.vue` | Public | Email/password + Google; redirects to `redirectUrl` or home |
+| `/register` | `register` | `views/RegisterView.vue` | Public | Create email/password account → server redirects to verify |
+| `/verify-email` | `verify-email` | `views/VerifyEmailView.vue` | Public | OTP confirmation; query `?email=` |
 
 Unauthenticated visits to protected routes → `/login?redirectUrl=<fullPath>`.
+
+Unverified password login → API `403` with `Location` / `redirect_to` → `/verify-email?email=...`.
 
 ## App shell (bottom tab bar)
 

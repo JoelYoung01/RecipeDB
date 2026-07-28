@@ -71,7 +71,12 @@ pnpm dev
 uv run fastapi dev api/main.py
 ```
 
-With `ENVIRONMENT=development`, the Vite app auto-signs in as the seeded test/admin user (no Google required). See `docs/cursor-cloud-agents.md`.
+Auth supports email/password (with OTP email verification) and Google OAuth. With `ENVIRONMENT=development`, the Vite app also auto-signs in as the seeded admin user. Seeded locals after `uv run python -m api.scripts.load_data`:
+
+- Admin: `admin@example.com` / `adminpass123`
+- Test: `test@example.com` / `testpass123`
+
+See `docs/cursor-cloud-agents.md` for the full auth flow.
 
 #### Type-Check, Compile and Minify for Production
 
