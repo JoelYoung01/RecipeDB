@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { addMenuActions } from "@/sitemap";
+<<<<<<< HEAD
 import { CalendarDays, Camera, Link2, PenLine, ShoppingCart } from "@lucide/vue";
+=======
+import { CalendarDays, Camera, Link2, List, PenLine } from "@lucide/vue";
+import { ref, watch } from "vue";
+>>>>>>> origin/main
 import { useRouter } from "vue-router";
 
 const open = defineModel<boolean>("open", { default: false });
@@ -17,9 +22,90 @@ const icons = {
 const createActions = addMenuActions.filter((a) => a.group === "create");
 const quickActions = addMenuActions.filter((a) => a.group === "quick");
 
+const dragY = ref(0);
+const dragging = ref(false);
+
+const CLOSE_DISTANCE = 100;
+const CLOSE_VELOCITY = 0.55;
+const TAP_SLOP = 6;
+
+let pointerId: number | null = null;
+let startY = 0;
+let lastY = 0;
+let lastT = 0;
+let velocity = 0;
+let moved = false;
+
+function resetDrag() {
+  dragY.value = 0;
+  dragging.value = false;
+  pointerId = null;
+  moved = false;
+  velocity = 0;
+}
+
+watch(open, (isOpen) => {
+  if (isOpen) resetDrag();
+});
+
+function onHandlePointerDown(e: PointerEvent) {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  pointerId = e.pointerId;
+  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  dragging.value = true;
+  moved = false;
+  startY = e.clientY;
+  lastY = e.clientY;
+  lastT = performance.now();
+  velocity = 0;
+}
+
+function onHandlePointerMove(e: PointerEvent) {
+  if (!dragging.value || e.pointerId !== pointerId) return;
+  const dy = e.clientY - startY;
+  dragY.value = Math.max(0, dy);
+  if (Math.abs(dy) > TAP_SLOP) moved = true;
+
+  const now = performance.now();
+  const dt = now - lastT;
+  if (dt > 0) velocity = (e.clientY - lastY) / dt;
+  lastY = e.clientY;
+  lastT = now;
+}
+
+function endDrag(e: PointerEvent) {
+  if (!dragging.value || e.pointerId !== pointerId) return;
+  dragging.value = false;
+  pointerId = null;
+
+  // Tap the handle bar to close
+  if (!moved) {
+    open.value = false;
+    return;
+  }
+
+  if (dragY.value >= CLOSE_DISTANCE || velocity >= CLOSE_VELOCITY) {
+    open.value = false;
+    return;
+  }
+
+  dragY.value = 0;
+}
+
+function onHandlePointerCancel(e: PointerEvent) {
+  if (e.pointerId !== pointerId) return;
+  dragging.value = false;
+  pointerId = null;
+  dragY.value = 0;
+}
+
 function go(href: string) {
   open.value = false;
   router.push(href);
+}
+
+function onAfterLeave() {
+  resetDrag();
 }
 </script>
 
@@ -33,15 +119,26 @@ function go(href: string) {
         @click="open = false"
       />
     </Transition>
-    <Transition name="sheet">
+    <Transition name="sheet" @after-leave="onAfterLeave">
       <div
         v-if="open"
         role="dialog"
         aria-modal="true"
         aria-label="Add new"
-        class="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-[20px] border border-b-0 border-border bg-card px-4 pt-2.5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)]"
+        class="sheet-panel fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md rounded-t-[20px] border border-b-0 border-border bg-card px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)]"
+        :class="{ 'is-dragging': dragging }"
+        :style="{ '--drag-y': `${dragY}px` }"
       >
-        <div class="mx-auto mb-3.5 h-1 w-9 rounded-full bg-[#3f3f46]" />
+        <div
+          class="flex cursor-grab touch-none items-center justify-center pt-2.5 pb-2 active:cursor-grabbing"
+          aria-label="Drag or tap to close"
+          @pointerdown="onHandlePointerDown"
+          @pointermove="onHandlePointerMove"
+          @pointerup="endDrag"
+          @pointercancel="onHandlePointerCancel"
+        >
+          <div class="h-1 w-9 rounded-full bg-[#3f3f46]" />
+        </div>
         <p class="px-1 pb-2.5 text-xs font-semibold tracking-[0.06em] text-faint uppercase">
           Add new
         </p>
@@ -103,23 +200,37 @@ function go(href: string) {
 </template>
 
 <style scoped>
+.sheet-panel {
+  --drag-y: 0px;
+  transform: translate3d(0, var(--drag-y), 0);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+.sheet-panel.is-dragging {
+  transition: none;
+}
+
+.sheet-enter-active {
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet-leave-active {
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translate3d(0, 100%, 0);
+}
+
 .scrim-enter-active,
 .scrim-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.22s ease;
 }
+
 .scrim-enter-from,
 .scrim-leave-to {
   opacity: 0;
-}
-.sheet-enter-active,
-.sheet-leave-active {
-  transition:
-    transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 0.2s ease;
-}
-.sheet-enter-from,
-.sheet-leave-to {
-  transform: translate(-50%, 100%);
-  opacity: 0.6;
 }
 </style>

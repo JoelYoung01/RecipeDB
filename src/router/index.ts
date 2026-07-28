@@ -101,7 +101,13 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: () => ({ top: 0 })
+  scrollBehavior() {
+    // Document scroll is locked; reset the app shell scroller instead.
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>("[data-app-scroll]")?.scrollTo({ top: 0 });
+    });
+    return false;
+  }
 });
 
 router.beforeEach(async (to) => {
