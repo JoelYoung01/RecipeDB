@@ -23,7 +23,8 @@ Layout: `layouts/AppShell.vue` (tab bar + add sheet). Children render in the she
 | `/` | — | — | — | Redirect → `/home` |
 | `/home` | `home` | `views/HomeView.vue` | Home | Tonight hero, week strip, action rows |
 | `/recipes` | `recipes` | `views/recipes/RecipesView.vue` | Recipes | User’s recipes + search |
-| `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Calendar meal planning |
+| `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Sliding week calendar (current week at top) |
+| `/planner/fill` | `planner-fill` | `views/planner/MealPlanWizardView.vue` | Planner | Fill-gaps / plan-week LLM wizard (stubbed) |
 | `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days) |
 | `/account` | `account` | `views/AccountView.vue` | — | Profile; opened from home avatar |
 
@@ -73,6 +74,6 @@ Preserve bookmarks from the Vuetify app:
 ## Feature coverage (no new product scope)
 
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
-- **Meal planning** — plan/unplan by day; home week strip + tonight hero
+- **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; LLM stubbed until OpenRouter creds)
 - **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
 - **Grocery list** — ingredients for planned meals in a sliding 7-day window; dismiss/delete state persisted per user

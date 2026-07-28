@@ -10,6 +10,7 @@ from api.routes import (
     grocery_routes,
     health_routes,
     ingredient_routes,
+    meal_plan_wizard_routes,
     planned_recipe_routes,
     recipe_routes,
     upload_routes,
@@ -36,6 +37,7 @@ api_router.include_router(recipe_routes.router)
 api_router.include_router(recipe_routes.unauth_router)
 api_router.include_router(auth_routes.router)
 api_router.include_router(planned_recipe_routes.router)
+api_router.include_router(meal_plan_wizard_routes.router)
 api_router.include_router(ingredient_routes.router)
 api_router.include_router(grocery_routes.router)
 api_router.include_router(upload_routes.router)

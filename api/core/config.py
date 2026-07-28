@@ -98,6 +98,11 @@ class Settings(BaseSettings):
 
     SUPERUSER_GID: str
 
+    # Optional OpenRouter credentials for meal-plan wizard LLM.
+    # When unset, the wizard uses a deterministic stub client.
+    OPENROUTER_API_KEY: str | None = None
+    OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
+
     # Local seed password users (development / first load_data)
     SEED_ADMIN_EMAIL: str = "admin@example.com"
     SEED_ADMIN_PASSWORD: str = "adminpass123"

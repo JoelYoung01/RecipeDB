@@ -1,20 +1,13 @@
 <script setup lang="ts">
+import HomeWeekStrip from "@/components/HomeWeekStrip.vue";
 import { Button } from "@/components/ui/button";
-import {
-  addDays,
-  endOfDay,
-  formatPrepTime,
-  mediaUrl,
-  startOfDay,
-  startOfWeekMonday,
-  toDateKey
-} from "@/lib/media";
-import { useSessionStore } from "@/stores/session";
+import { endOfDay, formatPrepTime, mediaUrl, startOfDay, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
+import { useSessionStore } from "@/stores/session";
 import type { GroceryListResponse, PlannedRecipeDetail } from "@/types";
 import { get, post } from "@/utils";
 import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -22,13 +15,12 @@ const session = useSessionStore();
 
 const loading = ref(true);
 const weekPlans = ref<PlannedRecipeDetail[]>([]);
+const tonightPlan = ref<PlannedRecipeDetail | null>(null);
 const recipeCount = ref(0);
 const groceryCount = ref(0);
+const visibleWeekDays = ref<Date[]>([]);
 
 const today = startOfDay();
-const weekStart = startOfWeekMonday(today);
-const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-const dayLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const weekdayName = computed(() => today.toLocaleDateString(undefined, { weekday: "long" }));
 
@@ -42,15 +34,19 @@ const plannedKeys = computed(() => {
 
 const plannedCount = computed(() => {
   let n = 0;
-  for (const d of weekDays) {
+  for (const d of visibleWeekDays.value) {
     if (plannedKeys.value.has(toDateKey(d))) n += 1;
   }
   return n;
 });
 
+const gapDays = computed(() =>
+  visibleWeekDays.value.filter((d) => !plannedKeys.value.has(toDateKey(d)))
+);
+
 const tonight = computed(() => {
   const key = toDateKey(today);
-  return weekPlans.value.find((p) => p.planned_for.startsWith(key)) ?? null;
+  return weekPlans.value.find((p) => p.planned_for.startsWith(key)) ?? tonightPlan.value ?? null;
 });
 
 const tonightImage = computed(() => mediaUrl(tonight.value?.recipe.cover_image?.url));
@@ -60,19 +56,37 @@ const tonightMeta = computed(() => {
   return prep || "Tonight’s plan";
 });
 
+async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
+  try {
+    weekPlans.value = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
+      start: rangeStart.toISOString(),
+      end: endOfDay(rangeEnd).toISOString()
+    });
+  } catch (er) {
+    console.error(er);
+  }
+}
+
+async function loadTonight() {
+  try {
+    const plans = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
+      start: today.toISOString(),
+      end: endOfDay(today).toISOString()
+    });
+    tonightPlan.value = plans[0] ?? null;
+  } catch (er) {
+    console.error(er);
+  }
+}
+
 async function load() {
   loading.value = true;
   try {
-    const weekEnd = endOfDay(addDays(weekStart, 6));
-    const [plans, recipes, grocery] = await Promise.all([
-      post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-        start: weekStart.toISOString(),
-        end: weekEnd.toISOString()
-      }),
+    const [recipes, grocery] = await Promise.all([
       get<{ id: number }[]>("/recipe/user/"),
-      get<GroceryListResponse>("/grocery/")
+      get<GroceryListResponse>("/grocery/"),
+      loadTonight()
     ]);
-    weekPlans.value = plans;
     recipeCount.value = recipes.length;
     groceryCount.value = grocery.items.filter((i) => !i.dismissed && !i.deleted).length;
   } catch (er) {
@@ -81,8 +95,22 @@ async function load() {
   loading.value = false;
 }
 
+function onWeekChange(_weekStart: Date, days: Date[], rangeStart: Date, rangeEnd: Date) {
+  visibleWeekDays.value = days;
+  void loadWeekPlans(rangeStart, rangeEnd);
+}
+
 function openDay(date: Date) {
   router.push({ path: paths.planner, query: { date: toDateKey(date) } });
+}
+
+function openFillGaps() {
+  router.push({
+    path: paths.plannerFill,
+    query: {
+      days: gapDays.value.map(toDateKey).join(",")
+    }
+  });
 }
 
 function cookTonight() {
@@ -162,37 +190,17 @@ onMounted(load);
 
     <!-- Week strip -->
     <section class="px-5 pt-3.5">
-      <div class="grid grid-cols-7 gap-1">
-        <button
-          v-for="(day, i) in weekDays"
-          :key="toDateKey(day)"
-          type="button"
-          class="rounded-lg py-1.5 text-center transition-colors"
-          :class="
-            toDateKey(day) === toDateKey(today)
-              ? 'border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)]'
-              : ''
-          "
-          @click="openDay(day)"
-        >
-          <div
-            class="text-[10px] font-semibold"
-            :class="toDateKey(day) === toDateKey(today) ? 'font-bold text-[#22c55e]' : 'text-faint'"
-          >
-            {{ dayLabels[i] }}
-          </div>
-          <div
-            class="mx-auto mt-1.5 size-1.5 rounded-full"
-            :class="plannedKeys.has(toDateKey(day)) ? 'bg-[#22c55e]' : 'bg-[#3f3f46]'"
-          />
-        </button>
-      </div>
+      <HomeWeekStrip
+        :planned-keys="plannedKeys"
+        @week-change="onWeekChange"
+        @select-day="openDay"
+      />
       <div class="mt-2.5 flex items-center justify-between">
         <p class="text-xs text-muted-foreground">{{ plannedCount }} of 7 dinners planned</p>
         <button
           type="button"
           class="text-[12.5px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
-          @click="router.push(paths.planner)"
+          @click="openFillGaps"
         >
           Fill the gaps →
         </button>
