@@ -223,6 +223,12 @@ def init_recipes(session: Session):
 
 
 def seed_database(session: Session):
-    init_users(session)
+    from api.core.seed_ingredients import (
+        ensure_sample_ingredients,
+        ensure_sample_planned_meals,
+    )
 
+    init_users(session)
     init_recipes(session)
+    ensure_sample_ingredients(session)
+    ensure_sample_planned_meals(session)

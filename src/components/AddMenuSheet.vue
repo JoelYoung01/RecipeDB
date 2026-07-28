@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { addMenuActions } from "@/sitemap";
-import { CalendarDays, Camera, Link2, List, PenLine } from "@lucide/vue";
+import { CalendarDays, Camera, Link2, PenLine, ShoppingCart } from "@lucide/vue";
 import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -12,7 +12,7 @@ const icons = {
   "import-photo": Camera,
   "recipe-scratch": PenLine,
   "plan-meal": CalendarDays,
-  "shop-item": List
+  "shop-item": ShoppingCart
 } as const;
 
 const createActions = addMenuActions.filter((a) => a.group === "create");

@@ -137,3 +137,19 @@ class PlannedRecipe(BaseIndexedDbModel, table=True):
 
     created_by: "User" = Relationship()
     recipe: "Recipe" = Relationship()
+
+
+class GroceryItemStatus(str, Enum):
+    dismissed = "dismissed"
+    deleted = "deleted"
+
+
+class GroceryItemState(BaseIndexedDbModel, table=True):
+    """Per-user grocery list state for a derived ingredient key."""
+
+    created_by_id: int = Field(foreign_key="user.id", index=True)
+    item_key: str = Field(index=True)
+    status: str  # GroceryItemStatus value
+    updated_on: datetime = Field(sa_type=UTCDateTime)
+
+    created_by: "User" = Relationship()

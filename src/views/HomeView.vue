@@ -11,9 +11,9 @@ import {
 } from "@/lib/media";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
-import type { PlannedRecipeDetail } from "@/types";
+import type { GroceryListResponse, PlannedRecipeDetail } from "@/types";
 import { get, post } from "@/utils";
-import { List, Plus, Search, User } from "@lucide/vue";
+import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
 import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
@@ -23,6 +23,7 @@ const session = useSessionStore();
 const loading = ref(true);
 const weekPlans = ref<PlannedRecipeDetail[]>([]);
 const recipeCount = ref(0);
+const groceryCount = ref(0);
 
 const today = startOfDay();
 const weekStart = startOfWeekMonday(today);
@@ -63,15 +64,17 @@ async function load() {
   loading.value = true;
   try {
     const weekEnd = endOfDay(addDays(weekStart, 6));
-    const [plans, recipes] = await Promise.all([
+    const [plans, recipes, grocery] = await Promise.all([
       post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
         start: weekStart.toISOString(),
         end: weekEnd.toISOString()
       }),
-      get<{ id: number }[]>("/recipe/user/")
+      get<{ id: number }[]>("/recipe/user/"),
+      get<GroceryListResponse>("/grocery/")
     ]);
     weekPlans.value = plans;
     recipeCount.value = recipes.length;
+    groceryCount.value = grocery.items.filter((i) => !i.dismissed && !i.deleted).length;
   } catch (er) {
     console.error(er);
   }
@@ -223,12 +226,12 @@ onMounted(load);
         class="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.list)"
       >
-        <List class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
-        <span class="flex-1 text-sm font-semibold">Shopping list</span>
+        <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
+        <span class="flex-1 text-sm font-semibold">Grocery</span>
         <span
           class="rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"
         >
-          Soon
+          {{ groceryCount }}
         </span>
       </button>
     </section>

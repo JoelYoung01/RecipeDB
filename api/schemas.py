@@ -179,3 +179,37 @@ class IngredientUpdate(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: str | None = None
+
+
+class GroceryQuantity(BaseModel):
+    amount: float | None = None
+    units: str | None = None
+
+
+class GroceryRecipeRef(BaseModel):
+    id: int
+    name: str
+
+
+class GroceryItem(BaseModel):
+    key: str
+    name: str
+    category: str
+    quantities: list[GroceryQuantity]
+    quantity_display: str
+    recipes: list[GroceryRecipeRef]
+    recipe_titles: str
+    source_ingredient_ids: list[int]
+    dismissed: bool = False
+    deleted: bool = False
+
+
+class GroceryListResponse(BaseModel):
+    window_start: datetime
+    window_end: datetime
+    items: list[GroceryItem]
+
+
+class GroceryItemStateUpdate(BaseModel):
+    item_key: str
+    status: str | None = None  # "dismissed" | "deleted" | null to clear

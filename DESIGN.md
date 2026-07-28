@@ -50,7 +50,7 @@ Map these to shadcn CSS variables (`--primary`, `--background`, etc.) in `src/as
 ### App chrome
 
 1. **Scrollable content** above a fixed bottom tab bar.
-2. **Tab bar** (global): Home · Recipes · **[+]** · Planner · List.
+2. **Tab bar** (global): Home · Recipes · **[+]** · Planner · Grocery.
 3. Raised center **+** opens the Add sheet (not a direct route). When open, “+” rotates to × / “Close”.
 4. Safe-area padding under the tab bar (~20px) for home-indicator devices.
 
@@ -60,7 +60,7 @@ Column: **full-bleed Tonight hero** → **week-at-a-glance** → **action rows**
 
 - Hero (~300px): recipe photo, gradient scrim, weekday + profile avatar overlay, “TONIGHT” + title + meta + **Cook** CTA. Empty state: prompt to plan tonight.
 - Week strip: 7 day cells; green dot = planned, zinc gap = unplanned; today tinted/outlined. “Fill the gaps →” → planner.
-- Action rows (not a recent-feed): Import a recipe · Find a recipe · Shopping list (with count chip when available).
+- Action rows (not a recent-feed): Import a recipe · Find a recipe · Grocery (7-day chip / count when available).
 
 ### Add sheet
 
@@ -68,9 +68,9 @@ Bottom sheet over dimmed scrim:
 
 1. **Add new** — Import from link (highlighted), Scan a photo, Write from scratch.
 2. Divider
-3. **Quick adds** — Add meal to plan, Add to shopping list.
+3. **Quick adds** — Add meal to plan, Grocery list.
 
-Wire only to existing features; stub unavailable import/list flows in UI without inventing backend behavior.
+Wire only to existing features; stub unavailable import flows in UI without inventing backend behavior.
 
 ## Motion
 
