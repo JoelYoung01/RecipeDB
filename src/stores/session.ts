@@ -1,14 +1,12 @@
-import { googleAccountsLoadedKey } from "@/plugins/googleAuth";
 import type { UserResponse } from "@/types/User";
 import { AuthLoginEvent, checkSessionToken, loginAsDevUser } from "@/utils";
 import { defineStore } from "pinia";
-import { inject, ref, watch } from "vue";
+import { ref } from "vue";
 
 export const TOKEN_STORAGE_KEY = "access_token";
 const SKIP_DEV_AUTO_LOGIN_KEY = "skip_dev_auto_login";
 
 export const useSessionStore = defineStore("session", () => {
-  const googleLibraryLoaded = inject(googleAccountsLoadedKey, ref(false));
   const access_token = ref<string | null>(localStorage.getItem(TOKEN_STORAGE_KEY));
   const currentUser = ref<UserResponse | null>(null);
   /** True until the first session check finishes (avoids auth redirect races). */
@@ -82,18 +80,6 @@ export const useSessionStore = defineStore("session", () => {
     loading.value = false;
     sessionStorage.removeItem(SKIP_DEV_AUTO_LOGIN_KEY);
   }) as EventListener);
-
-  watch(
-    googleLibraryLoaded,
-    (val) => {
-      // Skip Google One Tap in local Vite dev (dev-login handles auth).
-      if (import.meta.env.DEV) return;
-      if (val && !access_token.value) {
-        google.accounts.id.prompt();
-      }
-    },
-    { immediate: true }
-  );
 
   checkSession();
   return { currentUser, loading, checkSession, logout };

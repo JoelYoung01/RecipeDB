@@ -53,7 +53,7 @@ The admin seed also receives `SUPERUSER_GID` when set.
 
 - In local Vite dev (`pnpm dev`), the SPA **auto-logs in** via `POST /api/auth/dev-login/` as the seeded admin (`admin@example.com`). That endpoint returns 404 unless `ENVIRONMENT=development`. The login page also has “Continue as seeded admin”.
 - Ensure the DB is seeded first so those users exist.
-- Google One Tap is skipped while `import.meta.env.DEV` is true.
+- Google One Tap / FedCM is not auto-prompted on load; users sign in via the Google button on the login page.
 
 ## Lint / test / build
 
