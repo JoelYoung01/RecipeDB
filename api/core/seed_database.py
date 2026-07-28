@@ -38,6 +38,14 @@ def init_users(session: Session):
 
 def init_recipes(session: Session):
     user = session.exec(select(User)).first()
+    if user is None:
+        logger.warn("No user found, skipping recipes.")
+        return
+
+    existing_count = len(session.exec(select(Recipe)).all())
+    if existing_count > 0:
+        logger.warn("Recipes already exist, skipping add.")
+        return
 
     import random
 
@@ -151,6 +159,12 @@ def init_recipes(session: Session):
 
 
 def seed_database(session: Session):
-    init_users(session)
+    from api.core.seed_ingredients import (
+        ensure_sample_ingredients,
+        ensure_sample_planned_meals,
+    )
 
+    init_users(session)
     init_recipes(session)
+    ensure_sample_ingredients(session)
+    ensure_sample_planned_meals(session)

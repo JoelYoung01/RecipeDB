@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils";
 import { tabByRouteName, tabs, type SiteRouteName, type TabId } from "@/sitemap";
-import { BookOpen, CalendarDays, Home, List, Plus } from "@lucide/vue";
+import { BookOpen, CalendarDays, Home, Plus, ShoppingCart } from "@lucide/vue";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -20,7 +20,7 @@ const icons: Record<TabId, typeof Home> = {
   recipes: BookOpen,
   add: Plus,
   planner: CalendarDays,
-  list: List
+  list: ShoppingCart
 };
 
 function onTab(id: TabId) {

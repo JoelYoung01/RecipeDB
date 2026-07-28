@@ -47,7 +47,7 @@ export const tabs: TabItem[] = [
   { id: "recipes", label: "Recipes", routeName: "recipes", path: paths.recipes },
   { id: "add", label: "Add" },
   { id: "planner", label: "Planner", routeName: "planner", path: paths.planner },
-  { id: "list", label: "List", routeName: "list", path: paths.list }
+  { id: "list", label: "Grocery", routeName: "list", path: paths.list }
 ];
 
 export type AddMenuActionId =
@@ -102,11 +102,10 @@ export const addMenuActions: AddMenuAction[] = [
   },
   {
     id: "shop-item",
-    title: "Add to shopping list",
-    description: "Quick item entry",
+    title: "Grocery list",
+    description: "Ingredients for the next 7 days",
     href: paths.list,
-    group: "quick",
-    stub: true
+    group: "quick"
   }
 ];
 

@@ -20,7 +20,7 @@ Layout: `layouts/AppShell.vue` (tab bar + add sheet). Children render in the she
 | `/home` | `home` | `views/HomeView.vue` | Home | Tonight hero, week strip, action rows |
 | `/recipes` | `recipes` | `views/recipes/RecipesView.vue` | Recipes | User’s recipes + search |
 | `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Calendar meal planning |
-| `/list` | `list` | `views/list/ShoppingListView.vue` | List | UI shell only (no shopping-list API yet) |
+| `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days) |
 | `/account` | `account` | `views/AccountView.vue` | — | Profile; opened from home avatar |
 
 ### Add menu (sheet, not a tab destination)
@@ -33,7 +33,7 @@ Opened by the raised **+** control. Items:
 | Scan a photo | `/recipes/import?method=photo` | UI stub |
 | Write from scratch | `/recipes/new` | Live |
 | Add meal to plan | `/planner` | Live |
-| Add to shopping list | `/list` | UI shell |
+| Grocery list | `/list` | Live (derived from planner) |
 
 ## Recipe flows (no tab highlight, or Recipes)
 
@@ -71,4 +71,4 @@ Preserve bookmarks from the Vuetify app:
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
 - **Meal planning** — plan/unplan by day; home week strip + tonight hero
 - **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
-- **Shopping list** — nav + empty shell only (design surface; no persistence yet)
+- **Grocery list** — ingredients for planned meals in a sliding 7-day window; dismiss/delete state persisted per user
