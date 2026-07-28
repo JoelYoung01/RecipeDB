@@ -39,12 +39,31 @@ const assignments = ref<Record<string, string>>({});
 let abortController: AbortController | null = null;
 
 const today = startOfDay();
-const weekStart = startOfWeekMonday(today);
-const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+/** The single week this wizard session is scoped to (always 7 days). */
+const weekDays = ref<Date[]>(
+  Array.from({ length: 7 }, (_, i) => addDays(startOfWeekMonday(today), i))
+);
+
+const weekDayKeys = computed(() => weekDays.value.map(toDateKey));
+const weekKeySet = computed(() => new Set(weekDayKeys.value));
 
 const selectCount = computed(() => session.value?.select_count ?? selectedDays.value.length);
 
 const canContinueDays = computed(() => selectedDays.value.length > 0);
+
+const skippedCount = computed(() => weekDayKeys.value.length - selectedDays.value.length);
+
+const weekHeading = computed(() => {
+  const start = weekDays.value[0];
+  if (!start) return "This week";
+  const thisWeek = startOfWeekMonday(today);
+  const nextWeek = addDays(thisWeek, 7);
+  if (toDateKey(start) === toDateKey(thisWeek)) return "This week";
+  if (toDateKey(start) === toDateKey(nextWeek)) return "Next week";
+  const end = weekDays.value[6] ?? start;
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+});
 
 const canContinueSelect = computed(
   () => selectedIdeaIds.value.length === selectCount.value && selectCount.value > 0
@@ -94,33 +113,67 @@ const headerTitle = computed(() => {
   }
 });
 
+function parseDateKey(key: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const [y, m, d] = key.split("-").map(Number);
+  return startOfDay(new Date(y, m - 1, d));
+}
+
 function parseDaysFromQuery(): string[] {
   const raw = typeof route.query.days === "string" ? route.query.days : "";
   if (!raw) return [];
   return raw
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+    .filter((s) => Boolean(parseDateKey(s)));
+}
+
+function weekFromSeed(seed: Date): Date[] {
+  const start = startOfWeekMonday(seed);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+
+function clampDaysToWeek(keys: string[], weekKeys: string[]): string[] {
+  const allowed = new Set(weekKeys);
+  return [...new Set(keys.filter((k) => allowed.has(k)))].sort();
+}
+
+function isDaySelected(key: string) {
+  return selectedDays.value.includes(key);
 }
 
 function toggleDay(key: string) {
-  if (selectedDays.value.includes(key)) {
+  // Only the 7 nights in this wizard's week can be toggled.
+  if (!weekKeySet.value.has(key)) return;
+  if (isDaySelected(key)) {
     selectedDays.value = selectedDays.value.filter((d) => d !== key);
   } else {
-    selectedDays.value = [...selectedDays.value, key].sort();
+    selectedDays.value = clampDaysToWeek([...selectedDays.value, key], weekDayKeys.value);
   }
 }
 
+function selectAllWeekDays() {
+  selectedDays.value = [...weekDayKeys.value];
+}
+
+function clearWeekDays() {
+  selectedDays.value = [];
+}
+
 function dayLabel(key: string) {
-  const [y, m, d] = key.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
+  const date = parseDateKey(key);
+  if (!date) return key;
   return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function planningDays(): string[] {
+  return clampDaysToWeek(selectedDays.value, weekDayKeys.value);
 }
 
 async function ensureSession(): Promise<MealPlanWizardSession> {
   if (session.value) return session.value;
   const created = await post<MealPlanWizardSession>("/meal-plan-wizard/sessions/", {
-    days: selectedDays.value,
+    days: planningDays(),
     prefs: localPrefs.value
   });
   session.value = created;
@@ -128,6 +181,8 @@ async function ensureSession(): Promise<MealPlanWizardSession> {
 }
 
 async function syncDaysAndPrefs() {
+  // Keep selection strictly inside this week's 7 nights before talking to the API.
+  selectedDays.value = planningDays();
   persistPrefs(localPrefs.value);
   const s = await ensureSession();
   const [daysRes, prefsRes] = await Promise.all([
@@ -338,11 +393,16 @@ function recipeForIdea(ideaId: string) {
 onMounted(() => {
   localPrefs.value = { ...savedPrefs.value };
   const fromQuery = parseDaysFromQuery();
+  // Scope the wizard to one week: prefer the week of the first queried day.
+  const seed = fromQuery.length ? parseDateKey(fromQuery[0]!) ?? today : today;
+  weekDays.value = weekFromSeed(seed);
+  const keys = weekDayKeys.value;
   if (fromQuery.length) {
-    selectedDays.value = fromQuery;
+    // Pre-select only nights that belong to this week (e.g. fill-the-gaps).
+    selectedDays.value = clampDaysToWeek(fromQuery, keys);
   } else {
-    // Default: all days in the current week selected (user can deselect)
-    selectedDays.value = weekDays.map(toDateKey);
+    // Default: plan the whole week; user taps to skip nights.
+    selectedDays.value = [...keys];
   }
 });
 
@@ -398,37 +458,89 @@ onUnmounted(() => {
 
     <!-- DAYS -->
     <section v-if="uiStep === 'days'" class="mt-5">
-      <p class="text-sm text-muted-foreground">
-        Deselect nights you already have plans for. We’ll cover the rest.
-      </p>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-foreground">{{ weekHeading }}</p>
+          <p class="mt-0.5 text-sm text-muted-foreground">
+            Tap nights to plan. Highlighted nights get a dinner; the rest are skipped.
+          </p>
+        </div>
+        <div class="flex shrink-0 gap-2">
+          <button
+            type="button"
+            class="text-[12px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
+            @click="selectAllWeekDays"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="text-[12px] font-semibold text-faint transition-opacity active:opacity-70"
+            @click="clearWeekDays"
+          >
+            None
+          </button>
+        </div>
+      </div>
+
       <div class="mt-3 overflow-hidden rounded-xl border border-border bg-card">
         <button
           v-for="(day, i) in weekDays"
           :key="toDateKey(day)"
           type="button"
-          class="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left last:border-b-0"
-          :class="selectedDays.includes(toDateKey(day)) ? 'bg-[rgba(34,197,94,0.1)]' : 'opacity-60'"
+          class="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0"
+          :class="
+            isDaySelected(toDateKey(day))
+              ? 'bg-[rgba(34,197,94,0.14)]'
+              : 'bg-transparent opacity-55'
+          "
+          :aria-pressed="isDaySelected(toDateKey(day))"
           @click="toggleDay(toDateKey(day))"
         >
           <span
-            class="flex size-5 items-center justify-center rounded-md border"
+            class="flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors"
             :class="
-              selectedDays.includes(toDateKey(day))
+              isDaySelected(toDateKey(day))
                 ? 'border-[#16a34a] bg-[#16a34a] text-white'
-                : 'border-border'
+                : 'border-border bg-secondary/40'
             "
           >
-            <Check v-if="selectedDays.includes(toDateKey(day))" class="size-3.5" />
+            <Check v-if="isDaySelected(toDateKey(day))" class="size-3.5" />
           </span>
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold">{{ DAY_LABELS[i] }} · {{ day.getDate() }}</p>
+            <p
+              class="text-sm font-semibold"
+              :class="isDaySelected(toDateKey(day)) ? 'text-foreground' : 'text-muted-foreground'"
+            >
+              {{ DAY_LABELS[i] }} · {{ day.getDate() }}
+              <span
+                v-if="toDateKey(day) === toDateKey(today)"
+                class="ml-1 text-[11px] font-bold uppercase tracking-wide text-[#22c55e]"
+              >
+                Today
+              </span>
+            </p>
             <p class="text-[11px] text-muted-foreground">
-              {{ toDateKey(day) === toDateKey(today) ? "Today" : dayLabel(toDateKey(day)) }}
+              {{ dayLabel(toDateKey(day)) }}
             </p>
           </div>
+          <span
+            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+            :class="
+              isDaySelected(toDateKey(day))
+                ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
+                : 'bg-secondary text-faint'
+            "
+          >
+            {{ isDaySelected(toDateKey(day)) ? "Plan" : "Skip" }}
+          </span>
         </button>
       </div>
-      <p class="mt-2 text-xs text-faint">{{ selectedDays.length }} night(s) selected</p>
+
+      <p class="mt-2 text-xs text-faint">
+        Planning {{ selectedDays.length }} of {{ weekDayKeys.length }}
+        <span v-if="skippedCount"> · skipping {{ skippedCount }}</span>
+      </p>
       <Button
         type="button"
         class="mt-4 w-full"
@@ -436,7 +548,7 @@ onUnmounted(() => {
         :disabled="!canContinueDays || busy"
         @click="goForwardFromDays"
       >
-        Continue
+        Continue with {{ selectedDays.length }} night{{ selectedDays.length === 1 ? "" : "s" }}
       </Button>
     </section>
 
