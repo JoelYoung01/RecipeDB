@@ -312,9 +312,7 @@ defineExpose({
             </div>
             <div
               class="mt-0.5 text-[13px] font-bold leading-none tabular-nums"
-              :class="
-                toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'
-              "
+              :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'"
             >
               {{ day.getDate() }}
             </div>
