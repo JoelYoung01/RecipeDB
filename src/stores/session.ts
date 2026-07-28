@@ -1,10 +1,11 @@
 import { googleAccountsLoadedKey } from "@/plugins/googleAuth";
 import type { UserResponse } from "@/types/User";
-import { AuthLoginEvent, checkSessionToken } from "@/utils";
+import { AuthLoginEvent, checkSessionToken, loginAsDevUser } from "@/utils";
 import { defineStore } from "pinia";
 import { inject, ref, watch } from "vue";
 
 export const TOKEN_STORAGE_KEY = "access_token";
+const SKIP_DEV_AUTO_LOGIN_KEY = "skip_dev_auto_login";
 
 export const useSessionStore = defineStore("session", () => {
   const googleLibraryLoaded = inject(googleAccountsLoadedKey, ref(false));
@@ -14,13 +15,32 @@ export const useSessionStore = defineStore("session", () => {
   const loading = ref(true);
   let checking = false;
 
+  function shouldAutoDevLogin() {
+    return import.meta.env.DEV && sessionStorage.getItem(SKIP_DEV_AUTO_LOGIN_KEY) !== "1";
+  }
+
+  async function tryDevLogin() {
+    const session = await loginAsDevUser();
+    if (session) {
+      sessionStorage.removeItem(SKIP_DEV_AUTO_LOGIN_KEY);
+      return true;
+    }
+    return false;
+  }
+
   async function checkSession() {
     if (checking) return;
     checking = true;
     loading.value = true;
     access_token.value = localStorage.getItem(TOKEN_STORAGE_KEY);
+
     if (access_token.value === null) {
-      logout();
+      if (shouldAutoDevLogin() && (await tryDevLogin())) {
+        loading.value = false;
+        checking = false;
+        return;
+      }
+      logout({ skipDevAutoLogin: false });
       loading.value = false;
       checking = false;
       return;
@@ -31,18 +51,28 @@ export const useSessionStore = defineStore("session", () => {
     if (session) {
       currentUser.value = session.user;
       access_token.value = session.access_token;
+    } else if (shouldAutoDevLogin()) {
+      logout({ skipDevAutoLogin: false });
+      if (!(await tryDevLogin())) {
+        logout({ skipDevAutoLogin: false });
+      }
     } else {
-      logout();
+      logout({ skipDevAutoLogin: false });
     }
 
     loading.value = false;
     checking = false;
   }
 
-  function logout() {
+  function logout(options?: { skipDevAutoLogin?: boolean }) {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     access_token.value = null;
     currentUser.value = null;
+    // After an explicit sign-out in Vite dev, don't immediately re-auth until
+    // the user clicks “Continue as test user” (or a new tab clears sessionStorage).
+    if (import.meta.env.DEV && options?.skipDevAutoLogin !== false) {
+      sessionStorage.setItem(SKIP_DEV_AUTO_LOGIN_KEY, "1");
+    }
   }
 
   window.addEventListener(AuthLoginEvent, ((event: CustomEvent) => {
@@ -50,11 +80,14 @@ export const useSessionStore = defineStore("session", () => {
     access_token.value = event.detail.access_token;
     currentUser.value = event.detail.user;
     loading.value = false;
+    sessionStorage.removeItem(SKIP_DEV_AUTO_LOGIN_KEY);
   }) as EventListener);
 
   watch(
     googleLibraryLoaded,
     (val) => {
+      // Skip Google One Tap in local Vite dev (dev-login handles auth).
+      if (import.meta.env.DEV) return;
       if (val && !access_token.value) {
         google.accounts.id.prompt();
       }

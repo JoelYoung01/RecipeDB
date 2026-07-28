@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import GoogleLoginButton from "@/components/GoogleLoginButton.vue";
 import chefHat from "@/assets/chef-hat.png";
+import GoogleLoginButton from "@/components/GoogleLoginButton.vue";
+import { Button } from "@/components/ui/button";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
+import { loginAsDevUser } from "@/utils";
 import { watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -10,6 +12,8 @@ const session = useSessionStore();
 const route = useRoute();
 const router = useRouter();
 const appTitle = import.meta.env.VITE_APP_TITLE;
+const isDev = import.meta.env.DEV;
+const devLoggingIn = ref(false);
 
 watch(
   () => session.currentUser,
@@ -21,6 +25,13 @@ watch(
   },
   { immediate: true }
 );
+
+async function continueAsDevUser() {
+  if (devLoggingIn.value) return;
+  devLoggingIn.value = true;
+  await loginAsDevUser();
+  devLoggingIn.value = false;
+}
 </script>
 
 <template>
@@ -38,8 +49,20 @@ watch(
     </div>
 
     <div class="flex w-full flex-col items-center gap-3">
+      <template v-if="isDev">
+        <Button
+          class="h-11 w-[280px] rounded-lg"
+          :disabled="devLoggingIn"
+          @click="continueAsDevUser"
+        >
+          {{ devLoggingIn ? "Signing in…" : "Continue as test user" }}
+        </Button>
+        <p class="text-xs text-faint">Local dev bypass · seeded admin user</p>
+        <div class="my-1 h-px w-[280px] bg-border" />
+        <p class="text-xs text-muted-foreground">Or use Google</p>
+      </template>
       <GoogleLoginButton />
-      <p class="text-xs text-faint">Sign in with Google to continue</p>
+      <p v-if="!isDev" class="text-xs text-faint">Sign in with Google to continue</p>
     </div>
   </div>
 </template>

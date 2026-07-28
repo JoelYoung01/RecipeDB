@@ -4,6 +4,7 @@ from sqlmodel import select
 
 from api.core.authentication import (
     create_access_token,
+    create_access_token_for_user,
     verify_google_token,
     verify_access_token,
 )
@@ -27,6 +28,35 @@ def login_with_google(payload: GoogleLoginPayload, session: SessionDep):
         )
     access_token = create_access_token(google_token, session)
     return access_token
+
+
+@router.post("/dev-login/", response_model=TokenResponse)
+def login_as_dev_user(session: SessionDep):
+    """
+    Local-development only. Mints a session for the seeded SUPERUSER_GID user
+    (or the first user) so the SPA can skip Google OAuth.
+    """
+    if settings.ENVIRONMENT != "development":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found",
+        )
+
+    user = None
+    if settings.SUPERUSER_GID:
+        user = session.exec(
+            select(User).where(User.google_user_id == settings.SUPERUSER_GID)
+        ).first()
+    if user is None:
+        user = session.exec(select(User)).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No users found. Run the DB seed (api.scripts.load_data) first.",
+        )
+
+    return create_access_token_for_user(user, session)
 
 
 @router.get("/verify-session/", response_model=TokenResponse)

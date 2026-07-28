@@ -61,12 +61,17 @@ uv sync
 #### Compile and Hot-Reload for Development
 
 ```bash
+# Export env vars for both processes (see .envtemplate)
+set -a && . ./.env && set +a
+
 # Run Vite Dev Server
 pnpm dev
 
 # Run FastAPI Dev Server (uv run uses the project's .venv)
 uv run fastapi dev api/main.py
 ```
+
+With `ENVIRONMENT=development`, the Vite app auto-signs in as the seeded test/admin user (no Google required). See `docs/cursor-cloud-agents.md`.
 
 #### Type-Check, Compile and Minify for Production
 
