@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
-import { AuthApiError, loginAsDevUser, loginWithPassword } from "@/utils";
+import { AuthApiError, loginWithPassword } from "@/utils";
 import { ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
@@ -14,8 +14,6 @@ const session = useSessionStore();
 const route = useRoute();
 const router = useRouter();
 const appTitle = import.meta.env.VITE_APP_TITLE;
-const isDev = import.meta.env.DEV;
-const devLoggingIn = ref(false);
 const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
 const email = ref("");
@@ -31,13 +29,6 @@ watch(
   },
   { immediate: true }
 );
-
-async function continueAsDevUser() {
-  if (devLoggingIn.value) return;
-  devLoggingIn.value = true;
-  await loginAsDevUser();
-  devLoggingIn.value = false;
-}
 
 async function onSubmit() {
   if (submitting.value) return;
@@ -120,18 +111,6 @@ async function onSubmit() {
         <span class="text-xs text-faint">or</span>
         <div class="h-px flex-1 bg-border" />
       </div>
-
-      <template v-if="isDev">
-        <Button
-          class="h-11 w-full rounded-lg"
-          variant="secondary"
-          :disabled="devLoggingIn"
-          @click="continueAsDevUser"
-        >
-          {{ devLoggingIn ? "Signing in…" : "Continue as seeded admin" }}
-        </Button>
-        <p class="text-xs text-faint">Local bypass · admin@example.com</p>
-      </template>
 
       <GoogleLoginButton />
       <p class="text-xs text-faint">Google sign-in stays available</p>

@@ -67,7 +67,7 @@ export const useSessionStore = defineStore("session", () => {
     access_token.value = null;
     currentUser.value = null;
     // After an explicit sign-out in Vite dev, don't immediately re-auth until
-    // the user clicks “Continue as test user” (or a new tab clears sessionStorage).
+    // a new tab clears sessionStorage (or the user signs in again).
     if (import.meta.env.DEV && options?.skipDevAutoLogin !== false) {
       sessionStorage.setItem(SKIP_DEV_AUTO_LOGIN_KEY, "1");
     }
