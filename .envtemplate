@@ -34,6 +34,11 @@ SUPERUSER_GID=
 # SEED_TEST_EMAIL=test@example.com
 # SEED_TEST_PASSWORD=testpass123
 
+# Optional OpenRouter credentials for the meal-plan wizard LLM.
+# When unset, the wizard uses a deterministic stub client.
+# OPENROUTER_API_KEY=
+# OPENROUTER_MODEL=openai/gpt-4o-mini
+
 # Optional SMTP for verification emails (when unset, OTP is logged; in
 # development the API also returns `dev_otp` in JSON responses)
 # SMTP_HOST=

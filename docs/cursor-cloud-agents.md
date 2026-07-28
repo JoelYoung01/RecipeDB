@@ -55,6 +55,11 @@ The admin seed also receives `SUPERUSER_GID` when set.
 - Ensure the DB is seeded first so those users exist.
 - Google One Tap is skipped while `import.meta.env.DEV` is true.
 
+## Meal-plan wizard LLM
+
+- Routes under `/api/meal-plan-wizard/`. Pipeline stages: create session → ideate (SSE) → select → build (SSE) → commit.
+- Without `OPENROUTER_API_KEY`, the backend uses a deterministic stub LLM (`api/core/llm/client.py`). Set the key (+ optional `OPENROUTER_MODEL`) later to swap in the real client; tool helpers for user-scoped recipe search live in `api/core/llm/tools.py`.
+
 ## Lint / test / build
 
 - Frontend lint: `pnpm lint` (ESLint; note it runs with `--fix`). Build (includes `vue-tsc` type-check): `pnpm build`.

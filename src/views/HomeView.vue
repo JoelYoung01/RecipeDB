@@ -192,7 +192,17 @@ onMounted(load);
         <button
           type="button"
           class="text-[12.5px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
-          @click="router.push(paths.planner)"
+          @click="
+            router.push({
+              path: paths.plannerFill,
+              query: {
+                days: weekDays
+                  .filter((d) => !plannedKeys.has(toDateKey(d)))
+                  .map(toDateKey)
+                  .join(',')
+              }
+            })
+          "
         >
           Fill the gaps →
         </button>

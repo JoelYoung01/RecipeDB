@@ -213,3 +213,87 @@ class GroceryListResponse(BaseModel):
 class GroceryItemStateUpdate(BaseModel):
     item_key: str
     status: str | None = None  # "dismissed" | "deleted" | null to clear
+
+
+# --- Meal plan wizard ---
+
+
+class MealPlanWizardPrefs(BaseModel):
+    goals: str = ""
+    dietary_restrictions: str = ""
+    preferred_ingredients: str = ""
+    max_cook_minutes: int | None = None
+    servings: int | None = None
+    cuisine_notes: str = ""
+    extra_notes: str = ""
+
+
+class MealPlanWizardCreate(BaseModel):
+    days: list[str] = Field(min_length=1)
+    prefs: MealPlanWizardPrefs | None = None
+
+
+class MealPlanWizardDaysUpdate(BaseModel):
+    days: list[str] = Field(min_length=1)
+
+
+class MealPlanWizardIdea(BaseModel):
+    id: str
+    title: str
+    justification: str = ""
+
+
+class MealPlanWizardBuiltRecipe(BaseModel):
+    idea_id: str
+    title: str
+    description: str
+    instructions: str
+    notes: str | None = None
+    prep_time: float | None = None
+    ingredients: list[dict] = Field(default_factory=list)
+    source: str = "generated"
+    existing_recipe_id: int | None = None
+    created_recipe_id: int | None = None
+
+
+class MealPlanWizardProgressEvent(BaseModel):
+    stage: str
+    status: str
+    message: str
+    progress: float
+    data: dict | None = None
+
+
+class MealPlanWizardSessionResponse(BaseModel):
+    id: str
+    days: list[str]
+    prefs: MealPlanWizardPrefs
+    step: str
+    idea_target_count: int
+    select_count: int
+    ideas: list[MealPlanWizardIdea]
+    selected_idea_ids: list[str]
+    built_recipes: list[MealPlanWizardBuiltRecipe]
+    progress_log: list[MealPlanWizardProgressEvent]
+    stubbed: bool = True
+
+
+class MealPlanWizardSelectRequest(BaseModel):
+    idea_ids: list[str]
+
+
+class MealPlanWizardRefineRequest(BaseModel):
+    refinement: str | None = None
+
+
+class MealPlanWizardRewindRequest(BaseModel):
+    to_step: str
+
+
+class MealPlanWizardDayAssignment(BaseModel):
+    day: str
+    idea_id: str
+
+
+class MealPlanWizardCommitRequest(BaseModel):
+    assignments: list[MealPlanWizardDayAssignment] | None = None

@@ -14,6 +14,7 @@ export type SiteRouteName =
   | "recipe-detail"
   | "recipe-edit"
   | "planner"
+  | "planner-fill"
   | "list"
   | "account"
   | "public-user"
@@ -40,6 +41,7 @@ export const paths = {
   recipeDetail: (id: number | string) => `/recipes/${id}`,
   recipeEdit: (id: number | string) => `/recipes/${id}/edit`,
   planner: "/planner",
+  plannerFill: "/planner/fill",
   list: "/list",
   account: "/account",
   publicUser: (id: number | string) => `/users/${id}`,
@@ -122,6 +124,7 @@ export const tabByRouteName: Partial<Record<SiteRouteName, TabId>> = {
   "recipe-detail": "recipes",
   "recipe-edit": "recipes",
   planner: "planner",
+  "planner-fill": "planner",
   list: "list"
 };
 
