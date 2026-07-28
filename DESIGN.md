@@ -59,7 +59,7 @@ Map these to shadcn CSS variables (`--primary`, `--background`, etc.) in `src/as
 Column: **full-bleed Tonight hero** → **week-at-a-glance** → **action rows** → tab bar.
 
 - Hero (~300px): recipe photo, gradient scrim, weekday + profile avatar overlay, “TONIGHT” + title + meta + **Cook** CTA. Empty state: prompt to plan tonight.
-- Week strip: 7 day cells; green dot = planned, zinc gap = unplanned; today tinted/outlined. “Fill the gaps →” → planner fill wizard.
+- Week strip: swipeable weeks (past + future) with weekday + date; green dot = planned, zinc gap = unplanned; today tinted/outlined. Tap a day → that day’s plan in the planner. “Fill the gaps →” → planner fill wizard for the visible week.
 - Planner: vertical sliding weeks with **this week sticky at top**; day rows (not a month grid). “Plan week” / “Fill gaps” open the wizard.
 - Action rows (not a recent-feed): Import a recipe · Find a recipe · Grocery (7-day chip / count when available).
 
