@@ -10,15 +10,19 @@ export const useSessionStore = defineStore("session", () => {
   const googleLibraryLoaded = inject(googleAccountsLoadedKey, ref(false));
   const access_token = ref<string | null>(localStorage.getItem(TOKEN_STORAGE_KEY));
   const currentUser = ref<UserResponse | null>(null);
-  const loading = ref(false);
+  /** True until the first session check finishes (avoids auth redirect races). */
+  const loading = ref(true);
+  let checking = false;
 
   async function checkSession() {
-    if (loading.value) return;
+    if (checking) return;
+    checking = true;
     loading.value = true;
     access_token.value = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (access_token.value === null) {
       logout();
       loading.value = false;
+      checking = false;
       return;
     }
 
@@ -32,6 +36,7 @@ export const useSessionStore = defineStore("session", () => {
     }
 
     loading.value = false;
+    checking = false;
   }
 
   function logout() {
@@ -40,11 +45,11 @@ export const useSessionStore = defineStore("session", () => {
     currentUser.value = null;
   }
 
-  // Add event listener for login events
   window.addEventListener(AuthLoginEvent, ((event: CustomEvent) => {
     localStorage.setItem(TOKEN_STORAGE_KEY, event.detail.access_token);
     access_token.value = event.detail.access_token;
     currentUser.value = event.detail.user;
+    loading.value = false;
   }) as EventListener);
 
   watch(
