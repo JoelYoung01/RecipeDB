@@ -49,11 +49,11 @@ OTP codes are HMAC-hashed at rest, expire after `EMAIL_OTP_EXPIRE_MINUTES` (defa
 
 The admin seed also receives `SUPERUSER_GID` when set.
 
-### Local Vite auto-login bypass
+### Local login
 
-- In local Vite dev (`pnpm dev`), the SPA **auto-logs in** via `POST /api/auth/dev-login/` as the seeded admin (`admin@example.com`). That endpoint returns 404 unless `ENVIRONMENT=development`. The login page also has “Continue as seeded admin”.
+- Seeded password users (above) sign in through the normal email/password form on `/login` — there is no dedicated bypass button or `/auth/dev-login/` shortcut.
 - Ensure the DB is seeded first so those users exist.
-- Google One Tap is skipped while `import.meta.env.DEV` is true.
+- Google One Tap / FedCM is not auto-prompted on load; users sign in via the Google button on the login page.
 
 ## Lint / test / build
 

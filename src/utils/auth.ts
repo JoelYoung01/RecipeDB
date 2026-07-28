@@ -112,24 +112,6 @@ export async function loginWithGoogle(payload: { credential: string }) {
   }
 }
 
-/** Development-only: session for the seeded test/admin user (no Google). */
-export async function loginAsDevUser() {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/dev-login/`, {
-      method: "POST",
-      headers: { "content-type": "application/json" }
-    });
-    if (!response.ok) {
-      throw new Error(`Dev login failed: ${response.status} ${response.statusText}`);
-    }
-    const { access_token, user } = await response.json();
-    dispatchLogin(access_token, user);
-    return { access_token, user };
-  } catch (er) {
-    console.error(er);
-  }
-}
-
 export async function registerWithPassword(payload: {
   email: string;
   password: string;

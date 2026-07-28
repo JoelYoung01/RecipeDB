@@ -157,43 +157,6 @@ def login_with_google(payload: GoogleLoginPayload, session: SessionDep):
     return access_token
 
 
-@router.post("/dev-login/", response_model=TokenResponse)
-def login_as_dev_user(session: SessionDep):
-    """
-    Local-development only. Mints a session for the seeded admin password user
-    (falling back to SUPERUSER_GID / first user) so the SPA can skip OAuth.
-    """
-    if settings.ENVIRONMENT != "development":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Not found",
-        )
-
-    user = session.exec(
-        select(User).where(User.email == settings.SEED_ADMIN_EMAIL)
-    ).first()
-    if user is None and settings.SUPERUSER_GID:
-        user = session.exec(
-            select(User).where(User.google_user_id == settings.SUPERUSER_GID)
-        ).first()
-    if user is None:
-        user = session.exec(select(User)).first()
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No users found. Run the DB seed (api.scripts.load_data) first.",
-        )
-
-    if not user.email_verified:
-        user.email_verified = True
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-    return create_access_token_for_user(user, session)
-
-
 @router.get("/verify-session/", response_model=TokenResponse)
 def verify_session(
     access_token: Annotated[Token, Depends(verify_access_token)],
