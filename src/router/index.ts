@@ -11,6 +11,18 @@ const routes: RouteRecordRaw[] = [
     meta: { noAuthReq: true }
   },
   {
+    path: paths.register,
+    name: "register",
+    component: () => import("@/views/RegisterView.vue"),
+    meta: { noAuthReq: true }
+  },
+  {
+    path: paths.verifyEmail,
+    name: "verify-email",
+    component: () => import("@/views/VerifyEmailView.vue"),
+    meta: { noAuthReq: true }
+  },
+  {
     path: "/",
     component: () => import("@/layouts/AppShell.vue"),
     children: [
@@ -118,7 +130,10 @@ router.beforeEach(async (to) => {
     };
   }
 
-  if (to.name === "login" && session.currentUser) {
+  if (
+    (to.name === "login" || to.name === "register" || to.name === "verify-email") &&
+    session.currentUser
+  ) {
     const redirect = typeof to.query.redirectUrl === "string" ? to.query.redirectUrl : paths.home;
     return redirect;
   }

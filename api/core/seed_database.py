@@ -1,51 +1,115 @@
-from datetime import datetime
 import logging
+from datetime import datetime
+
 from sqlmodel import Session, select
 
 from api.core.config import settings
+from api.core.security import hash_password
 from api.models import Recipe, User
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def init_users(session: Session):
-    if not settings.SUPERUSER_GID:
-        raise ValueError("Missing SUPERUSER_GID env variable.")
-
-    existing = session.exec(
-        select(User).where(User.google_user_id == settings.SUPERUSER_GID)
-    ).first()
-
+def _upsert_password_user(
+    session: Session,
+    *,
+    email: str,
+    password: str,
+    display_name: str,
+    admin: bool,
+    google_user_id: str | None = None,
+) -> User:
+    email = email.strip().lower()
+    existing = session.exec(select(User).where(User.email == email)).first()
     if existing is not None:
-        logger.warn("Superuser already exsits, skipping add.")
-        return
+        changed = False
+        if not existing.hashed_password:
+            existing.hashed_password = hash_password(password)
+            changed = True
+        if not existing.email_verified:
+            existing.email_verified = True
+            changed = True
+        if existing.admin != admin:
+            existing.admin = admin
+            changed = True
+        if google_user_id and existing.google_user_id != google_user_id:
+            existing.google_user_id = google_user_id
+            changed = True
+        if changed:
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            logger.info("Updated seeded user %s", email)
+        else:
+            logger.info("Seeded user %s already exists, skipping.", email)
+        return existing
 
-    first_user = User.model_validate(
-        {
-            "username": "admin",
-            "email": "admin@joelyoung.dev",
-            "display_name": "admin",
-            "admin": True,
-            "google_user_id": settings.SUPERUSER_GID,
-        }
+    user = User(
+        username=email.split("@")[0],
+        email=email,
+        display_name=display_name,
+        admin=admin,
+        disabled=False,
+        email_verified=True,
+        hashed_password=hash_password(password),
+        google_user_id=google_user_id,
     )
-    session.add(first_user)
+    session.add(user)
     session.commit()
-    session.refresh(first_user)
-    logger.info("Successfully created users")
+    session.refresh(user)
+    logger.info("Created seeded user %s (admin=%s)", email, admin)
+    return user
+
+
+def init_users(session: Session):
+    """
+    Seed local password users:
+    - admin@example.com / adminpass123 (admin)
+    - test@example.com / testpass123 (regular)
+
+    The admin user also receives SUPERUSER_GID when set so Google promote /
+    legacy Google-linked flows keep working.
+    """
+    admin = _upsert_password_user(
+        session,
+        email=settings.SEED_ADMIN_EMAIL,
+        password=settings.SEED_ADMIN_PASSWORD,
+        display_name="Admin",
+        admin=True,
+        google_user_id=settings.SUPERUSER_GID or None,
+    )
+
+    _upsert_password_user(
+        session,
+        email=settings.SEED_TEST_EMAIL,
+        password=settings.SEED_TEST_PASSWORD,
+        display_name="Test User",
+        admin=False,
+    )
+
+    # Legacy: if an older Google-only admin row exists under SUPERUSER_GID with a
+    # different email, leave it; password seed users above are the primary locals.
+    if settings.SUPERUSER_GID and admin.google_user_id != settings.SUPERUSER_GID:
+        admin.google_user_id = settings.SUPERUSER_GID
+        session.add(admin)
+        session.commit()
 
 
 def init_recipes(session: Session):
-    user = session.exec(select(User)).first()
-    if user is None:
-        logger.warn("No user found, skipping recipes.")
-        return
-
     existing_count = len(session.exec(select(Recipe)).all())
     if existing_count > 0:
-        logger.warn("Recipes already exist, skipping add.")
+        logger.info("Recipes already seeded (%s), skipping.", existing_count)
         return
+
+    user = session.exec(
+        select(User).where(User.email == settings.SEED_ADMIN_EMAIL)
+    ).first()
+    if user is None:
+        user = session.exec(select(User)).first()
+
+    if user is None:
+        raise RuntimeError("No users available to attach seed recipes to.")
 
     import random
 
