@@ -36,7 +36,7 @@ function onTab(id: TabId) {
 
 <template>
   <nav
-    class="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-border bg-elevated px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+    class="fixed bottom-0 left-1/2 z-[60] w-full max-w-md -translate-x-1/2 border-t border-border bg-elevated px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
     aria-label="Primary"
   >
     <div class="grid grid-cols-5 items-end">
