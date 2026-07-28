@@ -1,2 +1,1 @@
-export * from "./vuetify";
-export * as googleAuth from "./googleAuth";
+export { install as googleAuth } from "./googleAuth";

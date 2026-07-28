@@ -78,10 +78,7 @@ def get_or_create_user_from_google_token(google_token, session: SessionDep):
     return db_user
 
 
-def create_access_token(google_token, session: SessionDep):
-    user = get_or_create_user_from_google_token(google_token, session)
-
-    # Create a long-lived session token
+def create_access_token_for_user(user: User, session: SessionDep) -> Token:
     access_token = jwt.encode(
         {
             "user_id": user.id,
@@ -103,7 +100,6 @@ def create_access_token(google_token, session: SessionDep):
 
     session.add(db_token)
 
-    # Update last_login timestamp
     user.last_login = datetime.now(timezone.utc)
     session.add(user)
 
@@ -111,6 +107,11 @@ def create_access_token(google_token, session: SessionDep):
     session.refresh(db_token)
 
     return db_token
+
+
+def create_access_token(google_token, session: SessionDep):
+    user = get_or_create_user_from_google_token(google_token, session)
+    return create_access_token_for_user(user, session)
 
 
 def verify_access_token(

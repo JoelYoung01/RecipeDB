@@ -14,6 +14,10 @@ export async function checkSessionToken(access_token: string) {
   }
 }
 
+function dispatchLogin(access_token: string, user: unknown) {
+  window.dispatchEvent(new CustomEvent(AuthLoginEvent, { detail: { access_token, user } }));
+}
+
 export async function loginWithGoogle(payload: any) {
   try {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login-google/`, {
@@ -24,7 +28,25 @@ export async function loginWithGoogle(payload: any) {
     if (!response.ok) throw new Error(`Error logging in with google: ${response.statusText}`);
     const { access_token, user } = await response.json();
 
-    window.dispatchEvent(new CustomEvent(AuthLoginEvent, { detail: { access_token, user } }));
+    dispatchLogin(access_token, user);
+  } catch (er) {
+    console.error(er);
+  }
+}
+
+/** Development-only: session for the seeded test/admin user (no Google). */
+export async function loginAsDevUser() {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/dev-login/`, {
+      method: "POST",
+      headers: { "content-type": "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error(`Dev login failed: ${response.status} ${response.statusText}`);
+    }
+    const { access_token, user } = await response.json();
+    dispatchLogin(access_token, user);
+    return { access_token, user };
   } catch (er) {
     console.error(er);
   }

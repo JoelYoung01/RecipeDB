@@ -1,9 +1,10 @@
+import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
-import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import AutoImport from "unplugin-auto-import/vite";
+import { defineConfig } from "vite";
 
 function validateVars(requiredEnvVars: string[]) {
   return {
@@ -25,13 +26,10 @@ function validateVars(requiredEnvVars: string[]) {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    vue({
-      template: { transformAssetUrls }
-    }),
-    vuetify(),
+    vue(),
+    tailwindcss(),
     validateVars(["VITE_APP_TITLE", "VITE_API_URL", "VITE_GOOGLE_CLIENT_ID"]),
     AutoImport({
-      // https://github.com/unplugin/unplugin-auto-import?tab=readme-ov-file#configuration
       include: [/\.vue$/, /\.vue\?vue/, /\.ts$/],
       imports: [
         {
@@ -44,7 +42,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url))
+      "@": path.resolve(fileURLToPath(new URL(".", import.meta.url)), "src")
     }
   }
 });

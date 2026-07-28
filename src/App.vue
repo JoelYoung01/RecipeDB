@@ -1,34 +1,9 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from "vue-router";
-
-const route = useRoute();
-
-const mainClassList = computed(() => {
-  let classes = "";
-
-  if (route.meta.useShadedBackground) {
-    classes += "shaded-bg";
-  }
-
-  return classes;
-});
+import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <v-app>
-    <v-main :class="mainClassList">
-      <RouterView />
-    </v-main>
-  </v-app>
+  <div class="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background text-foreground">
+    <RouterView />
+  </div>
 </template>
-
-<style scoped>
-.shaded-bg {
-  background-color: whitesmoke;
-}
-
-main {
-  max-width: 480px;
-  margin: 0 auto;
-}
-</style>

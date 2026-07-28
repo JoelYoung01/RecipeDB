@@ -1,96 +1,73 @@
 <script setup lang="ts">
-import type { RecipeDetail } from "@/types";
-import defaultImage from "@/assets/default-recipe.jpg";
-import { useSessionStore } from "@/stores/session";
-import { useRoute } from "vue-router";
+import { formatPrepTime, mediaUrl } from "@/lib/media";
+import { cn } from "@/lib/utils";
+import { paths } from "@/sitemap";
+import type { RecipeDashboard } from "@/types";
+import { Clock } from "@lucide/vue";
+import { computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-type SizeOption = "sm" | "md" | "lg";
-type ModeOption = "default" | "public" | "copy";
-
-interface Props {
-  recipe: Partial<RecipeDetail>;
-  size?: SizeOption;
-  mode?: ModeOption;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  size: "md",
-  mode: "default"
-});
-
-const route = useRoute();
-const sessionStore = useSessionStore();
-const loading = ref(false);
-
-const imageCols = computed(() => ({ sm: 3, md: 5, lg: 6 })[props.size]);
-const createdBy = computed(() =>
-  sessionStore.currentUser?.id === props.recipe.created_by_id
-    ? "You"
-    : props.recipe.created_by?.display_name || "-"
+const props = withDefaults(
+  defineProps<{
+    recipe: RecipeDashboard & {
+      created_by?: { display_name: string };
+    };
+    size?: "sm" | "md";
+    mode?: "default" | "public";
+  }>(),
+  { size: "md", mode: "default" }
 );
-const imageUrl = computed(() => {
-  if (loading.value) return "";
-  if (!props.recipe.cover_image?.url) return defaultImage;
 
-  let url = props.recipe.cover_image.url;
+const router = useRouter();
+const route = useRoute();
 
-  if (import.meta.env.DEV) {
-    url = `http://localhost:8000${url}`;
-  }
+const image = computed(() => mediaUrl(props.recipe.cover_image?.url));
+const prep = computed(() => formatPrepTime(props.recipe.prep_time));
 
-  return url;
-});
+function open() {
+  router.push({
+    path: paths.recipeDetail(props.recipe.id),
+    query: { returnUrl: route.fullPath }
+  });
+}
 </script>
 
 <template>
-  <v-card :to="`/recipe/${recipe.id}/detail?returnUrl=${route.fullPath}`" flat>
-    <v-row dense>
-      <v-col :cols="imageCols">
-        <v-img :src="imageUrl" cover aspect-ratio="1" class="rounded">
-          <template #placeholder>
-            <v-row class="fill-height ma-0" align="center" justify="center">
-              <v-progress-circular indeterminate color="primary" />
-            </v-row>
-          </template>
-        </v-img>
-      </v-col>
-      <v-col class="d-flex flex-column">
-        <div class="text-truncate-2 mb-1 font-weight-bold">{{ recipe.name }}</div>
-        <div v-if="size !== 'sm'" class="text-truncate-2 mb-2">{{ recipe.description }}</div>
-        <div v-if="mode === 'default'" class="text-disabled d-flex align-center gap-1">
-          <v-icon icon="mdi-clock" size="small" />
-          {{ recipe.prep_time ?? "-" }} minutes
-        </div>
-        <div v-else-if="mode === 'public'" class="text-disabled created-by">
-          Created by {{ createdBy }}
-        </div>
-        <div v-else-if="mode === 'copy'" class="mt-2">
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-content-copy"
-            size="small"
-            disabled
-            :to="`/recipe/create?copyExisting=${recipe.id}`"
-          >
-            Copy Recipe
-          </v-btn>
-        </div>
-      </v-col>
-    </v-row>
-  </v-card>
+  <button
+    type="button"
+    :class="
+      cn(
+        'flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border bg-card text-left transition-opacity active:opacity-80',
+        size === 'sm' ? 'p-2' : 'p-3'
+      )
+    "
+    @click="open"
+  >
+    <img
+      :src="image"
+      :alt="recipe.name"
+      :class="cn('shrink-0 rounded-lg object-cover', size === 'sm' ? 'size-14' : 'size-20')"
+    />
+    <div class="min-w-0 flex-1 py-0.5">
+      <p :class="cn('truncate font-semibold', size === 'sm' ? 'text-sm' : 'text-[15px]')">
+        {{ recipe.name }}
+      </p>
+      <p
+        v-if="mode === 'public' && recipe.created_by"
+        class="mt-0.5 truncate text-xs text-muted-foreground"
+      >
+        {{ recipe.created_by.display_name }}
+      </p>
+      <p v-else-if="recipe.description" class="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+        {{ recipe.description }}
+      </p>
+      <p
+        v-if="mode === 'default' && prep"
+        class="mt-1.5 flex items-center gap-1 text-[11px] text-faint"
+      >
+        <Clock class="size-3" />
+        {{ prep }}
+      </p>
+    </div>
+  </button>
 </template>
-
-<style scoped>
-.text-truncate-2 {
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.created-by {
-  font-size: small;
-}
-</style>

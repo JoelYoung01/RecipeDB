@@ -1,6 +1,6 @@
 # Vue + FastAPI Template
 
-This template should help get you started developing with a static Vue 3 web application built with Vite and styled with Vuetify.
+This template should help get you started developing with a static Vue 3 web application built with Vite and styled with Tailwind CSS + shadcn-vue. See `DESIGN.md` and `SITE_MAP.md` for the UI system and routes.
 
 ## Recommended IDE Setup
 
@@ -61,12 +61,17 @@ uv sync
 #### Compile and Hot-Reload for Development
 
 ```bash
+# Export env vars for both processes (see .envtemplate)
+set -a && . ./.env && set +a
+
 # Run Vite Dev Server
 pnpm dev
 
 # Run FastAPI Dev Server (uv run uses the project's .venv)
 uv run fastapi dev api/main.py
 ```
+
+With `ENVIRONMENT=development`, the Vite app auto-signs in as the seeded test/admin user (no Google required). See `docs/cursor-cloud-agents.md`.
 
 #### Type-Check, Compile and Minify for Production
 
