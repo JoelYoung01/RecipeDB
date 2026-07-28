@@ -284,6 +284,8 @@ class MealPlanWizardSelectRequest(BaseModel):
 
 class MealPlanWizardRefineRequest(BaseModel):
     refinement: str | None = None
+    """Optional idea ids to regenerate on a refine turn. Omit to rebuild all."""
+    idea_ids: list[str] | None = None
 
 
 class MealPlanWizardRewindRequest(BaseModel):

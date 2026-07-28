@@ -223,11 +223,16 @@ async def build(
 ):
     session = _get_owned_session(session_id, current_user.id)
     refinement = body.refinement if body else None
+    idea_ids = body.idea_ids if body else None
 
     async def gen():
         with Session(engine) as db:
             async for event in pipeline.run_build(
-                session, db, current_user, refinement=refinement
+                session,
+                db,
+                current_user,
+                refinement=refinement,
+                idea_ids=idea_ids,
             ):
                 wizard_sessions.touch(session)
                 yield event

@@ -4,17 +4,18 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import { addDays, endOfDay, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
+import { addDays, endOfDay, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import {
   emptyWizardPrefs,
+  type MealPlanWizardBuiltRecipe,
   type MealPlanWizardProgressEvent,
   type MealPlanWizardSession,
   type MealPlanWizardStep,
   type PlannedRecipeDetail
 } from "@/types";
 import { get, patch, post, postSse } from "@/utils";
-import { ArrowLeft, Check, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
+import { ArrowLeft, Check, ChevronDown, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -39,7 +40,10 @@ const busy = ref(false);
 const loadingDays = ref(true);
 /** Existing dinner titles keyed by YYYY-MM-DD for this week. */
 const plannedTitles = ref<Record<string, string>>({});
-const assignments = ref<Record<string, string>>({});
+/** Day keys expanded on the review screen. */
+const expandedDays = ref<string[]>([]);
+/** Idea ids marked for regeneration on refine. */
+const regenIdeaIds = ref<string[]>([]);
 let abortController: AbortController | null = null;
 
 const today = startOfDay();
@@ -60,6 +64,20 @@ const skippedCount = computed(() => weekDayKeys.value.length - selectedDays.valu
 const openNightKeys = computed(() => weekDayKeys.value.filter((key) => !plannedTitles.value[key]));
 
 const alreadyPlannedCount = computed(() => Object.keys(plannedTitles.value).length);
+
+/** Readonly day → recipe pairs in plan order (no reassignment). */
+const planRows = computed(() => {
+  const days = session.value?.days ?? [];
+  const recipes = session.value?.built_recipes ?? [];
+  return days.map((day, i) => ({
+    day,
+    recipe: recipes[i] ?? null
+  }));
+});
+
+const canRefineRecipes = computed(
+  () => Boolean(refineText.value.trim()) && regenIdeaIds.value.length > 0 && !busy.value
+);
 
 const weekHeading = computed(() => {
   const start = weekDays.value[0];
@@ -330,7 +348,7 @@ async function confirmSelectionAndBuild(refinement?: string) {
   }
 }
 
-async function runBuild(refinement?: string) {
+async function runBuild(refinement?: string, ideaIds?: string[]) {
   if (!session.value) return;
   error.value = "";
   busy.value = true;
@@ -342,7 +360,10 @@ async function runBuild(refinement?: string) {
     abortController = new AbortController();
     await postSse<MealPlanWizardProgressEvent>(
       `/meal-plan-wizard/sessions/${session.value.id}/build/`,
-      { refinement: refinement || null },
+      {
+        refinement: refinement || null,
+        idea_ids: ideaIds?.length ? ideaIds : null
+      },
       (event) => {
         if (event.status === "done") return;
         liveEvents.value = [...liveEvents.value, event];
@@ -351,15 +372,8 @@ async function runBuild(refinement?: string) {
       abortController.signal
     );
     await refreshSession();
-    // Default zip assignments
-    const next: Record<string, string> = {};
-    const days = session.value?.days ?? [];
-    const recipes = session.value?.built_recipes ?? [];
-    days.forEach((day, i) => {
-      if (recipes[i]) next[day] = recipes[i].idea_id;
-    });
-    assignments.value = next;
     refineText.value = "";
+    regenIdeaIds.value = [];
     if (!error.value) uiStep.value = "review";
   } catch (e) {
     if ((e as Error).name !== "AbortError") {
@@ -377,8 +391,54 @@ async function applyRefinement() {
   if (uiStep.value === "select" || uiStep.value === "ideate") {
     await runIdeate(text);
   } else if (uiStep.value === "review" || uiStep.value === "build") {
-    await runBuild(text);
+    if (!regenIdeaIds.value.length) {
+      error.value = "Mark at least one dinner to regenerate.";
+      return;
+    }
+    await runBuild(text, [...regenIdeaIds.value]);
   }
+}
+
+function toggleExpanded(day: string) {
+  if (expandedDays.value.includes(day)) {
+    expandedDays.value = expandedDays.value.filter((d) => d !== day);
+  } else {
+    expandedDays.value = [...expandedDays.value, day];
+  }
+}
+
+function isExpanded(day: string) {
+  return expandedDays.value.includes(day);
+}
+
+function toggleRegen(ideaId: string) {
+  if (regenIdeaIds.value.includes(ideaId)) {
+    regenIdeaIds.value = regenIdeaIds.value.filter((id) => id !== ideaId);
+  } else {
+    regenIdeaIds.value = [...regenIdeaIds.value, ideaId];
+  }
+}
+
+function isMarkedForRegen(ideaId: string) {
+  return regenIdeaIds.value.includes(ideaId);
+}
+
+function markAllForRegen() {
+  regenIdeaIds.value = (session.value?.built_recipes ?? []).map((r) => r.idea_id);
+}
+
+function clearRegenMarks() {
+  regenIdeaIds.value = [];
+}
+
+function formatIngredient(ing: MealPlanWizardBuiltRecipe["ingredients"][number]): string {
+  const bits = [
+    ing.amount != null ? String(ing.amount) : "",
+    ing.units || "",
+    ing.name,
+    ing.details ? `(${ing.details})` : ""
+  ].filter(Boolean);
+  return bits.join(" ");
 }
 
 async function rewindTo(step: UiStep) {
@@ -420,23 +480,14 @@ async function commitPlan() {
   error.value = "";
   busy.value = true;
   try {
-    const payload = {
-      assignments: Object.entries(assignments.value).map(([day, idea_id]) => ({
-        day,
-        idea_id
-      }))
-    };
-    await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, payload);
+    // Zip order: day[i] ↔ built_recipes[i]
+    await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {});
     router.push(paths.planner);
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Could not save plan";
   } finally {
     busy.value = false;
   }
-}
-
-function recipeForIdea(ideaId: string) {
-  return session.value?.built_recipes.find((r) => r.idea_id === ideaId);
 }
 
 onMounted(async () => {
@@ -770,70 +821,137 @@ onUnmounted(() => {
     <!-- REVIEW -->
     <section v-else-if="uiStep === 'review'" class="mt-5 space-y-4">
       <p class="text-sm text-muted-foreground">
-        Assign each built recipe to a night, then save to your planner.
+        Here’s your week. Expand a night for the full recipe, or mark dinners to regenerate.
       </p>
 
-      <div class="space-y-3">
+      <div class="space-y-2">
         <div
-          v-for="day in session?.days ?? []"
-          :key="day"
-          class="rounded-xl border border-border bg-card p-3"
+          v-for="row in planRows"
+          :key="row.day"
+          class="overflow-hidden rounded-xl border border-border bg-card"
+          :class="
+            row.recipe && isMarkedForRegen(row.recipe.idea_id)
+              ? 'border-[rgba(34,197,94,0.4)]'
+              : ''
+          "
         >
-          <p class="text-xs font-semibold uppercase tracking-wide text-faint">
-            {{ dayLabel(day) }}
-          </p>
-          <select
-            class="mt-2 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm"
-            :value="assignments[day] || ''"
-            @change="assignments[day] = ($event.target as HTMLSelectElement).value"
+          <button
+            type="button"
+            class="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors active:bg-secondary/40"
+            @click="toggleExpanded(row.day)"
           >
-            <option disabled value="">Choose recipe</option>
-            <option
-              v-for="recipe in session?.built_recipes ?? []"
-              :key="recipe.idea_id"
-              :value="recipe.idea_id"
+            <ChevronDown
+              class="mt-0.5 size-4 shrink-0 text-faint transition-transform"
+              :class="isExpanded(row.day) ? 'rotate-0' : '-rotate-90'"
+            />
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-faint">
+                {{ dayLabel(row.day) }}
+              </p>
+              <p class="mt-0.5 text-sm font-semibold leading-snug">
+                {{ row.recipe?.title || "Untitled dinner" }}
+              </p>
+              <p v-if="row.recipe?.prep_time" class="mt-0.5 text-[11px] text-muted-foreground">
+                {{ formatPrepTime(row.recipe.prep_time) }}
+              </p>
+            </div>
+            <label
+              v-if="row.recipe"
+              class="mt-0.5 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[10px] font-semibold"
+              :class="
+                isMarkedForRegen(row.recipe.idea_id)
+                  ? 'border-[rgba(34,197,94,0.45)] bg-[rgba(34,197,94,0.12)] text-[#86efac]'
+                  : 'text-faint'
+              "
+              @click.stop
             >
-              {{ recipe.title }}
-            </option>
-          </select>
-          <p
-            v-if="assignments[day] && recipeForIdea(assignments[day])"
-            class="mt-2 line-clamp-2 text-xs text-muted-foreground"
+              <input
+                type="checkbox"
+                class="size-3.5 accent-[#16a34a]"
+                :checked="isMarkedForRegen(row.recipe.idea_id)"
+                @change="toggleRegen(row.recipe.idea_id)"
+              />
+              Regen
+            </label>
+          </button>
+
+          <div
+            v-if="row.recipe && isExpanded(row.day)"
+            class="space-y-3 border-t border-border px-3 pb-3 pt-2"
           >
-            {{ recipeForIdea(assignments[day])?.description }}
-          </p>
+            <p v-if="row.recipe.description" class="text-sm text-muted-foreground">
+              {{ row.recipe.description }}
+            </p>
+
+            <div v-if="row.recipe.ingredients?.length">
+              <p class="text-xs font-semibold uppercase tracking-wide text-faint">Ingredients</p>
+              <ul class="mt-1.5 space-y-1">
+                <li
+                  v-for="(ing, idx) in row.recipe.ingredients"
+                  :key="`${row.recipe.idea_id}-ing-${idx}`"
+                  class="text-sm text-foreground/90"
+                >
+                  {{ formatIngredient(ing) }}
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-faint">Instructions</p>
+              <p class="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                {{ row.recipe.instructions }}
+              </p>
+            </div>
+
+            <p v-if="row.recipe.notes" class="text-xs text-muted-foreground">
+              Notes: {{ row.recipe.notes }}
+            </p>
+          </div>
         </div>
       </div>
 
-      <details class="rounded-xl border border-border bg-card px-3 py-2">
-        <summary class="cursor-pointer text-sm font-semibold">Adjust goals / diet</summary>
-        <div class="mt-3 pb-2">
-          <WizardPrefsFields v-model="localPrefs" />
-          <Button size="sm" variant="secondary" class="mt-2" :disabled="busy" @click="runIdeate()">
-            Apply & re-ideate (drops later steps)
-          </Button>
-        </div>
-      </details>
-
       <div class="rounded-xl border border-border bg-card p-3">
-        <p class="text-sm font-semibold">Refine recipes</p>
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-semibold">Refine recipes</p>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="text-[11.5px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
+              @click="markAllForRegen"
+            >
+              Mark all
+            </button>
+            <button
+              type="button"
+              class="text-[11.5px] font-semibold text-faint transition-opacity active:opacity-70"
+              @click="clearRegenMarks"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
         <p class="mt-0.5 text-xs text-muted-foreground">
-          Continues the build conversation with your notes.
+          Mark dinners above, then describe changes. Prior turns stay in context so the week
+          stays coherent.
+        </p>
+        <p class="mt-1.5 text-xs tabular-nums text-faint">
+          {{ regenIdeaIds.length }} marked for regeneration
         </p>
         <Textarea
           v-model="refineText"
           class="mt-2 min-h-16"
-          placeholder="Make Tuesday spicier, cut cook time, use chicken instead of tofu…"
+          placeholder="Make the pasta spicier, cut cook time on Tuesday, swap tofu for chicken…"
         />
         <Button
           variant="secondary"
           size="sm"
           class="mt-2 gap-1.5"
-          :disabled="busy || !refineText.trim()"
+          :disabled="!canRefineRecipes"
           @click="applyRefinement"
         >
           <RefreshCw class="size-3.5" />
-          Rebuild with feedback
+          Regenerate marked
+          <span v-if="regenIdeaIds.length">({{ regenIdeaIds.length }})</span>
         </Button>
       </div>
 
