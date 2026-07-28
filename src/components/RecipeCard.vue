@@ -2,14 +2,14 @@
 import { formatPrepTime, mediaUrl } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import { paths } from "@/sitemap";
-import type { RecipeDashboard } from "@/types";
+import type { RecipeCard } from "@/types";
 import { Clock } from "@lucide/vue";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const props = withDefaults(
   defineProps<{
-    recipe: RecipeDashboard & {
+    recipe: RecipeCard & {
       created_by?: { display_name: string };
     };
     size?: "sm" | "md";

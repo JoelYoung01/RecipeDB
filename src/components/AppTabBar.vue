@@ -2,18 +2,30 @@
 import { cn } from "@/lib/utils";
 import { tabByRouteName, tabs, type SiteRouteName, type TabId } from "@/sitemap";
 import { BookOpen, CalendarDays, Home, Plus, ShoppingCart } from "@lucide/vue";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const open = defineModel<boolean>("open", { default: false });
 
-const route = useRoute();
 const router = useRouter();
+const currentRoute = useRoute();
 
-const activeTab = computed<TabId | undefined>(() => {
+/** Optimistic highlight so the tab bar reacts before the route chunk resolves. */
+const pendingTab = ref<TabId | null>(null);
+
+const routeTab = computed<TabId | undefined>(() => {
   if (open.value) return "add";
-  return tabByRouteName[route.name as SiteRouteName];
+  return tabByRouteName[currentRoute.name as SiteRouteName];
 });
+
+const activeTab = computed<TabId | undefined>(() => pendingTab.value ?? routeTab.value);
+
+watch(
+  () => currentRoute.fullPath,
+  () => {
+    pendingTab.value = null;
+  }
+);
 
 const icons: Record<TabId, typeof Home> = {
   home: Home,
@@ -26,11 +38,14 @@ const icons: Record<TabId, typeof Home> = {
 function onTab(id: TabId) {
   if (id === "add") {
     open.value = !open.value;
+    pendingTab.value = null;
     return;
   }
   open.value = false;
   const tab = tabs.find((t) => t.id === id);
-  if (tab?.path) router.push(tab.path);
+  if (!tab?.path) return;
+  pendingTab.value = id;
+  void router.push(tab.path);
 }
 </script>
 

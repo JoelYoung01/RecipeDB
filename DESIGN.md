@@ -75,15 +75,24 @@ Wire only to existing features; stub unavailable import flows in UI without inve
 
 ## Motion
 
-Keep motion intentional and light (2–3 patterns app-wide):
+Keep motion intentional and light (app-wide):
 
 1. Sheet slide-up + scrim fade.
 2. FAB “+” → “×” rotate.
 3. Subtle press/active opacity on action rows and tab items.
+4. Page transitions: short fade + slight vertical rise (~180ms) between shell routes.
+5. Skeleton pulse (`animate-pulse` muted bars) while list/hero data loads — never blank the page behind “Loading…”.
+
+## Loading & caching
+
+- Tab roots (Home, Recipes, Planner, Grocery) stay mounted via `KeepAlive` after first visit.
+- Shared Pinia stores (`recipes`, `planner`, `grocery`) hold fetched data so revisits paint immediately; soft-refresh in the background when needed.
+- First paint shows page chrome + skeletons; content fills in when the network returns.
+- Prefer slim list DTOs (`RecipeCard`) and summary/count endpoints for badges over shipping full payloads.
 
 ## Components (shadcn-vue)
 
-Prefer primitives from `@/components/ui/*`: Button, Input, Textarea, Checkbox, Dialog, Sheet, Calendar, Popover, Separator, Badge, Avatar, Label, ScrollArea, etc.
+Prefer primitives from `@/components/ui/*`: Button, Input, Textarea, Checkbox, Dialog, Sheet, Calendar, Popover, Separator, Badge, Avatar, Label, ScrollArea, Skeleton, etc.
 
 App-specific compositions live under `@/components/` (e.g. `AppTabBar`, `AddMenuSheet`, `RecipeCard`, `TonightHero`).
 

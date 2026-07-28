@@ -1,15 +1,17 @@
 from datetime import UTC, datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import update
+from sqlalchemy import func, update
+from sqlalchemy.orm import selectinload
 from sqlmodel import and_, or_, select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.models import Recipe, Ingredient
 from api.schemas import (
+    CountResponse,
+    RecipeCard,
     RecipeCreate,
-    RecipeDashboard,
     RecipeDetail,
     RecipeUpdate,
 )
@@ -32,7 +34,17 @@ def get_public_recipes(
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
 ):
-    stmt = select(Recipe).where(Recipe.public).offset(offset).limit(limit)
+    stmt = (
+        select(Recipe)
+        .where(Recipe.public)
+        .options(
+            selectinload(Recipe.cover_image),
+            selectinload(Recipe.created_by),
+            selectinload(Recipe.ingredients),
+        )
+        .offset(offset)
+        .limit(limit)
+    )
 
     if user:
         stmt = stmt.where(Recipe.created_by_id == user)
@@ -41,35 +53,55 @@ def get_public_recipes(
     return recipes
 
 
-@router.get("/all/", response_model=list[RecipeDashboard])
+@router.get("/all/", response_model=list[RecipeCard])
 def get_all_recipes(
     current_user: CurrentUserDep,
     session: SessionDep,
     offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    limit: Annotated[int, Query(le=100)] = 50,
 ):
     recipes = session.exec(
         select(Recipe)
         .where(or_(Recipe.public, Recipe.created_by == current_user))
+        .options(selectinload(Recipe.cover_image))
         .offset(offset)
         .limit(limit)
     ).all()
     return recipes
 
 
-@router.get("/user/", response_model=list[RecipeDashboard])
-def get_users_recipes(current_user: CurrentUserDep, session: SessionDep):
+@router.get("/user/", response_model=list[RecipeCard])
+def get_users_recipes(
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 50,
+):
     recipes = session.exec(
-        select(Recipe).where(Recipe.created_by == current_user)
+        select(Recipe)
+        .where(Recipe.created_by == current_user)
+        .options(selectinload(Recipe.cover_image))
+        .order_by(Recipe.created_on.desc())
+        .offset(offset)
+        .limit(limit)
     ).all()
     return recipes
 
 
-@router.get("/user/recent/", response_model=list[RecipeDashboard])
+@router.get("/user/count/", response_model=CountResponse)
+def get_users_recipe_count(current_user: CurrentUserDep, session: SessionDep):
+    count = session.exec(
+        select(func.count()).select_from(Recipe).where(Recipe.created_by == current_user)
+    ).one()
+    return CountResponse(count=count)
+
+
+@router.get("/user/recent/", response_model=list[RecipeCard])
 def get_users_recently_added_recipes(current_user: CurrentUserDep, session: SessionDep):
     recipes = session.exec(
         select(Recipe)
         .where(Recipe.created_by == current_user)
+        .options(selectinload(Recipe.cover_image))
         .order_by(Recipe.created_on.desc())
         .limit(5)
     ).all()
@@ -84,7 +116,15 @@ def get_recipe_by_id(
     recipe_id: int,
     session: SessionDep,
 ):
-    recipe = session.exec(select(Recipe).where(Recipe.id == recipe_id)).first()
+    recipe = session.exec(
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .options(
+            selectinload(Recipe.cover_image),
+            selectinload(Recipe.created_by),
+            selectinload(Recipe.ingredients),
+        )
+    ).first()
     if not recipe:
         raise HTTPException(
             status_code=404, detail=f"Recipe with id {recipe_id} not found."
@@ -92,16 +132,21 @@ def get_recipe_by_id(
     return recipe
 
 
-@router.get("/search/", response_model=list[RecipeDetail])
+@router.get("/search/", response_model=list[RecipeCard])
 def search_recipes(
     searchText: str,
     current_user: CurrentUserDep,
     session: SessionDep,
     offset=0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    limit: Annotated[int, Query(le=100)] = 50,
 ):
     if not searchText:
-        recipes = session.exec(select(Recipe).where(Recipe.public).limit(25)).all()
+        recipes = session.exec(
+            select(Recipe)
+            .where(Recipe.public)
+            .options(selectinload(Recipe.cover_image))
+            .limit(25)
+        ).all()
         return recipes
 
     query = (
@@ -125,6 +170,7 @@ def search_recipes(
                 ),
             )
         )
+        .options(selectinload(Recipe.cover_image))
         .offset(offset)
         .limit(limit)
     )

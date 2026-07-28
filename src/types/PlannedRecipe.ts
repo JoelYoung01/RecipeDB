@@ -1,4 +1,4 @@
-import type { RecipeDashboard } from "./Recipe";
+import type { RecipeCard } from "./Recipe";
 import type { UserResponse } from "./User";
 
 export interface PlannedRecipeSlim {
@@ -10,5 +10,5 @@ export interface PlannedRecipeSlim {
 
 export interface PlannedRecipeDetail extends PlannedRecipeSlim {
   created_by: UserResponse;
-  recipe: RecipeDashboard;
+  recipe: RecipeCard;
 }

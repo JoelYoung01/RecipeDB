@@ -1,41 +1,50 @@
 <script setup lang="ts">
 import RecipeCard from "@/components/RecipeCard.vue";
+import RecipeCardSkeleton from "@/components/RecipeCardSkeleton.vue";
 import { Input } from "@/components/ui/input";
-import type { RecipeDashboard } from "@/types";
-import { get } from "@/utils";
+import { useRecipesStore } from "@/stores/recipes";
+import type { RecipeCard as RecipeCardType } from "@/types";
 import { Search } from "@lucide/vue";
-import { computed, onMounted, watch } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 
-const loading = ref(true);
-const recipes = ref<RecipeDashboard[]>([]);
+defineOptions({ name: "RecipesView" });
+
+const recipesStore = useRecipesStore();
+
 const searchText = ref("");
+const searchResults = ref<RecipeCardType[] | null>(null);
 const searching = ref(false);
 
-const sorted = computed(() =>
-  [...recipes.value].sort(
-    (a, b) => new Date(b.created_on).getTime() - new Date(a.created_on).getTime()
-  )
+const displayList = computed(() => {
+  if (searchResults.value) {
+    return [...searchResults.value].sort(
+      (a, b) => new Date(b.created_on).getTime() - new Date(a.created_on).getTime()
+    );
+  }
+  return recipesStore.sorted;
+});
+
+const showSkeleton = computed(
+  () =>
+    (recipesStore.loading && !recipesStore.recipes.length) ||
+    (searching.value && !searchResults.value?.length && !!searchText.value.trim())
 );
 
 async function loadMine() {
-  loading.value = true;
-  try {
-    recipes.value = await get("/recipe/user/");
-  } catch (er) {
-    console.error(er);
-  }
-  loading.value = false;
+  await recipesStore.ensureLoaded();
 }
 
-async function search() {
+async function runSearch() {
   const q = searchText.value.trim();
   if (!q) {
-    await loadMine();
+    searchResults.value = null;
+    searching.value = false;
+    await recipesStore.ensureLoaded();
     return;
   }
   searching.value = true;
   try {
-    recipes.value = await get(`/recipe/search/?searchText=${encodeURIComponent(q)}`);
+    searchResults.value = await recipesStore.search(q);
   } catch (er) {
     console.error(er);
   }
@@ -45,10 +54,15 @@ async function search() {
 let debounce: ReturnType<typeof setTimeout> | undefined;
 watch(searchText, () => {
   clearTimeout(debounce);
-  debounce = setTimeout(search, 300);
+  debounce = setTimeout(runSearch, 300);
 });
 
 onMounted(loadMine);
+onActivated(() => {
+  if (!searchText.value.trim()) {
+    void recipesStore.ensureLoaded();
+  }
+});
 </script>
 
 <template>
@@ -68,20 +82,32 @@ onMounted(loadMine);
       />
     </div>
 
-    <p v-if="loading || searching" class="mt-6 text-center text-sm text-muted-foreground">
-      Loading…
-    </p>
-
-    <div v-else class="mt-4 flex flex-col gap-2">
-      <RecipeCard v-for="recipe in sorted" :key="recipe.id" :recipe="recipe" />
-      <p
-        v-if="sorted.length === 0"
-        class="rounded-xl border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground"
-      >
-        {{
-          searchText.trim() ? "No recipes matched that search." : "No recipes yet — add one with +"
-        }}
-      </p>
+    <div class="mt-4 flex flex-col gap-2">
+      <template v-if="showSkeleton">
+        <RecipeCardSkeleton v-for="n in 4" :key="n" />
+      </template>
+      <template v-else>
+        <RecipeCard v-for="recipe in displayList" :key="recipe.id" :recipe="recipe" />
+        <p
+          v-if="displayList.length === 0"
+          class="rounded-xl border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground"
+        >
+          {{
+            searchText.trim()
+              ? "No recipes matched that search."
+              : "No recipes yet — add one with +"
+          }}
+        </p>
+        <button
+          v-else-if="!searchText.trim() && recipesStore.hasMore"
+          type="button"
+          class="mt-1 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-[#22c55e] transition-opacity active:opacity-70"
+          :disabled="recipesStore.refreshing"
+          @click="recipesStore.loadMore()"
+        >
+          {{ recipesStore.refreshing ? "Loading…" : "Load more" }}
+        </button>
+      </template>
     </div>
   </div>
 </template>

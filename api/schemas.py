@@ -102,6 +102,24 @@ class RecipeDashboard(RecipeSlim):
     cover_image: UploadFileResponse | None
 
 
+class RecipeCard(BaseModel):
+    """List/card payload — omits instructions/notes for faster first paint."""
+
+    id: int
+    name: str
+    description: str
+    created_on: datetime
+    created_by_id: int
+    public: bool
+    prep_time: float | None = None
+    cover_image_id: int | None = None
+    cover_image: UploadFileResponse | None = None
+
+
+class CountResponse(BaseModel):
+    count: int
+
+
 class RecipeCreate(BaseModel):
     name: str
     description: str
@@ -137,7 +155,7 @@ class PlannedRecipeSlim(BaseModel):
 
 class PlannedRecipeDetail(PlannedRecipeSlim):
     created_by: "UserResponse"
-    recipe: "RecipeDashboard"
+    recipe: "RecipeCard"
 
 
 class PlannedRecipeCreate(BaseModel):
@@ -208,6 +226,12 @@ class GroceryListResponse(BaseModel):
     window_start: datetime
     window_end: datetime
     items: list[GroceryItem]
+
+
+class GrocerySummaryResponse(BaseModel):
+    window_start: datetime
+    window_end: datetime
+    active_count: int
 
 
 class GroceryItemStateUpdate(BaseModel):
