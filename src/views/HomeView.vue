@@ -56,12 +56,11 @@ const tonightMeta = computed(() => {
   return prep || "Tonight’s plan";
 });
 
-async function loadWeekPlans(weekStart: Date) {
+async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
   try {
-    const weekEnd = endOfDay(addDays(weekStart, 6));
     weekPlans.value = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: weekStart.toISOString(),
-      end: weekEnd.toISOString()
+      start: rangeStart.toISOString(),
+      end: endOfDay(rangeEnd).toISOString()
     });
   } catch (er) {
     console.error(er);
@@ -96,9 +95,14 @@ async function load() {
   loading.value = false;
 }
 
-function onWeekChange(weekStart: Date, days: Date[]) {
+function onWeekChange(
+  _weekStart: Date,
+  days: Date[],
+  rangeStart: Date,
+  rangeEnd: Date
+) {
   visibleWeekDays.value = days;
-  void loadWeekPlans(weekStart);
+  void loadWeekPlans(rangeStart, rangeEnd);
 }
 
 function openDay(date: Date) {
