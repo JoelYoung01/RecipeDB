@@ -4,13 +4,14 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import { addDays, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
+import { addDays, endOfDay, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import {
   emptyWizardPrefs,
   type MealPlanWizardProgressEvent,
   type MealPlanWizardSession,
-  type MealPlanWizardStep
+  type MealPlanWizardStep,
+  type PlannedRecipeDetail
 } from "@/types";
 import { get, patch, post, postSse } from "@/utils";
 import { ArrowLeft, Check, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
@@ -35,6 +36,9 @@ const running = ref(false);
 const error = ref("");
 const refineText = ref("");
 const busy = ref(false);
+const loadingDays = ref(true);
+/** Existing dinner titles keyed by YYYY-MM-DD for this week. */
+const plannedTitles = ref<Record<string, string>>({});
 const assignments = ref<Record<string, string>>({});
 let abortController: AbortController | null = null;
 
@@ -52,6 +56,10 @@ const selectCount = computed(() => session.value?.select_count ?? selectedDays.v
 const canContinueDays = computed(() => selectedDays.value.length > 0);
 
 const skippedCount = computed(() => weekDayKeys.value.length - selectedDays.value.length);
+
+const openNightKeys = computed(() => weekDayKeys.value.filter((key) => !plannedTitles.value[key]));
+
+const alreadyPlannedCount = computed(() => Object.keys(plannedTitles.value).length);
 
 const weekHeading = computed(() => {
   const start = weekDays.value[0];
@@ -142,6 +150,10 @@ function isDaySelected(key: string) {
   return selectedDays.value.includes(key);
 }
 
+function plannedTitleFor(key: string): string | null {
+  return plannedTitles.value[key] ?? null;
+}
+
 function toggleDay(key: string) {
   // Only the 7 nights in this wizard's week can be toggled.
   if (!weekKeySet.value.has(key)) return;
@@ -152,8 +164,8 @@ function toggleDay(key: string) {
   }
 }
 
-function selectAllWeekDays() {
-  selectedDays.value = [...weekDayKeys.value];
+function selectAllOpenNights() {
+  selectedDays.value = [...openNightKeys.value];
 }
 
 function clearWeekDays() {
@@ -164,6 +176,28 @@ function dayLabel(key: string) {
   const date = parseDateKey(key);
   if (!date) return key;
   return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+async function loadPlannedForWeek(days: Date[]): Promise<Record<string, string>> {
+  if (!days.length) return {};
+  const start = days[0]!;
+  const end = days[days.length - 1]!;
+  try {
+    const plans = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
+      start: startOfDay(start).toISOString(),
+      end: endOfDay(end).toISOString()
+    });
+    const titles: Record<string, string> = {};
+    for (const plan of plans) {
+      const key = plan.planned_for.slice(0, 10);
+      // Keep the first dinner title if multiple are planned that day.
+      if (!titles[key]) titles[key] = plan.recipe.name;
+    }
+    return titles;
+  } catch (er) {
+    console.error(er);
+    return {};
+  }
 }
 
 function planningDays(): string[] {
@@ -390,20 +424,22 @@ function recipeForIdea(ideaId: string) {
   return session.value?.built_recipes.find((r) => r.idea_id === ideaId);
 }
 
-onMounted(() => {
+onMounted(async () => {
   localPrefs.value = { ...savedPrefs.value };
   const fromQuery = parseDaysFromQuery();
   // Scope the wizard to one week: prefer the week of the first queried day.
   const seed = fromQuery.length ? parseDateKey(fromQuery[0]!) ?? today : today;
   weekDays.value = weekFromSeed(seed);
   const keys = weekDayKeys.value;
-  if (fromQuery.length) {
-    // Pre-select only nights that belong to this week (e.g. fill-the-gaps).
-    selectedDays.value = clampDaysToWeek(fromQuery, keys);
-  } else {
-    // Default: plan the whole week; user taps to skip nights.
-    selectedDays.value = [...keys];
-  }
+
+  loadingDays.value = true;
+  plannedTitles.value = await loadPlannedForWeek(weekDays.value);
+  loadingDays.value = false;
+
+  // Auto-skip nights that already have a dinner. Prefer the caller's day list
+  // (fill-gaps / plan-week / autofill), then drop anything already planned.
+  const preferred = fromQuery.length ? clampDaysToWeek(fromQuery, keys) : [...keys];
+  selectedDays.value = preferred.filter((key) => !plannedTitles.value[key]);
 });
 
 onUnmounted(() => {
@@ -462,16 +498,22 @@ onUnmounted(() => {
         <div class="min-w-0">
           <p class="text-sm font-semibold text-foreground">{{ weekHeading }}</p>
           <p class="mt-0.5 text-sm text-muted-foreground">
-            Tap nights to plan. Highlighted nights get a dinner; the rest are skipped.
+            <template v-if="loadingDays">Checking what’s already planned…</template>
+            <template v-else-if="alreadyPlannedCount">
+              Nights with a dinner are skipped — tap one to replan it anyway.
+            </template>
+            <template v-else>
+              Tap nights to plan. Highlighted nights get a dinner; the rest are skipped.
+            </template>
           </p>
         </div>
         <div class="flex shrink-0 gap-2">
           <button
             type="button"
             class="text-[12px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
-            @click="selectAllWeekDays"
+            @click="selectAllOpenNights"
           >
-            All
+            Open
           </button>
           <button
             type="button"
@@ -492,7 +534,7 @@ onUnmounted(() => {
           :class="
             isDaySelected(toDateKey(day))
               ? 'bg-[rgba(34,197,94,0.14)]'
-              : 'bg-transparent opacity-55'
+              : 'bg-transparent opacity-70'
           "
           :aria-pressed="isDaySelected(toDateKey(day))"
           @click="toggleDay(toDateKey(day))"
@@ -520,8 +562,19 @@ onUnmounted(() => {
                 Today
               </span>
             </p>
-            <p class="text-[11px] text-muted-foreground">
-              {{ dayLabel(toDateKey(day)) }}
+            <p
+              v-if="plannedTitleFor(toDateKey(day))"
+              class="mt-0.5 truncate text-[12px]"
+              :class="isDaySelected(toDateKey(day)) ? 'text-muted-foreground' : 'text-[#86efac]/80'"
+            >
+              {{
+                isDaySelected(toDateKey(day))
+                  ? `Replace · ${plannedTitleFor(toDateKey(day))}`
+                  : plannedTitleFor(toDateKey(day))
+              }}
+            </p>
+            <p v-else class="mt-0.5 text-[11px] text-muted-foreground">
+              {{ isDaySelected(toDateKey(day)) ? "Open night" : "Skipping" }}
             </p>
           </div>
           <span
@@ -529,27 +582,47 @@ onUnmounted(() => {
             :class="
               isDaySelected(toDateKey(day))
                 ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
-                : 'bg-secondary text-faint'
+                : plannedTitleFor(toDateKey(day))
+                  ? 'bg-secondary text-muted-foreground'
+                  : 'bg-secondary text-faint'
             "
           >
-            {{ isDaySelected(toDateKey(day)) ? "Plan" : "Skip" }}
+            {{
+              isDaySelected(toDateKey(day))
+                ? plannedTitleFor(toDateKey(day))
+                  ? "Replan"
+                  : "Plan"
+                : plannedTitleFor(toDateKey(day))
+                  ? "Kept"
+                  : "Skip"
+            }}
           </span>
         </button>
       </div>
 
       <p class="mt-2 text-xs text-faint">
-        Planning {{ selectedDays.length }} of {{ weekDayKeys.length }}
-        <span v-if="skippedCount"> · skipping {{ skippedCount }}</span>
+        <template v-if="loadingDays">Loading plans…</template>
+        <template v-else>
+          Planning {{ selectedDays.length }} of {{ weekDayKeys.length }}
+          <span v-if="alreadyPlannedCount"> · {{ alreadyPlannedCount }} already planned </span>
+          <span v-else-if="skippedCount"> · skipping {{ skippedCount }}</span>
+        </template>
       </p>
       <Button
         type="button"
         class="mt-4 w-full"
         data-testid="wizard-continue-days"
-        :disabled="!canContinueDays || busy"
+        :disabled="!canContinueDays || busy || loadingDays"
         @click="goForwardFromDays"
       >
         Continue with {{ selectedDays.length }} night{{ selectedDays.length === 1 ? "" : "s" }}
       </Button>
+      <p
+        v-if="!loadingDays && !selectedDays.length && alreadyPlannedCount"
+        class="mt-2 text-center text-xs text-muted-foreground"
+      >
+        Every night already has a dinner. Tap one to replan it, or head back.
+      </p>
     </section>
 
     <!-- PREFS -->
