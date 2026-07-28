@@ -2,7 +2,7 @@
 import { addDays, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-const props = defineProps<{
+defineProps<{
   plannedKeys: Set<string>;
 }>();
 

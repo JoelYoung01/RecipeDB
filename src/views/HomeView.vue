@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import HomeWeekStrip from "@/components/HomeWeekStrip.vue";
 import { Button } from "@/components/ui/button";
-import { addDays, endOfDay, formatPrepTime, mediaUrl, startOfDay, toDateKey } from "@/lib/media";
+import { endOfDay, formatPrepTime, mediaUrl, startOfDay, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import { useSessionStore } from "@/stores/session";
 import type { GroceryListResponse, PlannedRecipeDetail } from "@/types";
@@ -95,12 +95,7 @@ async function load() {
   loading.value = false;
 }
 
-function onWeekChange(
-  _weekStart: Date,
-  days: Date[],
-  rangeStart: Date,
-  rangeEnd: Date
-) {
+function onWeekChange(_weekStart: Date, days: Date[], rangeStart: Date, rangeEnd: Date) {
   visibleWeekDays.value = days;
   void loadWeekPlans(rangeStart, rangeEnd);
 }
