@@ -8,14 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import {
-  addDays,
-  endOfDay,
-  mediaUrl,
-  startOfDay,
-  startOfWeekMonday,
-  toDateKey
-} from "@/lib/media";
+import { addDays, endOfDay, mediaUrl, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
 import type { RecipeDashboard } from "@/types/Recipe";
@@ -220,9 +213,7 @@ onMounted(async () => {
           <div>
             <h2 class="text-sm font-semibold">{{ weekLabel(week.weekStart, week.weekIndex) }}</h2>
             <p class="text-[11px] text-faint">
-              {{
-                week.days.filter((d) => (plannedByDay.get(toDateKey(d)) ?? []).length).length
-              }}
+              {{ week.days.filter((d) => (plannedByDay.get(toDateKey(d)) ?? []).length).length }}
               / 7 planned
             </p>
           </div>
@@ -252,17 +243,13 @@ onMounted(async () => {
             <div class="w-11 shrink-0 text-center">
               <div
                 class="text-[10px] font-semibold uppercase tracking-wide"
-                :class="
-                  toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-faint'
-                "
+                :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-faint'"
               >
                 {{ DAY_LABELS[dayIndex] }}
               </div>
               <div
                 class="mt-0.5 text-base font-bold leading-none"
-                :class="
-                  toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'
-                "
+                :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'"
               >
                 {{ day.getDate() }}
               </div>
@@ -330,11 +317,7 @@ onMounted(async () => {
         <Button variant="outline" @click="openAssign">
           {{ currentPlannedRecipes.length ? "Change" : "Add recipes" }}
         </Button>
-        <Button
-          variant="secondary"
-          class="gap-1.5"
-          @click="openFillGaps([selectedDate])"
-        >
+        <Button variant="secondary" class="gap-1.5" @click="openFillGaps([selectedDate])">
           <Sparkles class="size-3.5" />
           Autofill
         </Button>

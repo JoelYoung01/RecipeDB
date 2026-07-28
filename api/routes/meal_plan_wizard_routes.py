@@ -7,11 +7,11 @@ from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep, engine
 from api.core.meal_plan_wizard.pipeline import MealPlanWizardPipeline
-from sqlmodel import Session
 from api.core.meal_plan_wizard.session_store import (
     WizardPrefs,
     WizardSession,
@@ -116,7 +116,9 @@ def get_session(session_id: str, current_user: CurrentUserDep):
     return _serialize(_get_owned_session(session_id, current_user.id))
 
 
-@router.patch("/sessions/{session_id}/days/", response_model=MealPlanWizardSessionResponse)
+@router.patch(
+    "/sessions/{session_id}/days/", response_model=MealPlanWizardSessionResponse
+)
 def update_days(
     session_id: str,
     body: MealPlanWizardDaysUpdate,
@@ -131,7 +133,9 @@ def update_days(
     return _serialize(session)
 
 
-@router.patch("/sessions/{session_id}/prefs/", response_model=MealPlanWizardSessionResponse)
+@router.patch(
+    "/sessions/{session_id}/prefs/", response_model=MealPlanWizardSessionResponse
+)
 def update_prefs(
     session_id: str,
     body: MealPlanWizardPrefs,
@@ -143,7 +147,9 @@ def update_prefs(
     return _serialize(session)
 
 
-@router.post("/sessions/{session_id}/rewind/", response_model=MealPlanWizardSessionResponse)
+@router.post(
+    "/sessions/{session_id}/rewind/", response_model=MealPlanWizardSessionResponse
+)
 def rewind_session(
     session_id: str,
     body: MealPlanWizardRewindRequest,
@@ -158,7 +164,9 @@ def rewind_session(
     return _serialize(session)
 
 
-@router.post("/sessions/{session_id}/select/", response_model=MealPlanWizardSessionResponse)
+@router.post(
+    "/sessions/{session_id}/select/", response_model=MealPlanWizardSessionResponse
+)
 def select_ideas(
     session_id: str,
     body: MealPlanWizardSelectRequest,
@@ -183,7 +191,7 @@ async def _sse(events: AsyncIterator) -> AsyncIterator[bytes]:
             "data": event.data,
         }
         yield f"data: {json.dumps(payload)}\n\n".encode()
-    yield b"data: {\"status\": \"done\"}\n\n"
+    yield b'data: {"status": "done"}\n\n'
 
 
 @router.post("/sessions/{session_id}/ideate/")

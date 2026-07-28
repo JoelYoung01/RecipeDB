@@ -4,12 +4,7 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import {
-  addDays,
-  startOfDay,
-  startOfWeekMonday,
-  toDateKey
-} from "@/lib/media";
+import { addDays, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import {
   emptyWizardPrefs,
@@ -47,9 +42,7 @@ const today = startOfDay();
 const weekStart = startOfWeekMonday(today);
 const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-const selectCount = computed(
-  () => session.value?.select_count ?? selectedDays.value.length
-);
+const selectCount = computed(() => session.value?.select_count ?? selectedDays.value.length);
 
 const canContinueDays = computed(() => selectedDays.value.length > 0);
 
@@ -135,33 +128,23 @@ async function ensureSession(): Promise<MealPlanWizardSession> {
 }
 
 async function syncDaysAndPrefs() {
-  const s = await ensureSession();
   persistPrefs(localPrefs.value);
+  const s = await ensureSession();
   const [daysRes, prefsRes] = await Promise.all([
     patch<MealPlanWizardSession>(`/meal-plan-wizard/sessions/${s.id}/days/`, {
       days: selectedDays.value
     }),
-    patch<MealPlanWizardSession>(
-      `/meal-plan-wizard/sessions/${s.id}/prefs/`,
-      localPrefs.value
-    )
+    patch<MealPlanWizardSession>(`/meal-plan-wizard/sessions/${s.id}/prefs/`, localPrefs.value)
   ]);
-  session.value = prefsRes.step ? prefsRes : daysRes;
+  session.value = prefsRes ?? daysRes;
   selectedIdeaIds.value = session.value.selected_idea_ids;
 }
 
-async function goForwardFromDays() {
+function goForwardFromDays() {
   if (!canContinueDays.value) return;
   error.value = "";
-  busy.value = true;
-  try {
-    await syncDaysAndPrefs();
-    uiStep.value = "prefs";
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : "Could not start wizard";
-  } finally {
-    busy.value = false;
-  }
+  // Days → prefs is local; the server session is created when ideation starts.
+  uiStep.value = "prefs";
 }
 
 async function refreshSession() {
@@ -216,22 +199,24 @@ function toggleIdea(id: string) {
 }
 
 async function confirmSelectionAndBuild(refinement?: string) {
-  if (!session.value || !canContinueSelect.value) return;
+  const current = session.value;
+  if (!current || !canContinueSelect.value) return;
   error.value = "";
   busy.value = true;
   try {
     // Allow prefs edits on select step to apply (drops future if changed)
     persistPrefs(localPrefs.value);
-    session.value = await patch(
-      `/meal-plan-wizard/sessions/${session.value.id}/prefs/`,
+    const afterPrefs = await patch<MealPlanWizardSession>(
+      `/meal-plan-wizard/sessions/${current.id}/prefs/`,
       localPrefs.value
     );
-    if (!session.value.ideas.length) {
+    session.value = afterPrefs;
+    if (!afterPrefs.ideas.length) {
       await runIdeate();
       return;
     }
-    session.value = await post(
-      `/meal-plan-wizard/sessions/${session.value.id}/select/`,
+    session.value = await post<MealPlanWizardSession>(
+      `/meal-plan-wizard/sessions/${afterPrefs.id}/select/`,
       { idea_ids: selectedIdeaIds.value }
     );
     await runBuild(refinement);
@@ -301,10 +286,9 @@ async function rewindTo(step: UiStep) {
     // Clear future on server when leaving LLM stages
     if (session.value.ideas.length || session.value.built_recipes.length) {
       try {
-        session.value = await post(
-          `/meal-plan-wizard/sessions/${session.value.id}/rewind/`,
-          { to_step: step }
-        );
+        session.value = await post(`/meal-plan-wizard/sessions/${session.value.id}/rewind/`, {
+          to_step: step
+        });
       } catch (e) {
         console.error(e);
       }
@@ -315,10 +299,12 @@ async function rewindTo(step: UiStep) {
     return;
   }
   try {
-    session.value = await post(`/meal-plan-wizard/sessions/${session.value.id}/rewind/`, {
-      to_step: step as MealPlanWizardStep
-    });
-    selectedIdeaIds.value = session.value.selected_idea_ids;
+    const rewound = await post<MealPlanWizardSession>(
+      `/meal-plan-wizard/sessions/${session.value.id}/rewind/`,
+      { to_step: step as MealPlanWizardStep }
+    );
+    session.value = rewound;
+    selectedIdeaIds.value = rewound.selected_idea_ids;
     uiStep.value = step;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Could not go back";
@@ -403,7 +389,10 @@ onUnmounted(() => {
       />
     </div>
 
-    <p v-if="error" class="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p
+      v-if="error"
+      class="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+    >
       {{ error }}
     </p>
 
@@ -418,11 +407,7 @@ onUnmounted(() => {
           :key="toDateKey(day)"
           type="button"
           class="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left last:border-b-0"
-          :class="
-            selectedDays.includes(toDateKey(day))
-              ? 'bg-[rgba(34,197,94,0.1)]'
-              : 'opacity-60'
-          "
+          :class="selectedDays.includes(toDateKey(day)) ? 'bg-[rgba(34,197,94,0.1)]' : 'opacity-60'"
           @click="toggleDay(toDateKey(day))"
         >
           <span
@@ -444,7 +429,13 @@ onUnmounted(() => {
         </button>
       </div>
       <p class="mt-2 text-xs text-faint">{{ selectedDays.length }} night(s) selected</p>
-      <Button class="mt-4 w-full" :disabled="!canContinueDays || busy" @click="goForwardFromDays">
+      <Button
+        type="button"
+        class="mt-4 w-full"
+        data-testid="wizard-continue-days"
+        :disabled="!canContinueDays || busy"
+        @click="goForwardFromDays"
+      >
         Continue
       </Button>
     </section>
@@ -558,10 +549,7 @@ onUnmounted(() => {
 
       <div class="grid grid-cols-2 gap-2">
         <Button variant="outline" :disabled="busy" @click="rewindTo('prefs')">Back</Button>
-        <Button
-          :disabled="!canContinueSelect || busy"
-          @click="confirmSelectionAndBuild()"
-        >
+        <Button :disabled="!canContinueSelect || busy" @click="confirmSelectionAndBuild()">
           Build recipes
         </Button>
       </div>
@@ -609,13 +597,7 @@ onUnmounted(() => {
         <summary class="cursor-pointer text-sm font-semibold">Adjust goals / diet</summary>
         <div class="mt-3 pb-2">
           <WizardPrefsFields v-model="localPrefs" />
-          <Button
-            size="sm"
-            variant="secondary"
-            class="mt-2"
-            :disabled="busy"
-            @click="runIdeate()"
-          >
+          <Button size="sm" variant="secondary" class="mt-2" :disabled="busy" @click="runIdeate()">
             Apply & re-ideate (drops later steps)
           </Button>
         </div>

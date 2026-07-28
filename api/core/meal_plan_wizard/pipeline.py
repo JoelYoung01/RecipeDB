@@ -121,7 +121,8 @@ class MealPlanWizardPipeline:
                 {
                     "role": "user",
                     "content": (
-                        f"Refine the previous idea list with this feedback:\n{refinement}\n"
+                        "Refine the previous idea list with this feedback:\n"
+                        f"{refinement}\n"
                         f"Return exactly IDEATE_COUNT={target} ideas again."
                     ),
                 }
@@ -169,7 +170,10 @@ class MealPlanWizardPipeline:
             "ideate",
             "running",
             (
-                f"Checked your recipe shelf — {len(library_hits)} familiar options nearby…"
+                (
+                    "Checked your recipe shelf — "
+                    f"{len(library_hits)} familiar options nearby…"
+                )
                 if library_hits
                 else "No close shelf matches yet — drafting fresh ideas…"
             ),
@@ -216,7 +220,10 @@ class MealPlanWizardPipeline:
             {
                 "role": "assistant",
                 "content": json.dumps(
-                    [{"id": i.id, "title": i.title, "justification": i.justification} for i in ideas]
+                    [
+                        {"id": i.id, "title": i.title, "justification": i.justification}
+                        for i in ideas
+                    ]
                 ),
             }
         )
@@ -241,7 +248,9 @@ class MealPlanWizardPipeline:
             },
         )
 
-    def select_ideas(self, session: WizardSession, idea_ids: list[str]) -> WizardSession:
+    def select_ideas(
+        self, session: WizardSession, idea_ids: list[str]
+    ) -> WizardSession:
         if not session.ideas:
             raise ValueError("Run ideation before selecting ideas.")
         wanted = session.day_count

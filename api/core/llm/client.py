@@ -135,7 +135,8 @@ class StubLlmClient(LlmClient):
         title = f"{protein.title()} {style.title()} {twist}"
         justification = (
             f"Fits your preferences with a {protein}-forward {style} that stays "
-            f"weeknight-friendly while keeping variety across the plan (option {index + 1})."
+            "weeknight-friendly while keeping variety across the plan "
+            f"(option {index + 1})."
         )
         return {"title": title, "justification": justification}
 

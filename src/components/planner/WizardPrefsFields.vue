@@ -15,14 +15,7 @@ const GOAL_CHIPS = [
   "Quick weeknights"
 ];
 
-const DIET_CHIPS = [
-  "Vegetarian",
-  "Gluten-free",
-  "Dairy-free",
-  "Nut-free",
-  "Halal",
-  "No pork"
-];
+const DIET_CHIPS = ["Vegetarian", "Gluten-free", "Dairy-free", "Nut-free", "Halal", "No pork"];
 
 function toggleInField(field: "goals" | "dietary_restrictions", chip: string) {
   const current = prefs.value[field] || "";
@@ -49,7 +42,9 @@ function chipActive(field: "goals" | "dietary_restrictions", chip: string) {
   <div class="space-y-5">
     <div>
       <Label class="text-sm font-semibold">Goals</Label>
-      <p class="mt-0.5 text-xs text-muted-foreground">Optional — what should this week optimize for?</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">
+        Optional — what should this week optimize for?
+      </p>
       <div class="mt-2 flex flex-wrap gap-1.5">
         <button
           v-for="chip in GOAL_CHIPS"
@@ -76,7 +71,9 @@ function chipActive(field: "goals" | "dietary_restrictions", chip: string) {
 
     <div>
       <Label class="text-sm font-semibold">Dietary restrictions</Label>
-      <p class="mt-0.5 text-xs text-muted-foreground">Optional — allergies, religions, preferences</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">
+        Optional — allergies, religions, preferences
+      </p>
       <div class="mt-2 flex flex-wrap gap-1.5">
         <button
           v-for="chip in DIET_CHIPS"

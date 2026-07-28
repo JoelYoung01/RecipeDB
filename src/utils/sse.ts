@@ -45,11 +45,13 @@ export async function postSse<T extends { status?: string }>(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let done = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
+  while (!done) {
+    const result = await reader.read();
+    done = result.done;
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    buffer += decoder.decode(result.value, { stream: true });
     const chunks = buffer.split("\n\n");
     buffer = chunks.pop() ?? "";
     for (const chunk of chunks) {

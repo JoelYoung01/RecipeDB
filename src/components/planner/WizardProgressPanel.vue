@@ -60,10 +60,7 @@ watch(
       </div>
 
       <div class="mt-3 flex items-center gap-2">
-        <span
-          class="relative flex size-2.5"
-          :class="running ? '' : 'opacity-40'"
-        >
+        <span class="relative flex size-2.5" :class="running ? '' : 'opacity-40'">
           <span
             v-if="running"
             class="absolute inline-flex size-full animate-ping rounded-full bg-[#22c55e] opacity-60"
