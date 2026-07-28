@@ -2,12 +2,7 @@ import secrets
 import warnings
 from typing import Annotated, Any, Literal
 
-from pydantic import (
-    AnyUrl,
-    BeforeValidator,
-    computed_field,
-    model_validator,
-)
+from pydantic import AnyUrl, BeforeValidator, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
@@ -28,6 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api"
+    PROJECT_NAME: str = "RecipeDB"
     # Deployed git SHA (or "dev" locally). Used by /api/health/ for release verification.
     APP_VERSION: str = "dev"
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -41,9 +37,16 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "data/uploads"
     LOGS_DIR: str = "data/logs"
 
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
+    # Password / email verification
+    PASSWORD_MIN_LENGTH: int = 8
+    EMAIL_OTP_EXPIRE_MINUTES: int = 15
+    EMAIL_OTP_MAX_ATTEMPTS: int = 5
+    EMAIL_OTP_RESEND_COOLDOWN_SECONDS: int = 60
+    VERIFY_EMAIL_PATH: str = "/verify-email"
+
+    BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
+        []
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -78,36 +81,28 @@ class Settings(BaseSettings):
     #         path=self.POSTGRES_DB,
     #     )
 
-    # SMTP_TLS: bool = True
-    # SMTP_SSL: bool = False
-    # SMTP_PORT: int = 587
-    # SMTP_HOST: str | None = None
-    # SMTP_USER: str | None = None
-    # SMTP_PASSWORD: str | None = None
-    # # TODO: update type to EmailStr when sqlmodel supports it
-    # EMAILS_FROM_EMAIL: str | None = None
-    # EMAILS_FROM_NAME: str | None = None
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+    SMTP_PORT: int = 587
+    SMTP_HOST: str | None = None
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    EMAILS_FROM_EMAIL: str | None = None
+    EMAILS_FROM_NAME: str | None = None
 
-    # @model_validator(mode="after")
-    # def _set_default_emails_from(self) -> Self:
-    #     if not self.EMAILS_FROM_NAME:
-    #         self.EMAILS_FROM_NAME = self.PROJECT_NAME
-    #     return self
+    @model_validator(mode="after")
+    def _set_default_emails_from(self) -> Self:
+        if self.EMAILS_FROM_NAME is None:
+            self.EMAILS_FROM_NAME = self.PROJECT_NAME
+        return self
 
-    # EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
-
-    # @computed_field  # type: ignore[prop-decorator]
-    # @property
-    # def emails_enabled(self) -> bool:
-    #     return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
-
-    # # TODO: update type to EmailStr when sqlmodel supports it
-    # EMAIL_TEST_USER: str = "test@example.com"
-    # # TODO: update type to EmailStr when sqlmodel supports it
-
-    # FIRST_SUPERUSER: str
-    # FIRST_SUPERUSER_PASSWORD: str
     SUPERUSER_GID: str
+
+    # Local seed password users (development / first load_data)
+    SEED_ADMIN_EMAIL: str = "admin@example.com"
+    SEED_ADMIN_PASSWORD: str = "adminpass123"
+    SEED_TEST_EMAIL: str = "test@example.com"
+    SEED_TEST_PASSWORD: str = "testpass123"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

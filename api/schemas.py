@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, computed_field
+
+from pydantic import BaseModel, EmailStr, Field, computed_field
 
 
 class HealthResponse(BaseModel):
@@ -14,6 +15,7 @@ class UserResponse(BaseModel):
     display_name: str
     admin: bool
     disabled: bool
+    email_verified: bool = False
     avatar_url: str | None = None
     last_login: datetime | None = None
 
@@ -26,6 +28,37 @@ class UserPublic(BaseModel):
 
 class GoogleLoginPayload(BaseModel):
     credential: str
+
+
+class RegisterPayload(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=1024)
+    display_name: str = Field(min_length=1, max_length=100)
+
+
+class PasswordLoginPayload(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class VerifyEmailPayload(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=4, max_length=12)
+
+
+class ResendVerificationPayload(BaseModel):
+    email: EmailStr
+
+
+class AuthRedirectResponse(BaseModel):
+    """Server-directed next step for the SPA (e.g. email verification)."""
+
+    code: str
+    message: str
+    redirect_to: str
+    email: str | None = None
+    # Only populated when ENVIRONMENT=development so local testing can skip SMTP.
+    dev_otp: str | None = None
 
 
 class TokenResponse(BaseModel):
