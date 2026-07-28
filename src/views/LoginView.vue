@@ -13,7 +13,6 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 const session = useSessionStore();
 const route = useRoute();
 const router = useRouter();
-const appTitle = import.meta.env.VITE_APP_TITLE;
 const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
 const email = ref("");
@@ -60,12 +59,7 @@ async function onSubmit() {
   >
     <div class="flex flex-col items-center gap-3 text-center">
       <img :src="chefHat" alt="" class="size-20 object-contain" />
-      <h1 class="text-3xl font-bold tracking-tight text-foreground">
-        {{ appTitle }}
-      </h1>
-      <p class="max-w-xs text-sm text-muted-foreground">
-        Save recipes, plan the week, and see what’s for dinner tonight.
-      </p>
+      <h1 class="text-3xl font-bold tracking-tight text-foreground">RecipeDB</h1>
     </div>
 
     <form class="flex w-full max-w-[320px] flex-col gap-3" @submit.prevent="onSubmit">
@@ -113,7 +107,6 @@ async function onSubmit() {
       </div>
 
       <GoogleLoginButton />
-      <p class="text-xs text-faint">Google sign-in stays available</p>
     </div>
   </div>
 </template>
