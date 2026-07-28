@@ -7,9 +7,19 @@ import logging
 
 from sqlmodel import Session, select
 
+from api.core.config import settings
 from api.models import Ingredient, PlannedRecipe, Recipe, User
 
 logger = logging.getLogger(__name__)
+
+
+def _seed_owner(session: Session) -> User | None:
+    user = session.exec(
+        select(User).where(User.email == settings.SEED_ADMIN_EMAIL)
+    ).first()
+    if user is None:
+        user = session.exec(select(User)).first()
+    return user
 
 # Recipe name -> ingredient rows
 SAMPLE_INGREDIENTS: dict[str, list[dict]] = {
@@ -84,7 +94,7 @@ SAMPLE_INGREDIENTS: dict[str, list[dict]] = {
 
 
 def ensure_sample_ingredients(session: Session) -> None:
-    user = session.exec(select(User)).first()
+    user = _seed_owner(session)
     if user is None:
         return
 
@@ -123,7 +133,7 @@ def ensure_sample_ingredients(session: Session) -> None:
 
 
 def ensure_sample_planned_meals(session: Session) -> None:
-    user = session.exec(select(User)).first()
+    user = _seed_owner(session)
     if user is None:
         return
 
