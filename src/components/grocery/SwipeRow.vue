@@ -45,9 +45,7 @@ function clamp(value: number, min: number, max: number) {
 function isInteractive(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(
-    target.closest(
-      'button, a, input, textarea, select, [role="checkbox"], [data-slot="checkbox"]'
-    )
+    target.closest('button, a, input, textarea, select, [role="checkbox"], [data-slot="checkbox"]')
   );
 }
 

@@ -13,6 +13,7 @@ import { addDays, endOfDay, mediaUrl, startOfDay, startOfWeekMonday, toDateKey }
 import { paths } from "@/sitemap";
 import { usePlannerStore } from "@/stores/planner";
 import { useRecipesStore } from "@/stores/recipes";
+import { syncAfterPlanMutation } from "@/stores/sync";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
 import { del, post } from "@/utils";
 import { ChevronRight, Sparkles, Trash2 } from "@lucide/vue";
@@ -165,7 +166,7 @@ async function assignRecipe() {
       ),
       ...removed.map((pr) => del(`/planned-recipe/${pr.id}/`))
     ]);
-    plannerStore.invalidate();
+    syncAfterPlanMutation();
     await getPlannedRecipes(true);
     showRecipeDialog.value = false;
   } catch (error) {
@@ -176,7 +177,7 @@ async function assignRecipe() {
 async function removePlanned(planned: PlannedRecipeDetail) {
   try {
     await del(`/planned-recipe/${planned.id}/`);
-    plannerStore.invalidate();
+    syncAfterPlanMutation();
     await getPlannedRecipes(true);
   } catch (er) {
     console.error(er);
@@ -186,6 +187,14 @@ async function removePlanned(planned: PlannedRecipeDetail) {
 watch(selectedDate, () => {
   selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
 });
+
+// Wizard (and other pages) invalidate via revision; refetch while this tab is cached.
+watch(
+  () => plannerStore.revision,
+  () => {
+    void getPlannedRecipes();
+  }
+);
 
 onMounted(() => {
   void getPlannedRecipes();
