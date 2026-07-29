@@ -131,7 +131,9 @@ class MealPlanWizardPipeline:
                     "content": (
                         "Refine the previous idea list with this feedback:\n"
                         f"{refinement}\n"
-                        f"Return exactly IDEATE_COUNT={target} ideas again."
+                        f"Return exactly IDEATE_COUNT={target} ideas again.\n"
+                        "Respond with ONLY valid JSON: "
+                        '{"ideas":[{"title":"...","justification":"..."}]}'
                     ),
                 }
             )
@@ -141,7 +143,10 @@ class MealPlanWizardPipeline:
             system = (
                 "You are a meal-planning assistant. Propose dinner ideas. "
                 "Be deterministic and respect constraints. "
-                "Prefer reusing the user's recipes when they fit."
+                "Prefer reusing the user's recipes when they fit. "
+                "Respond with ONLY valid JSON (no markdown) matching:\n"
+                '{"ideas":[{"title":"string","justification":"string"}]}\n'
+                "Return exactly the requested number of ideas."
             )
             user_prompt = self._ideate_prompt(session, library_preview, target)
             session.ideate_messages = [
@@ -342,6 +347,8 @@ class MealPlanWizardPipeline:
                         + f"\n\nFeedback:\n{refinement}\n\n"
                         "Prior plan context (do not drop coherence with these):\n"
                         + json.dumps(prior_plan)
+                        + "\n\nRespond with ONLY valid JSON: "
+                        '{"recipes":[...]} for the dinners listed above.'
                     ),
                 }
             )
@@ -351,7 +358,18 @@ class MealPlanWizardPipeline:
             library_preview = search_user_recipes(db, user, "", limit=20)
             system = (
                 "You build complete dinner recipes or reuse existing ones. "
-                "Respect dietary restrictions. Return structured recipes."
+                "Respect dietary restrictions. "
+                "Respond with ONLY valid JSON (no markdown) matching:\n"
+                '{"recipes":[{'
+                '"title":"string","description":"string",'
+                '"instructions":"string","notes":"string|null",'
+                '"prep_time":30,'
+                '"ingredients":[{"name":"string","amount":1.0,'
+                '"units":"string|null","details":"string|null"}],'
+                '"source":"generated","existing_recipe_id":null'
+                "}]}\n"
+                'Use source "library" and set existing_recipe_id when reusing '
+                'a library recipe; otherwise source "generated" and null id.'
             )
             user_prompt = (
                 "BUILD_RECIPES for these selected ideas:\n"
@@ -360,6 +378,7 @@ class MealPlanWizardPipeline:
                 + self._prefs_block(session.prefs)
                 + "\n\nUser library (may reuse by id later):\n"
                 + json.dumps(library_preview)
+                + "\n\nReturn one recipe object per selected idea, same titles."
             )
             session.build_messages = [
                 {"role": "system", "content": system},

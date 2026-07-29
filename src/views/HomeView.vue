@@ -8,9 +8,8 @@ import { useGroceryStore } from "@/stores/grocery";
 import { usePlannerStore } from "@/stores/planner";
 import { useRecipesStore } from "@/stores/recipes";
 import { useSessionStore } from "@/stores/session";
-import type { PlannedRecipeDetail } from "@/types";
 import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
-import { computed, onActivated, onMounted, ref } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 defineOptions({ name: "HomeView" });
@@ -22,15 +21,19 @@ const groceryStore = useGroceryStore();
 const plannerStore = usePlannerStore();
 
 const loading = ref(true);
-const weekPlans = ref<PlannedRecipeDetail[]>([]);
-const recipeCount = ref(0);
-const groceryCount = ref(0);
-const visibleWeekDays = ref<Date[]>([]);
 const plansReady = ref(false);
+const visibleWeekDays = ref<Date[]>([]);
+const weekRange = ref<{ start: Date; end: Date } | null>(null);
 
 const today = startOfDay();
 
 const weekdayName = computed(() => today.toLocaleDateString(undefined, { weekday: "long" }));
+
+/** Derived from the shared planner store so KeepAlive tabs stay in sync. */
+const weekPlans = computed(() => {
+  if (!weekRange.value) return [];
+  return plannerStore.plansInRange(weekRange.value.start, weekRange.value.end);
+});
 
 const plannedKeys = computed(() => {
   const set = new Set<string>();
@@ -66,10 +69,13 @@ const tonightMeta = computed(() => {
 
 const showHeroSkeleton = computed(() => loading.value && !plansReady.value && !tonight.value);
 
+const recipeCount = computed(() => recipesStore.count ?? 0);
+const groceryCount = computed(() => groceryStore.activeCount ?? 0);
+
 async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
+  weekRange.value = { start: rangeStart, end: rangeEnd };
   try {
     await plannerStore.ensureRange(rangeStart, rangeEnd);
-    weekPlans.value = plannerStore.plansInRange(rangeStart, rangeEnd);
     plansReady.value = true;
   } catch (er) {
     console.error(er);
@@ -81,12 +87,7 @@ async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
 
 async function loadBadges() {
   try {
-    const [recipes, grocery] = await Promise.all([
-      recipesStore.fetchCount(),
-      groceryStore.fetchSummary()
-    ]);
-    recipeCount.value = recipes;
-    groceryCount.value = grocery;
+    await Promise.all([recipesStore.fetchCount(), groceryStore.fetchSummary()]);
   } catch (er) {
     console.error(er);
   }
@@ -121,12 +122,29 @@ function cookTonight() {
   });
 }
 
+async function refreshHome() {
+  await loadBadges();
+  if (weekRange.value) {
+    await loadWeekPlans(weekRange.value.start, weekRange.value.end);
+  }
+}
+
 onMounted(() => {
   void loadBadges();
 });
 onActivated(() => {
-  void loadBadges();
+  void refreshHome();
 });
+
+// If another page invalidates planner while Home is cached, refetch the visible window.
+watch(
+  () => plannerStore.revision,
+  () => {
+    if (weekRange.value) {
+      void loadWeekPlans(weekRange.value.start, weekRange.value.end);
+    }
+  }
+);
 </script>
 
 <template>
@@ -231,7 +249,7 @@ onActivated(() => {
         <Search class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Find a recipe</span>
         <span class="text-[11.5px] text-faint">
-          <template v-if="recipeCount === 0 && recipesStore.count === null">
+          <template v-if="recipesStore.count === null">
             <Skeleton class="inline-block h-3 w-10 align-middle" />
           </template>
           <template v-else>{{ recipeCount }} saved</template>
