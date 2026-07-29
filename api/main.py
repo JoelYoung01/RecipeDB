@@ -1,5 +1,3 @@
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -7,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 
 
 from api.core.config import settings
-from api.core.migrate import run_migrations
 from api.routes import (
     auth_routes,
     grocery_routes,
@@ -21,14 +18,7 @@ from api.routes import (
 )
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    # Persistent SQLite volumes do not pick up new Alembic revisions until this runs.
-    run_migrations()
-    yield
-
-
-app = FastAPI(docs_url="/api/docs", redoc_url="/api/redoc", lifespan=lifespan)
+app = FastAPI(docs_url="/api/docs", redoc_url="/api/redoc")
 
 # Add CORS middleware for development environment
 if settings.ENVIRONMENT == "development":
