@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { paths } from "@/sitemap";
 import { syncAfterRecipeMutation } from "@/stores/sync";
-import type { IngredientCreate, RecipeCreate, RecipeDetail } from "@/types";
+import type { IngredientCreate, RecipeCreate, RecipeDetail, UploadSlim } from "@/types";
 import { ApiError, del, get, post, put } from "@/utils";
-import { Plus, Trash2 } from "@lucide/vue";
+import { LoaderCircle, Plus, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onMounted, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -29,6 +29,8 @@ const defaultIngredient: IngredientForm = {
 const recipeDetail = ref<RecipeDetail>();
 const saving = ref(false);
 const loading = ref(false);
+const generatingCover = ref(false);
+const coverError = ref("");
 const form = reactive<Partial<RecipeCreate>>({
   name: undefined,
   description: undefined,
@@ -68,6 +70,35 @@ const validForm = computed(
     ingredientForms.every((ing) => ing.name)
 );
 const canSave = computed(() => !!validForm.value && !saving.value && !loading.value);
+
+const canGenerateCover = computed(
+  () => Boolean(form.name?.trim()) && !generatingCover.value && !saving.value && !loading.value
+);
+
+async function generateCoverImage() {
+  if (!canGenerateCover.value || !form.name?.trim()) return;
+  generatingCover.value = true;
+  coverError.value = "";
+  try {
+    const upload = await post<UploadSlim>("/recipe/generate-cover/", {
+      name: form.name.trim(),
+      description: form.description?.trim() || null,
+      ingredients: ingredientForms
+        .filter((ing) => ing.name?.trim())
+        .map((ing) => ({ name: ing.name!.trim() }))
+    });
+    form.cover_image_id = upload.id;
+  } catch (er) {
+    console.error(er);
+    coverError.value =
+      er instanceof ApiError
+        ? typeof er.message === "string"
+          ? er.message
+          : "Could not find a cover image."
+        : "Could not find a cover image.";
+  }
+  generatingCover.value = false;
+}
 
 async function getRecipeDetails() {
   if (creating.value) return;
@@ -161,7 +192,27 @@ onMounted(() => {
     <h1 class="text-xl font-bold">{{ creating ? "New recipe" : "Edit recipe" }}</h1>
 
     <form class="mt-4 flex flex-col gap-4" @submit.prevent="saveChanges">
-      <ImageUploadDialog v-model="form.cover_image_id" />
+      <div class="space-y-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <ImageUploadDialog v-model="form.cover_image_id" />
+          <Button
+            type="button"
+            variant="secondary"
+            class="gap-1.5"
+            :disabled="!canGenerateCover"
+            @click="generateCoverImage"
+          >
+            <LoaderCircle v-if="generatingCover" class="size-4 animate-spin" />
+            <Sparkles v-else class="size-4 text-[#22c55e]" />
+            {{ generatingCover ? "Finding image…" : "Generate image" }}
+          </Button>
+        </div>
+        <p class="text-xs text-muted-foreground">
+          Generate pulls a free public-domain food photo from the recipe name and ingredients. Enter
+          a name first.
+        </p>
+        <p v-if="coverError" class="text-sm text-destructive">{{ coverError }}</p>
+      </div>
 
       <div class="space-y-2">
         <Label for="name">Name</Label>

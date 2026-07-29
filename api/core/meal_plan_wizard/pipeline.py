@@ -12,8 +12,11 @@ from typing import Any
 from sqlmodel import select
 
 from api.core.database import SessionDep
+from api.core.image_gen.client import ImageGenClient, get_image_gen_client
+from api.core.image_gen.service import generate_recipe_cover_upload
 from api.core.llm.client import ChatMessage, LlmClient, get_llm_client
 from api.core.llm.tools import search_user_recipes
+from api.core.logging import logger
 from api.core.meal_plan_wizard.session_store import (
     ProgressEvent,
     WizardBuiltRecipe,
@@ -26,8 +29,13 @@ from api.models import Ingredient, PlannedRecipe, Recipe, User
 
 
 class MealPlanWizardPipeline:
-    def __init__(self, llm: LlmClient | None = None):
+    def __init__(
+        self,
+        llm: LlmClient | None = None,
+        image_gen: ImageGenClient | None = None,
+    ):
         self.llm = llm or get_llm_client()
+        self.image_gen = image_gen or get_image_gen_client()
 
     def update_days(self, session: WizardSession, days: list[str]) -> WizardSession:
         cleaned = sorted({d.strip() for d in days if d.strip()})
@@ -565,6 +573,14 @@ class MealPlanWizardPipeline:
                     )
                     db.add(db_ing)
                 db.commit()
+
+                cover_id = self._maybe_attach_cover(db, user, built)
+                if cover_id is not None:
+                    db_recipe.cover_image_id = cover_id
+                    db.add(db_recipe)
+                    db.commit()
+                    db.refresh(db_recipe)
+
                 recipe_id = db_recipe.id
                 built.created_recipe_id = recipe_id
                 built.source = "generated"
@@ -598,6 +614,27 @@ class MealPlanWizardPipeline:
 
         session.step = "committed"
         return planned
+
+    def _maybe_attach_cover(
+        self,
+        db: SessionDep,
+        user: User,
+        built: WizardBuiltRecipe,
+    ) -> int | None:
+        """Best-effort cover image via the configured provider. Never fails commit."""
+        try:
+            upload = generate_recipe_cover_upload(
+                user=user,
+                db=db,
+                title=built.title,
+                description=built.description,
+                ingredients=built.ingredients,
+                image_gen=self.image_gen,
+            )
+            return upload.id if upload else None
+        except Exception as exc:  # noqa: BLE001 — cover art must not block planning
+            logger.warning("Cover image generation failed for %r: %s", built.title, exc)
+            return None
 
     def _ideate_prompt(
         self,

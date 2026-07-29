@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, update
 from sqlalchemy.orm import selectinload
@@ -7,13 +8,16 @@ from sqlmodel import and_, or_, select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models import Recipe, Ingredient
+from api.core.image_gen.service import generate_recipe_cover_upload
+from api.models import Ingredient, Recipe
 from api.schemas import (
     CountResponse,
     RecipeCard,
+    RecipeCoverGenerateRequest,
     RecipeCreate,
     RecipeDetail,
     RecipeUpdate,
+    UploadFileResponse,
 )
 
 router = APIRouter(
@@ -25,6 +29,36 @@ unauth_router = APIRouter(
     prefix="/recipe",
     tags=["Recipe"],
 )
+
+
+@router.post("/generate-cover/", response_model=UploadFileResponse)
+def generate_recipe_cover(
+    body: RecipeCoverGenerateRequest,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+):
+    """Fetch/generate a cover image from the active image provider (default: broke).
+
+    Creates an Upload owned by the current user. The client should set
+    ``cover_image_id`` on create/update — same pattern as manual upload.
+    """
+    ingredients = [
+        {"name": ing.name} for ing in body.ingredients if (ing.name or "").strip()
+    ]
+    upload = generate_recipe_cover_upload(
+        user=current_user,
+        db=session,
+        title=body.name,
+        description=body.description,
+        ingredients=ingredients,
+    )
+    if upload is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No suitable cover image found. Try a clearer recipe name, "
+            "or upload a photo instead.",
+        )
+    return upload
 
 
 @unauth_router.get("/public/", response_model=list[RecipeDetail])
@@ -91,7 +125,9 @@ def get_users_recipes(
 @router.get("/user/count/", response_model=CountResponse)
 def get_users_recipe_count(current_user: CurrentUserDep, session: SessionDep):
     count = session.exec(
-        select(func.count()).select_from(Recipe).where(Recipe.created_by == current_user)
+        select(func.count())
+        .select_from(Recipe)
+        .where(Recipe.created_by == current_user)
     ).one()
     return CountResponse(count=count)
 
