@@ -610,7 +610,7 @@ onUnmounted(() => {
             class="flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors"
             :class="
               isDaySelected(toDateKey(day))
-                ? 'border-[#16a34a] bg-[#16a34a] text-white'
+                ? 'border-[#16a34a] bg-[#16a34a] text-primary-foreground'
                 : 'border-border bg-secondary/40'
             "
           >
@@ -767,7 +767,9 @@ onUnmounted(() => {
           <span
             class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border"
             :class="
-              isIdeaSelected(idea.id) ? 'border-[#16a34a] bg-[#16a34a] text-white' : 'border-border'
+              isIdeaSelected(idea.id)
+                ? 'border-[#16a34a] bg-[#16a34a] text-primary-foreground'
+                : 'border-border'
             "
           >
             <Check v-if="isIdeaSelected(idea.id)" class="size-3.5" />

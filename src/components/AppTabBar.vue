@@ -66,12 +66,12 @@ function onTab(id: TabId) {
       >
         <template v-if="tab.id === 'add'">
           <span
-            class="flex size-[50px] -mt-7 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-[0_4px_12px_rgba(22,163,74,0.4)] transition-transform duration-200"
+            class="flex size-[50px] -mt-7 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-[0_4px_8px_rgba(22,163,74,0.35)] transition-transform duration-200"
             :class="open ? 'rotate-45' : ''"
           >
             <Plus class="size-[22px]" :stroke-width="2.5" />
           </span>
-          <span class="mt-0.5 text-[10px] font-medium text-muted-foreground">
+          <span class="mt-0.5 text-[10px] font-medium text-faint">
             {{ open ? "Close" : tab.label }}
           </span>
         </template>
@@ -79,7 +79,7 @@ function onTab(id: TabId) {
           <component
             :is="icons[tab.id]"
             class="size-[21px] transition-colors"
-            :class="activeTab === tab.id ? 'text-[#22c55e]' : 'text-muted-foreground'"
+            :class="activeTab === tab.id ? 'text-[#22c55e]' : 'text-faint'"
             :stroke-width="2"
           />
           <span

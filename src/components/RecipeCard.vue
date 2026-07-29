@@ -38,6 +38,7 @@ function open() {
     :class="
       cn(
         'flex w-full items-stretch gap-3 overflow-hidden rounded-xl border border-border bg-card text-left transition-opacity active:opacity-80',
+        /* Outer padding ≥ relatedness gap; image radius = outer (12) − pad */
         size === 'sm' ? 'p-2' : 'p-3'
       )
     "
@@ -46,7 +47,9 @@ function open() {
     <img
       :src="image"
       :alt="recipe.name"
-      :class="cn('shrink-0 rounded-lg object-cover', size === 'sm' ? 'size-14' : 'size-20')"
+      :class="
+        cn('shrink-0 object-cover', size === 'sm' ? 'size-14 rounded-[4px]' : 'size-20 rounded-sm')
+      "
     />
     <div class="min-w-0 flex-1 py-0.5">
       <p :class="cn('truncate font-semibold', size === 'sm' ? 'text-sm' : 'text-[15px]')">
@@ -65,7 +68,7 @@ function open() {
         v-if="mode === 'default' && prep"
         class="mt-1.5 flex items-center gap-1 text-[11px] text-faint"
       >
-        <Clock class="size-3" />
+        <Clock class="size-3 opacity-70" />
         {{ prep }}
       </p>
     </div>

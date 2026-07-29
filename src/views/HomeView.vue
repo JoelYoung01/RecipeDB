@@ -159,17 +159,17 @@ watch(
       />
       <div
         v-else
-        class="absolute inset-0 bg-[repeating-linear-gradient(45deg,#232326_0_10px,#1d1d20_10px_20px)]"
+        class="absolute inset-0 bg-[repeating-linear-gradient(45deg,#232623_0_10px,#1d201d_10px_20px)]"
       />
       <div
-        class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[rgba(9,9,11,0.95)]"
+        class="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-[rgba(9,11,9,0.95)]"
       />
 
       <div class="absolute inset-x-0 top-0 flex items-center justify-between px-5 pt-4">
-        <h1 class="text-base font-bold text-white">{{ weekdayName }}</h1>
+        <h1 class="text-base font-bold tracking-tight text-foreground">{{ weekdayName }}</h1>
         <button
           type="button"
-          class="flex size-[34px] items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition-opacity active:opacity-80"
+          class="flex size-[34px] items-center justify-center rounded-full bg-foreground/15 text-foreground backdrop-blur-sm transition-opacity active:opacity-80"
           aria-label="Account"
           @click="router.push(paths.account)"
         >
@@ -179,7 +179,7 @@ watch(
             alt=""
             class="size-full rounded-full object-cover"
           />
-          <User v-else class="size-4" :stroke-width="2" />
+          <User v-else class="size-4 opacity-80" :stroke-width="2" />
         </button>
       </div>
 
@@ -187,22 +187,24 @@ watch(
         <div class="min-w-0">
           <p class="text-[11px] font-bold tracking-[0.08em] text-success-soft">TONIGHT</p>
           <template v-if="tonight">
-            <p class="mt-0.5 text-xl font-bold leading-tight text-white">
+            <p class="mt-0.5 text-xl font-bold tracking-tight leading-tight text-foreground">
               {{ tonight.recipe.name }}
             </p>
-            <p class="mt-0.5 text-xs text-white/80">{{ tonightMeta }}</p>
+            <p class="mt-0.5 text-xs text-foreground/75">{{ tonightMeta }}</p>
           </template>
           <template v-else-if="showHeroSkeleton">
-            <Skeleton class="mt-1.5 h-6 w-40 bg-white/20" />
-            <Skeleton class="mt-2 h-3 w-28 bg-white/15" />
+            <Skeleton class="mt-1.5 h-6 w-40 bg-foreground/20" />
+            <Skeleton class="mt-2 h-3 w-28 bg-foreground/15" />
           </template>
           <template v-else>
-            <p class="mt-0.5 text-xl font-bold leading-tight text-white">Nothing planned</p>
-            <p class="mt-0.5 text-xs text-white/80">Pick something for tonight</p>
+            <p class="mt-0.5 text-xl font-bold tracking-tight leading-tight text-foreground">
+              Nothing planned
+            </p>
+            <p class="mt-0.5 text-xs text-foreground/75">Pick something for tonight</p>
           </template>
         </div>
         <Button
-          class="shrink-0 rounded-[11px] px-4 py-2.5 text-[13px] font-semibold"
+          class="shrink-0 rounded-[11px] px-5 py-2.5 text-[13px] font-semibold"
           @click="cookTonight"
         >
           {{ tonight ? "Cook" : "Plan" }}
@@ -211,13 +213,13 @@ watch(
     </section>
 
     <!-- Week strip -->
-    <section class="px-5 pt-3.5">
+    <section class="px-5 pt-4">
       <HomeWeekStrip
         :planned-keys="plannedKeys"
         @week-change="onWeekChange"
         @select-day="openDay"
       />
-      <div class="mt-2.5 flex items-center justify-between">
+      <div class="mt-2 flex items-center justify-between">
         <p class="text-xs text-muted-foreground">{{ plannedCount }} of 7 dinners planned</p>
         <button
           type="button"
@@ -229,24 +231,24 @@ watch(
       </div>
     </section>
 
-    <!-- Action rows -->
+    <!-- Action rows: heaviest label first; icons muted so they don't overpower text -->
     <section class="flex flex-1 flex-col gap-2 overflow-hidden px-5 pt-4">
       <button
         type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3.5 text-left transition-opacity active:opacity-80"
+        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(`${paths.recipeImport}?method=link`)"
       >
-        <Plus class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
+        <Plus class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Import a recipe</span>
         <span class="text-[11.5px] text-faint">link · photo · manual</span>
       </button>
 
       <button
         type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3.5 text-left transition-opacity active:opacity-80"
+        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.recipes)"
       >
-        <Search class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
+        <Search class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Find a recipe</span>
         <span class="text-[11.5px] text-faint">
           <template v-if="recipesStore.count === null">
@@ -258,10 +260,10 @@ watch(
 
       <button
         type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-3.5 text-left transition-opacity active:opacity-80"
+        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.list)"
       >
-        <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]" :stroke-width="2" />
+        <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Grocery</span>
         <span
           class="rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"
