@@ -39,6 +39,16 @@ SUPERUSER_GID=
 # OPENROUTER_API_KEY=
 # OPENROUTER_MODEL=openai/gpt-4o-mini
 
+# Cover images for newly generated recipes (meal-plan wizard commit).
+# Providers: stub | broke (default, free Openverse CC0/PDM search) | qwen
+# IMAGE_GEN_PROVIDER=broke
+# OPENVERSE_BASE_URL=https://api.openverse.org/v1
+# OPENVERSE_LICENSES=cc0,pdm
+# Future paid diffusion (not wired yet):
+# DASHSCOPE_API_KEY=
+# QWEN_IMAGE_MODEL=qwen-image-3.0-pro
+# DASHSCOPE_IMAGE_BASE_URL=https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+
 # Optional SMTP for verification emails (when unset, OTP is logged; in
 # development the API also returns `dev_otp` in JSON responses)
 # SMTP_HOST=

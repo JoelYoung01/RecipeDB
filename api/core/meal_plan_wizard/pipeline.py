@@ -12,8 +12,12 @@ from typing import Any
 from sqlmodel import select
 
 from api.core.database import SessionDep
+from api.core.image_gen.client import ImageGenClient, get_image_gen_client
+from api.core.image_gen.persist import save_cover_upload
+from api.core.image_gen.prompts import build_recipe_image_prompt, recipe_image_keywords
 from api.core.llm.client import ChatMessage, LlmClient, get_llm_client
 from api.core.llm.tools import search_user_recipes
+from api.core.logging import logger
 from api.core.meal_plan_wizard.session_store import (
     ProgressEvent,
     WizardBuiltRecipe,
@@ -26,8 +30,13 @@ from api.models import Ingredient, PlannedRecipe, Recipe, User
 
 
 class MealPlanWizardPipeline:
-    def __init__(self, llm: LlmClient | None = None):
+    def __init__(
+        self,
+        llm: LlmClient | None = None,
+        image_gen: ImageGenClient | None = None,
+    ):
         self.llm = llm or get_llm_client()
+        self.image_gen = image_gen or get_image_gen_client()
 
     def update_days(self, session: WizardSession, days: list[str]) -> WizardSession:
         cleaned = sorted({d.strip() for d in days if d.strip()})
@@ -411,7 +420,9 @@ class MealPlanWizardPipeline:
                 ),
                 notes=raw.get("notes"),
                 prep_time=(
-                    float(raw["prep_time"]) if raw.get("prep_time") is not None else None
+                    float(raw["prep_time"])
+                    if raw.get("prep_time") is not None
+                    else None
                 ),
                 ingredients=list(raw.get("ingredients") or []),
                 source=str(raw.get("source") or "generated"),
@@ -544,6 +555,14 @@ class MealPlanWizardPipeline:
                     )
                     db.add(db_ing)
                 db.commit()
+
+                cover_id = self._maybe_attach_cover(db, user, built)
+                if cover_id is not None:
+                    db_recipe.cover_image_id = cover_id
+                    db.add(db_recipe)
+                    db.commit()
+                    db.refresh(db_recipe)
+
                 recipe_id = db_recipe.id
                 built.created_recipe_id = recipe_id
                 built.source = "generated"
@@ -577,6 +596,46 @@ class MealPlanWizardPipeline:
 
         session.step = "committed"
         return planned
+
+    def _maybe_attach_cover(
+        self,
+        db: SessionDep,
+        user: User,
+        built: WizardBuiltRecipe,
+    ) -> int | None:
+        """Best-effort cover image via the configured provider. Never fails commit."""
+        try:
+            prompt = build_recipe_image_prompt(
+                built.title,
+                built.description,
+                built.ingredients,
+            )
+            keywords = recipe_image_keywords(built.title, built.ingredients)
+            image = self.image_gen.generate(
+                prompt,
+                recipe_title=built.title,
+                keywords=keywords,
+            )
+            if image is None:
+                return None
+            upload = save_cover_upload(
+                user=user,
+                image=image,
+                recipe_title=built.title,
+                db=db,
+            )
+            if upload is None:
+                return None
+            logger.info(
+                "Attached cover upload %s to recipe %r via %s",
+                upload.id,
+                built.title,
+                image.source,
+            )
+            return upload.id
+        except Exception as exc:  # noqa: BLE001 — cover art must not block planning
+            logger.warning("Cover image generation failed for %r: %s", built.title, exc)
+            return None
 
     def _ideate_prompt(
         self,
