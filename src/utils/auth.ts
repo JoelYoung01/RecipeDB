@@ -2,6 +2,8 @@ import type { UserResponse } from "@/types/User";
 
 export const AuthLoginEvent = "auth:login";
 export const AuthErrorEvent = "auth:error";
+/** Fired when an auth exchange starts (e.g. Google credential → API). */
+export const AuthPendingEvent = "auth:pending";
 
 export type AuthRedirectPayload = {
   code: string;
@@ -98,26 +100,37 @@ function dispatchLogin(access_token: string, user: unknown) {
 }
 
 export async function loginWithGoogle(payload: { credential: string }) {
-  const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login-google/`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await readAuthResponse(response);
-  if (!response.ok) {
-    const parsed = parseDetail(data?.detail ?? data);
-    const message = parsed.message || "Google sign-in failed";
-    const error = new AuthApiError(message, {
-      status: response.status,
-      detail: data?.detail
+  window.dispatchEvent(new CustomEvent(AuthPendingEvent, { detail: { provider: "google" } }));
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login-google/`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
     });
-    window.dispatchEvent(new CustomEvent(AuthErrorEvent, { detail: { message: error.message } }));
-    throw error;
-  }
+    const data = await readAuthResponse(response);
+    if (!response.ok) {
+      const parsed = parseDetail(data?.detail ?? data);
+      const message = parsed.message || "Google sign-in failed";
+      const error = new AuthApiError(message, {
+        status: response.status,
+        detail: data?.detail
+      });
+      window.dispatchEvent(new CustomEvent(AuthErrorEvent, { detail: { message: error.message } }));
+      throw error;
+    }
 
-  const token = data as unknown as TokenPayload;
-  dispatchLogin(token.access_token, token.user);
-  return token;
+    const token = data as unknown as TokenPayload;
+    dispatchLogin(token.access_token, token.user);
+    return token;
+  } catch (er) {
+    // Ensure the login UI can leave the pending state for network/parse failures
+    // that never produced AuthErrorEvent.
+    if (!(er instanceof AuthApiError)) {
+      const message = er instanceof Error ? er.message : "Google sign-in failed";
+      window.dispatchEvent(new CustomEvent(AuthErrorEvent, { detail: { message } }));
+    }
+    throw er;
+  }
 }
 
 export async function registerWithPassword(payload: {
