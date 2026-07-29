@@ -208,6 +208,24 @@ class StubLlmClient(LlmClient):
         }
 
 
+def _repair_json_text(text: str) -> str:
+    """Apply cheap fixes for common LLM JSON quirks before json.loads."""
+    repaired = text.strip()
+    # Normalize fancy whitespace / quotes that break strict JSON.
+    repaired = (
+        repaired.replace("\u00a0", " ")
+        .replace("\u202f", " ")
+        .replace("\u2009", " ")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+    )
+    # Trailing commas before } or ]
+    repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+    return repaired
+
+
 def _extract_json_payload(text: str) -> Any:
     """Parse JSON from a model reply, tolerating markdown fences / prose."""
     cleaned = (text or "").strip()
@@ -225,8 +243,16 @@ def _extract_json_payload(text: str) -> Any:
         if start != -1 and end > start:
             candidates.append(cleaned[start : end + 1])
 
-    errors: list[str] = []
+    # Also try repaired variants of each candidate.
+    expanded: list[str] = []
     for candidate in candidates:
+        expanded.append(candidate)
+        repaired = _repair_json_text(candidate)
+        if repaired != candidate:
+            expanded.append(repaired)
+
+    errors: list[str] = []
+    for candidate in expanded:
         try:
             return json.loads(candidate)
         except json.JSONDecodeError as exc:
@@ -295,6 +321,11 @@ class OpenRouterLlmClient(LlmClient):
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
+        else:
+            # Ask OpenRouter for a JSON object when we are not in a tool loop.
+            # Mercury/OpenAI-compatible models honor this more reliably than
+            # prompt-only "JSON only" instructions.
+            payload["response_format"] = {"type": "json_object"}
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -303,6 +334,32 @@ class OpenRouterLlmClient(LlmClient):
             "X-Title": settings.PROJECT_NAME,
         }
 
+        last_error: Exception | None = None
+        # One retry helps when a model occasionally emits truncated / invalid JSON.
+        for attempt in range(2):
+            try:
+                return await self._complete_once(
+                    payload, headers=headers, mode=mode, attempt=attempt
+                )
+            except RuntimeError as exc:
+                last_error = exc
+                if attempt == 0 and "non-JSON content" in str(exc):
+                    logger.warning(
+                        "OpenRouter %s JSON parse failed on attempt 1; retrying once",
+                        mode,
+                    )
+                    continue
+                raise
+        raise RuntimeError(str(last_error) if last_error else "OpenRouter failed")
+
+    async def _complete_once(
+        self,
+        payload: dict[str, Any],
+        *,
+        headers: dict[str, str],
+        mode: str,
+        attempt: int,
+    ) -> LlmTurnResult:
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
@@ -349,8 +406,9 @@ class OpenRouterLlmClient(LlmClient):
                 if tool_calls:
                     logger.warning(
                         "OpenRouter reply was not valid structured JSON "
-                        "(mode=%s); returning tool_calls only",
+                        "(mode=%s attempt=%s); returning tool_calls only",
                         mode,
+                        attempt + 1,
                     )
                 else:
                     raise RuntimeError(

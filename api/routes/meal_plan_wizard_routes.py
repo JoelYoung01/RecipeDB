@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,10 +14,13 @@ from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep, engine
 from api.core.meal_plan_wizard.pipeline import MealPlanWizardPipeline
 from api.core.meal_plan_wizard.session_store import (
+    ProgressEvent,
     WizardPrefs,
     WizardSession,
     wizard_sessions,
 )
+
+logger = logging.getLogger(__name__)
 from api.schemas import (
     MealPlanWizardCommitRequest,
     MealPlanWizardCreate,
@@ -205,12 +209,21 @@ async def ideate(
 
     async def gen():
         # Own a session for the stream lifetime (request SessionDep may close early).
-        with Session(engine) as db:
-            async for event in pipeline.run_ideate(
-                session, db, current_user, refinement=refinement
-            ):
-                wizard_sessions.touch(session)
-                yield event
+        try:
+            with Session(engine) as db:
+                async for event in pipeline.run_ideate(
+                    session, db, current_user, refinement=refinement
+                ):
+                    wizard_sessions.touch(session)
+                    yield event
+        except Exception as exc:
+            logger.exception("meal-plan wizard ideate failed for %s", session_id)
+            yield ProgressEvent(
+                stage="ideate",
+                status="error",
+                message=str(exc) or "Ideation failed.",
+                progress=0,
+            )
 
     return StreamingResponse(_sse(gen()), media_type="text/event-stream")
 
@@ -226,16 +239,25 @@ async def build(
     idea_ids = body.idea_ids if body else None
 
     async def gen():
-        with Session(engine) as db:
-            async for event in pipeline.run_build(
-                session,
-                db,
-                current_user,
-                refinement=refinement,
-                idea_ids=idea_ids,
-            ):
-                wizard_sessions.touch(session)
-                yield event
+        try:
+            with Session(engine) as db:
+                async for event in pipeline.run_build(
+                    session,
+                    db,
+                    current_user,
+                    refinement=refinement,
+                    idea_ids=idea_ids,
+                ):
+                    wizard_sessions.touch(session)
+                    yield event
+        except Exception as exc:
+            logger.exception("meal-plan wizard build failed for %s", session_id)
+            yield ProgressEvent(
+                stage="build",
+                status="error",
+                message=str(exc) or "Recipe build failed.",
+                progress=0,
+            )
 
     return StreamingResponse(_sse(gen()), media_type="text/event-stream")
 
