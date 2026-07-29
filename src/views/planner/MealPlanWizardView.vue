@@ -4,15 +4,16 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import { addDays, endOfDay, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
+import { addDays, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
+import { usePlannerStore } from "@/stores/planner";
+import { syncAfterPlanMutation } from "@/stores/sync";
 import {
   emptyWizardPrefs,
   type MealPlanWizardBuiltRecipe,
   type MealPlanWizardProgressEvent,
   type MealPlanWizardSession,
-  type MealPlanWizardStep,
-  type PlannedRecipeDetail
+  type MealPlanWizardStep
 } from "@/types";
 import { get, patch, post, postSse } from "@/utils";
 import { ArrowLeft, Check, ChevronDown, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
@@ -21,6 +22,7 @@ import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
+const plannerStore = usePlannerStore();
 const { prefs: savedPrefs, save: persistPrefs } = useMealPlanWizardPrefs();
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -212,15 +214,12 @@ function dayLabel(key: string) {
 
 async function loadPlannedForWeek(days: Date[]): Promise<Record<string, string>> {
   if (!days.length) return {};
-  const start = days[0]!;
+  const start = startOfDay(days[0]!);
   const end = days[days.length - 1]!;
   try {
-    const plans = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: startOfDay(start).toISOString(),
-      end: endOfDay(end).toISOString()
-    });
+    await plannerStore.ensureRange(start, end);
     const titles: Record<string, string> = {};
-    for (const plan of plans) {
+    for (const plan of plannerStore.plansInRange(start, end)) {
       const key = plan.planned_for.slice(0, 10);
       // Keep the first dinner title if multiple are planned that day.
       if (!titles[key]) titles[key] = plan.recipe.name;
@@ -482,6 +481,8 @@ async function commitPlan() {
   try {
     // Zip order: day[i] ↔ built_recipes[i]
     await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {});
+    // Wizard creates recipes + planned meals; grocery derives from the plan.
+    syncAfterPlanMutation({ recipesChanged: true });
     router.push(paths.planner);
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Could not save plan";
@@ -732,9 +733,7 @@ onUnmounted(() => {
     <section v-else-if="uiStep === 'select'" class="mt-5 space-y-4">
       <div class="flex items-end justify-between gap-2">
         <p class="text-sm text-muted-foreground">
-          <template v-if="selectionFull">
-            All set — deselect one if you want to swap.
-          </template>
+          <template v-if="selectionFull"> All set — deselect one if you want to swap. </template>
           <template v-else>
             Choose <span class="font-semibold text-foreground">{{ selectCount }}</span> of
             {{ session?.ideas.length ?? 0 }} ideas
@@ -768,9 +767,7 @@ onUnmounted(() => {
           <span
             class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border"
             :class="
-              isIdeaSelected(idea.id)
-                ? 'border-[#16a34a] bg-[#16a34a] text-white'
-                : 'border-border'
+              isIdeaSelected(idea.id) ? 'border-[#16a34a] bg-[#16a34a] text-white' : 'border-border'
             "
           >
             <Check v-if="isIdeaSelected(idea.id)" class="size-3.5" />
@@ -830,9 +827,7 @@ onUnmounted(() => {
           :key="row.day"
           class="overflow-hidden rounded-xl border border-border bg-card"
           :class="
-            row.recipe && isMarkedForRegen(row.recipe.idea_id)
-              ? 'border-[rgba(34,197,94,0.4)]'
-              : ''
+            row.recipe && isMarkedForRegen(row.recipe.idea_id) ? 'border-[rgba(34,197,94,0.4)]' : ''
           "
         >
           <button
@@ -931,8 +926,8 @@ onUnmounted(() => {
           </div>
         </div>
         <p class="mt-0.5 text-xs text-muted-foreground">
-          Mark dinners above, then describe changes. Prior turns stay in context so the week
-          stays coherent.
+          Mark dinners above, then describe changes. Prior turns stay in context so the week stays
+          coherent.
         </p>
         <p class="mt-1.5 text-xs tabular-nums text-faint">
           {{ regenIdeaIds.length }} marked for regeneration

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { paths } from "@/sitemap";
+import { syncAfterRecipeMutation } from "@/stores/sync";
 import type { IngredientCreate, RecipeCreate, RecipeDetail } from "@/types";
 import { ApiError, del, get, post, put } from "@/utils";
 import { Plus, Trash2 } from "@lucide/vue";
@@ -100,6 +101,7 @@ async function saveChanges() {
     }
 
     await saveIngredients(recipeId);
+    syncAfterRecipeMutation();
     router.push(returnUrl.value);
   } catch (er) {
     console.error(er);
