@@ -4,22 +4,16 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import {
-  addDays,
-  endOfDay,
-  formatPrepTime,
-  startOfDay,
-  startOfWeekMonday,
-  toDateKey
-} from "@/lib/media";
+import { addDays, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
+import { usePlannerStore } from "@/stores/planner";
+import { syncAfterPlanMutation } from "@/stores/sync";
 import {
   emptyWizardPrefs,
   type MealPlanWizardBuiltRecipe,
   type MealPlanWizardProgressEvent,
   type MealPlanWizardSession,
-  type MealPlanWizardStep,
-  type PlannedRecipeDetail
+  type MealPlanWizardStep
 } from "@/types";
 import { get, patch, post, postSse } from "@/utils";
 import { ArrowLeft, Check, ChevronDown, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
@@ -28,6 +22,7 @@ import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
+const plannerStore = usePlannerStore();
 const { prefs: savedPrefs, save: persistPrefs } = useMealPlanWizardPrefs();
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -219,15 +214,12 @@ function dayLabel(key: string) {
 
 async function loadPlannedForWeek(days: Date[]): Promise<Record<string, string>> {
   if (!days.length) return {};
-  const start = days[0]!;
+  const start = startOfDay(days[0]!);
   const end = days[days.length - 1]!;
   try {
-    const plans = await post<PlannedRecipeDetail[]>("/planned-recipe/time-frame/", {
-      start: startOfDay(start).toISOString(),
-      end: endOfDay(end).toISOString()
-    });
+    await plannerStore.ensureRange(start, end);
     const titles: Record<string, string> = {};
-    for (const plan of plans) {
+    for (const plan of plannerStore.plansInRange(start, end)) {
       const key = plan.planned_for.slice(0, 10);
       // Keep the first dinner title if multiple are planned that day.
       if (!titles[key]) titles[key] = plan.recipe.name;
@@ -489,6 +481,8 @@ async function commitPlan() {
   try {
     // Zip order: day[i] ↔ built_recipes[i]
     await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {});
+    // Wizard creates recipes + planned meals; grocery derives from the plan.
+    syncAfterPlanMutation({ recipesChanged: true });
     router.push(paths.planner);
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Could not save plan";
@@ -538,7 +532,7 @@ onUnmounted(() => {
         <h1 class="truncate text-lg font-bold">{{ headerTitle }}</h1>
       </div>
       <span
-        v-if="session?.stubbed !== false"
+        v-if="session?.stubbed === true"
         class="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold text-faint"
       >
         Stub LLM

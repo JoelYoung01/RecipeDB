@@ -12,6 +12,7 @@ export const useGroceryStore = defineStore("grocery", () => {
   const loaded = ref(false);
   const error = ref<string | null>(null);
   const activeCount = ref<number | null>(null);
+  const revision = ref(0);
   let listInflight: Promise<void> | null = null;
   let summaryInflight: Promise<number> | null = null;
 
@@ -88,6 +89,17 @@ export const useGroceryStore = defineStore("grocery", () => {
   function invalidate() {
     loaded.value = false;
     activeCount.value = null;
+    revision.value += 1;
+  }
+
+  function reset() {
+    items.value = [];
+    windowStart.value = null;
+    windowEnd.value = null;
+    loading.value = false;
+    refreshing.value = false;
+    error.value = null;
+    invalidate();
   }
 
   return {
@@ -100,10 +112,12 @@ export const useGroceryStore = defineStore("grocery", () => {
     error,
     activeCount,
     activeItems,
+    revision,
     fetchSummary,
     ensureLoaded,
     setStatus,
     patchLocal,
-    invalidate
+    invalidate,
+    reset
   };
 });

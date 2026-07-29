@@ -12,6 +12,7 @@ export const useRecipesStore = defineStore("recipes", () => {
   const loaded = ref(false);
   const count = ref<number | null>(null);
   const hasMore = ref(false);
+  const revision = ref(0);
   let listInflight: Promise<void> | null = null;
   let countInflight: Promise<number> | null = null;
 
@@ -88,6 +89,15 @@ export const useRecipesStore = defineStore("recipes", () => {
   function invalidate() {
     loaded.value = false;
     count.value = null;
+    revision.value += 1;
+  }
+
+  function reset() {
+    recipes.value = [];
+    loading.value = false;
+    refreshing.value = false;
+    hasMore.value = false;
+    invalidate();
   }
 
   return {
@@ -98,10 +108,12 @@ export const useRecipesStore = defineStore("recipes", () => {
     loaded,
     count,
     hasMore,
+    revision,
     fetchCount,
     ensureLoaded,
     loadMore,
     search,
-    invalidate
+    invalidate,
+    reset
   };
 });

@@ -12,8 +12,11 @@ from typing import Any
 from sqlmodel import select
 
 from api.core.database import SessionDep
+from api.core.image_gen.client import ImageGenClient, get_image_gen_client
+from api.core.image_gen.service import generate_recipe_cover_upload
 from api.core.llm.client import ChatMessage, LlmClient, get_llm_client
 from api.core.llm.tools import search_user_recipes
+from api.core.logging import logger
 from api.core.meal_plan_wizard.session_store import (
     ProgressEvent,
     WizardBuiltRecipe,
@@ -26,8 +29,13 @@ from api.models import Ingredient, PlannedRecipe, Recipe, User
 
 
 class MealPlanWizardPipeline:
-    def __init__(self, llm: LlmClient | None = None):
+    def __init__(
+        self,
+        llm: LlmClient | None = None,
+        image_gen: ImageGenClient | None = None,
+    ):
         self.llm = llm or get_llm_client()
+        self.image_gen = image_gen or get_image_gen_client()
 
     def update_days(self, session: WizardSession, days: list[str]) -> WizardSession:
         cleaned = sorted({d.strip() for d in days if d.strip()})
@@ -123,7 +131,9 @@ class MealPlanWizardPipeline:
                     "content": (
                         "Refine the previous idea list with this feedback:\n"
                         f"{refinement}\n"
-                        f"Return exactly IDEATE_COUNT={target} ideas again."
+                        f"Return exactly IDEATE_COUNT={target} ideas again.\n"
+                        "Respond with ONLY valid JSON: "
+                        '{"ideas":[{"title":"...","justification":"..."}]}'
                     ),
                 }
             )
@@ -133,7 +143,10 @@ class MealPlanWizardPipeline:
             system = (
                 "You are a meal-planning assistant. Propose dinner ideas. "
                 "Be deterministic and respect constraints. "
-                "Prefer reusing the user's recipes when they fit."
+                "Prefer reusing the user's recipes when they fit. "
+                "Respond with ONLY valid JSON (no markdown) matching:\n"
+                '{"ideas":[{"title":"string","justification":"string"}]}\n'
+                "Return exactly the requested number of ideas."
             )
             user_prompt = self._ideate_prompt(session, library_preview, target)
             session.ideate_messages = [
@@ -334,6 +347,8 @@ class MealPlanWizardPipeline:
                         + f"\n\nFeedback:\n{refinement}\n\n"
                         "Prior plan context (do not drop coherence with these):\n"
                         + json.dumps(prior_plan)
+                        + "\n\nRespond with ONLY valid JSON: "
+                        '{"recipes":[...]} for the dinners listed above.'
                     ),
                 }
             )
@@ -343,7 +358,18 @@ class MealPlanWizardPipeline:
             library_preview = search_user_recipes(db, user, "", limit=20)
             system = (
                 "You build complete dinner recipes or reuse existing ones. "
-                "Respect dietary restrictions. Return structured recipes."
+                "Respect dietary restrictions. "
+                "Respond with ONLY valid JSON (no markdown) matching:\n"
+                '{"recipes":[{'
+                '"title":"string","description":"string",'
+                '"instructions":"string","notes":"string|null",'
+                '"prep_time":30,'
+                '"ingredients":[{"name":"string","amount":1.0,'
+                '"units":"string|null","details":"string|null"}],'
+                '"source":"generated","existing_recipe_id":null'
+                "}]}\n"
+                'Use source "library" and set existing_recipe_id when reusing '
+                'a library recipe; otherwise source "generated" and null id.'
             )
             user_prompt = (
                 "BUILD_RECIPES for these selected ideas:\n"
@@ -352,6 +378,7 @@ class MealPlanWizardPipeline:
                 + self._prefs_block(session.prefs)
                 + "\n\nUser library (may reuse by id later):\n"
                 + json.dumps(library_preview)
+                + "\n\nReturn one recipe object per selected idea, same titles."
             )
             session.build_messages = [
                 {"role": "system", "content": system},
@@ -411,7 +438,9 @@ class MealPlanWizardPipeline:
                 ),
                 notes=raw.get("notes"),
                 prep_time=(
-                    float(raw["prep_time"]) if raw.get("prep_time") is not None else None
+                    float(raw["prep_time"])
+                    if raw.get("prep_time") is not None
+                    else None
                 ),
                 ingredients=list(raw.get("ingredients") or []),
                 source=str(raw.get("source") or "generated"),
@@ -544,6 +573,14 @@ class MealPlanWizardPipeline:
                     )
                     db.add(db_ing)
                 db.commit()
+
+                cover_id = self._maybe_attach_cover(db, user, built)
+                if cover_id is not None:
+                    db_recipe.cover_image_id = cover_id
+                    db.add(db_recipe)
+                    db.commit()
+                    db.refresh(db_recipe)
+
                 recipe_id = db_recipe.id
                 built.created_recipe_id = recipe_id
                 built.source = "generated"
@@ -577,6 +614,27 @@ class MealPlanWizardPipeline:
 
         session.step = "committed"
         return planned
+
+    def _maybe_attach_cover(
+        self,
+        db: SessionDep,
+        user: User,
+        built: WizardBuiltRecipe,
+    ) -> int | None:
+        """Best-effort cover image via the configured provider. Never fails commit."""
+        try:
+            upload = generate_recipe_cover_upload(
+                user=user,
+                db=db,
+                title=built.title,
+                description=built.description,
+                ingredients=built.ingredients,
+                image_gen=self.image_gen,
+            )
+            return upload.id if upload else None
+        except Exception as exc:  # noqa: BLE001 — cover art must not block planning
+            logger.warning("Cover image generation failed for %r: %s", built.title, exc)
+            return None
 
     def _ideate_prompt(
         self,

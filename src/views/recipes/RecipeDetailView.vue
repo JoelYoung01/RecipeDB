@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatPrepTime, mediaUrl } from "@/lib/media";
 import { useSessionStore } from "@/stores/session";
+import { syncAfterRecipeMutation } from "@/stores/sync";
 import { paths } from "@/sitemap";
 import type { RecipeDetail } from "@/types";
 import { ApiError, del, get } from "@/utils";
@@ -54,6 +55,7 @@ async function deleteRecipe() {
   loading.value = true;
   try {
     await del(`/recipe/${route.params.recipeId}/`);
+    syncAfterRecipeMutation();
     router.push(returnUrl.value);
   } catch (er) {
     console.error(er);

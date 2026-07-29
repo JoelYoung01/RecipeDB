@@ -101,7 +101,21 @@ class Settings(BaseSettings):
     # Optional OpenRouter credentials for meal-plan wizard LLM.
     # When unset, the wizard uses a deterministic stub client.
     OPENROUTER_API_KEY: str | None = None
-    OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
+    OPENROUTER_MODEL: str = "inception/mercury-2"
+
+    # Cover-image provider for newly generated recipes.
+    #   stub  — no network; leave cover unset
+    #   broke — free CC0/public-domain search via Openverse (default)
+    #   qwen  — DashScope Qwen-Image (requires DASHSCOPE_API_KEY; not wired yet)
+    IMAGE_GEN_PROVIDER: str = "broke"
+    OPENVERSE_BASE_URL: str = "https://api.openverse.org/v1"
+    OPENVERSE_LICENSES: str = "cc0,pdm"
+    DASHSCOPE_API_KEY: str | None = None
+    QWEN_IMAGE_MODEL: str = "qwen-image-3.0-pro"
+    DASHSCOPE_IMAGE_BASE_URL: str = (
+        "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/"
+        "multimodal-generation/generation"
+    )
 
     # Local seed password users (development / first load_data)
     SEED_ADMIN_EMAIL: str = "admin@example.com"

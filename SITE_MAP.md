@@ -74,6 +74,6 @@ Preserve bookmarks from the Vuetify app:
 ## Feature coverage (no new product scope)
 
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
-- **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; LLM stubbed until OpenRouter creds)
+- **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; OpenRouter when `OPENROUTER_API_KEY` is set, else stub LLM)
 - **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
 - **Grocery list** — ingredients for planned meals in a sliding 7-day window; dismiss/delete state persisted per user

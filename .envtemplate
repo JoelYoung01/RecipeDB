@@ -37,7 +37,17 @@ SUPERUSER_GID=
 # Optional OpenRouter credentials for the meal-plan wizard LLM.
 # When unset, the wizard uses a deterministic stub client.
 # OPENROUTER_API_KEY=
-# OPENROUTER_MODEL=openai/gpt-4o-mini
+# OPENROUTER_MODEL=inception/mercury-2
+
+# Cover images for newly generated recipes (meal-plan wizard commit).
+# Providers: stub | broke (default, free Openverse CC0/PDM search) | qwen
+# IMAGE_GEN_PROVIDER=broke
+# OPENVERSE_BASE_URL=https://api.openverse.org/v1
+# OPENVERSE_LICENSES=cc0,pdm
+# Future paid diffusion (not wired yet):
+# DASHSCOPE_API_KEY=
+# QWEN_IMAGE_MODEL=qwen-image-3.0-pro
+# DASHSCOPE_IMAGE_BASE_URL=https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
 
 # Optional SMTP for verification emails (when unset, OTP is logged; in
 # development the API also returns `dev_otp` in JSON responses)

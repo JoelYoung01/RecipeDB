@@ -1,3 +1,4 @@
+import { resetClientData } from "@/stores/sync";
 import type { UserResponse } from "@/types/User";
 import { AuthLoginEvent, checkSessionToken } from "@/utils";
 import { defineStore } from "pinia";
@@ -42,6 +43,7 @@ export const useSessionStore = defineStore("session", () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     access_token.value = null;
     currentUser.value = null;
+    resetClientData();
   }
 
   window.addEventListener(AuthLoginEvent, ((event: CustomEvent) => {

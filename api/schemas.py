@@ -87,6 +87,18 @@ class UploadFileResponse(BaseModel):
         return f"/uploads/{self.file_path}"
 
 
+class RecipeCoverIngredientHint(BaseModel):
+    name: str | None = None
+
+
+class RecipeCoverGenerateRequest(BaseModel):
+    """Fields used to search/generate a cover; works before a recipe is saved."""
+
+    name: str = Field(min_length=1)
+    description: str | None = None
+    ingredients: list[RecipeCoverIngredientHint] = Field(default_factory=list)
+
+
 class RecipeSlim(BaseModel):
     id: int
     name: str

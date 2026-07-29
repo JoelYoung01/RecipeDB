@@ -98,12 +98,17 @@ class WizardSessionStore:
         days: list[str],
         prefs: WizardPrefs | None = None,
     ) -> WizardSession:
+        # Reflect the configured client up front so the UI does not flash
+        # "Stub LLM" while a live OpenRouter turn is still in flight.
+        from api.core.llm.client import StubLlmClient, get_llm_client
+
         session = WizardSession(
             id=str(uuid.uuid4()),
             user_id=user_id,
             days=sorted(set(days)),
             prefs=prefs or WizardPrefs(),
             step="prefs",
+            stubbed=isinstance(get_llm_client(), StubLlmClient),
         )
         with self._lock:
             self._sessions[session.id] = session
