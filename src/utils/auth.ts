@@ -45,27 +45,41 @@ export class AuthApiError extends Error {
   }
 }
 
-function parseDetail(detail: unknown): {
+function parseDetail(
+  detail: unknown,
+  body?: Record<string, unknown> | null
+): {
   message: string;
   redirectTo?: string;
   email?: string;
   code?: string;
   devOtp?: string | null;
 } {
+  const topMessage =
+    typeof body?.user_message === "string" && body.user_message.trim()
+      ? body.user_message.trim()
+      : null;
+
   if (typeof detail === "string") {
-    return { message: detail };
+    return { message: topMessage || detail };
   }
   if (detail && typeof detail === "object") {
     const d = detail as Record<string, unknown>;
+    const nestedMessage =
+      (typeof d.user_message === "string" && d.user_message) ||
+      (typeof d.message === "string" && d.message) ||
+      null;
     return {
-      message: typeof d.message === "string" ? d.message : "Request failed",
+      message: topMessage || nestedMessage || "Request failed",
       redirectTo: typeof d.redirect_to === "string" ? d.redirect_to : undefined,
       email: typeof d.email === "string" ? d.email : undefined,
-      code: typeof d.code === "string" ? d.code : undefined,
+      code:
+        (typeof body?.code === "string" && body.code) ||
+        (typeof d.code === "string" ? d.code : undefined),
       devOtp: typeof d.dev_otp === "string" ? d.dev_otp : null
     };
   }
-  return { message: "Request failed" };
+  return { message: topMessage || "Request failed" };
 }
 
 async function readAuthResponse(response: Response) {
@@ -109,7 +123,7 @@ export async function loginWithGoogle(payload: { credential: string }) {
     });
     const data = await readAuthResponse(response);
     if (!response.ok) {
-      const parsed = parseDetail(data?.detail ?? data);
+      const parsed = parseDetail(data?.detail ?? data, data);
       const message = parsed.message || "Google sign-in failed";
       const error = new AuthApiError(message, {
         status: response.status,
@@ -145,7 +159,7 @@ export async function registerWithPassword(payload: {
   });
   const data = await readAuthResponse(response);
   if (!response.ok) {
-    const parsed = parseDetail(data?.detail ?? data);
+    const parsed = parseDetail(data?.detail ?? data, data);
     throw new AuthApiError(parsed.message, { status: response.status, detail: data?.detail });
   }
   return data as unknown as AuthRedirectPayload;
@@ -163,7 +177,7 @@ export async function loginWithPassword(payload: {
   const data = await readAuthResponse(response);
 
   if (response.status === 403) {
-    const parsed = parseDetail(data?.detail);
+    const parsed = parseDetail(data?.detail, data);
     const locationHeader = response.headers.get("Location") || undefined;
     throw new AuthApiError(parsed.message || "Email not verified", {
       status: 403,
@@ -175,7 +189,7 @@ export async function loginWithPassword(payload: {
   }
 
   if (!response.ok) {
-    const parsed = parseDetail(data?.detail ?? data);
+    const parsed = parseDetail(data?.detail ?? data, data);
     throw new AuthApiError(parsed.message || "Login failed", {
       status: response.status,
       detail: data?.detail
@@ -198,7 +212,7 @@ export async function verifyEmailOtp(payload: {
   });
   const data = await readAuthResponse(response);
   if (!response.ok) {
-    const parsed = parseDetail(data?.detail ?? data);
+    const parsed = parseDetail(data?.detail ?? data, data);
     throw new AuthApiError(parsed.message || "Verification failed", {
       status: response.status,
       detail: data?.detail
@@ -217,7 +231,7 @@ export async function resendVerificationEmail(email: string): Promise<AuthRedire
   });
   const data = await readAuthResponse(response);
   if (!response.ok) {
-    const parsed = parseDetail(data?.detail ?? data);
+    const parsed = parseDetail(data?.detail ?? data, data);
     throw new AuthApiError(parsed.message || "Could not resend code", {
       status: response.status,
       detail: data?.detail

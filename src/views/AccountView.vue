@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
 import { put } from "@/utils/api";
+import { toast } from "@/utils/toast";
 import { Pencil } from "@lucide/vue";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
@@ -34,8 +35,10 @@ async function updateDisplayName() {
     });
     sessionStore.currentUser.display_name = newDisplayName.value;
     editingDisplayName.value = false;
+    toast.success("Display name updated.");
   } catch (error) {
     console.error("Failed to update display name:", error);
+    toast.fromError(error, "Couldn’t update your display name.");
   } finally {
     loading.value = false;
   }

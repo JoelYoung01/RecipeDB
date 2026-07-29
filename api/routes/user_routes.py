@@ -14,7 +14,7 @@ router = APIRouter(prefix="/user", tags=["User"])
 def get_public_user_profile(user_id: int, session: SessionDep):
     db_user = session.exec(select(User).where(User.id == user_id)).first()
     if not db_user:
-        raise HTTPException(404, f"User with id {user_id} not found.")
+        raise HTTPException(404, "That user couldn’t be found.")
 
     return db_user
 

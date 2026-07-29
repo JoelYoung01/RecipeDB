@@ -1,5 +1,5 @@
 import type { GroceryItem, GroceryListResponse, GrocerySummaryResponse } from "@/types";
-import { get, put } from "@/utils";
+import { get, getErrorMessage, put, toast } from "@/utils";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
@@ -54,7 +54,8 @@ export const useGroceryStore = defineStore("grocery", () => {
         loaded.value = true;
       } catch (er) {
         console.error(er);
-        error.value = "Couldn’t load your grocery list.";
+        error.value = getErrorMessage(er, "Couldn’t load your grocery list.");
+        toast.fromError(er, "Couldn’t load your grocery list.");
         throw er;
       } finally {
         loading.value = false;
@@ -82,6 +83,7 @@ export const useGroceryStore = defineStore("grocery", () => {
     } catch (er) {
       console.error(er);
       patchLocal(item.key, previous);
+      toast.fromError(er, "Couldn’t update that grocery item.");
       throw er;
     }
   }

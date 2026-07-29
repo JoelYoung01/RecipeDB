@@ -77,10 +77,13 @@ def update_planned_recipe(
 ):
     db_planned_recipe = session.get(PlannedRecipe, planned_recipe_id)
     if not db_planned_recipe:
-        raise HTTPException(status_code=404, detail="Planned recipe not found")
+        raise HTTPException(
+            status_code=404, detail="That planned meal couldn’t be found."
+        )
     if db_planned_recipe.created_by != current_user:
         raise HTTPException(
-            status_code=403, detail="Not authorized to update this planned recipe"
+            status_code=403,
+            detail="You can only update meals on your own plan.",
         )
 
     update_stmt = (
@@ -106,10 +109,13 @@ def delete_planned_recipe(
 ):
     db_planned_recipe = session.get(PlannedRecipe, planned_recipe_id)
     if not db_planned_recipe:
-        raise HTTPException(status_code=404, detail="Planned recipe not found")
+        raise HTTPException(
+            status_code=404, detail="That planned meal couldn’t be found."
+        )
     if db_planned_recipe.created_by != current_user:
         raise HTTPException(
-            status_code=403, detail="Not authorized to delete this planned recipe"
+            status_code=403,
+            detail="You can only remove meals from your own plan.",
         )
 
     session.delete(db_planned_recipe)

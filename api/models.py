@@ -112,7 +112,10 @@ class Recipe(BaseIndexedDbModel, table=True):
         back_populates="recipe",
         cascade_delete=True,
     )
-    planned: list["PlannedRecipe"] = Relationship(back_populates="recipe")
+    planned: list["PlannedRecipe"] = Relationship(
+        back_populates="recipe",
+        cascade_delete=True,
+    )
     cover_image: "Upload" = Relationship()
 
 
@@ -136,7 +139,7 @@ class PlannedRecipe(BaseIndexedDbModel, table=True):
     planned_for: datetime = Field(sa_type=UTCDateTime)
 
     created_by: "User" = Relationship()
-    recipe: "Recipe" = Relationship()
+    recipe: "Recipe" = Relationship(back_populates="planned")
 
 
 class GroceryItemStatus(str, Enum):

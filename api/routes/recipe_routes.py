@@ -163,7 +163,8 @@ def get_recipe_by_id(
     ).first()
     if not recipe:
         raise HTTPException(
-            status_code=404, detail=f"Recipe with id {recipe_id} not found."
+            status_code=404,
+            detail="That recipe couldn’t be found. It may have been deleted.",
         )
     return recipe
 
@@ -247,13 +248,14 @@ def update_recipe(
 
     if not existing_recipe:
         raise HTTPException(
-            status_code=404, detail=f"Recipe with id {recipe_id} not found."
+            status_code=404,
+            detail="That recipe couldn’t be found. It may have been deleted.",
         )
 
     if currentUser.id != existing_recipe.created_by_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the creator of this recipe.",
+            detail="You can only edit recipes you created.",
         )
 
     update_stmt = (
@@ -268,21 +270,22 @@ def update_recipe(
     return existing_recipe
 
 
-@router.delete("/{recipe_id:int}/")
+@router.delete("/{recipe_id:int}/", status_code=status.HTTP_204_NO_CONTENT)
 def delete_recipe(recipe_id: int, currentUser: CurrentUserDep, session: SessionDep):
     existing_recipe = session.exec(select(Recipe).where(Recipe.id == recipe_id)).first()
 
     if not existing_recipe:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Recipe with id {recipe_id} not found.",
+            detail="That recipe couldn’t be found. It may have already been deleted.",
         )
 
     if existing_recipe.created_by_id != currentUser.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the creator of this recipe.",
+            detail="You can only delete recipes you created.",
         )
 
+    # Cascades remove ingredients + planned meal entries for this recipe.
     session.delete(existing_recipe)
     session.commit()

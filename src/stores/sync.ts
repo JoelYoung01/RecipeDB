@@ -16,10 +16,12 @@ export function syncAfterPlanMutation(opts?: { recipesChanged?: boolean }) {
   }
 }
 
-/** Recipe create / update / delete — list + grocery may both shift. */
+/** Recipe create / update / delete — list, grocery, and plans may all shift. */
 export function syncAfterRecipeMutation() {
   useRecipesStore().invalidate();
   useGroceryStore().invalidate();
+  // Deleting a recipe also removes its planned meals (server cascade).
+  usePlannerStore().invalidate();
 }
 
 /** Clear all domain caches (e.g. on logout). */

@@ -1,10 +1,10 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 
 from api.core.config import settings
+from api.core.errors import register_exception_handlers
 from api.routes import (
     admin_routes,
     auth_routes,
@@ -48,6 +48,10 @@ api_router.include_router(user_routes.router)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Normalize HTTP / validation / unexpected errors to { user_message, detail, ... }
+# and keep SPA HTML fallback for non-API 404s in deployed builds.
+register_exception_handlers(app)
+
 # Add Uploads dir
 app.mount("/uploads/", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
@@ -57,8 +61,3 @@ if settings.ENVIRONMENT != "development":
     app.mount(
         "/", StaticFiles(directory=settings.VUE_STATIC_DIR, html=True), name="frontend"
     )
-
-    # Add catch-all route for handling 404s
-    @app.exception_handler(404)
-    async def custom_404_handler(request, __):
-        return FileResponse(f"{settings.VUE_STATIC_DIR}/index.html")
