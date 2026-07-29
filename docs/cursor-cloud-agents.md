@@ -17,7 +17,8 @@ Standard commands live in `README.md`, `package.json`, and `pyproject.toml`. Bel
 
 ## Database setup (not part of the dependency update script)
 
-- The SQLite DB lives at `data/database.db`. Create dirs and run migrations + seed once: `mkdir -p data/uploads data/logs && set -a && . ./.env && set +a && uv run alembic upgrade head && uv run python -m api.scripts.load_data`. The seed creates verified admin + test password users and 10 sample recipes. This is state setup, so it is intentionally NOT in the startup update script.
+- The SQLite DB lives at `data/database.db`. Create dirs and seed once: `mkdir -p data/uploads data/logs && set -a && . ./.env && set +a && uv run alembic upgrade head && uv run python -m api.scripts.load_data`. The seed creates verified admin + test password users and 10 sample recipes. Seeding is state setup, so it is intentionally NOT in the startup update script.
+- Alembic migrations **do** run automatically on API startup (`api.core.migrate.run_migrations` via the FastAPI lifespan). That matters in production: `data/` is a persistent volume, so new columns/tables from deploys (e.g. password-auth / Google login fields) are applied when the container boots. You can still run `uv run alembic upgrade head` manually.
 
 ## Running the services
 

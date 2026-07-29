@@ -1,8 +1,23 @@
-import { loginWithGoogle } from "@/utils";
+import { AuthErrorEvent, loginWithGoogle } from "@/utils";
 import type { InjectionKey, Ref } from "vue";
 import { ref } from "vue";
 
 export const googleAccountsLoadedKey = Symbol() as InjectionKey<Ref<boolean>>;
+
+async function handleGoogleCredential(response: { credential?: string }) {
+  if (!response.credential) {
+    const message = "Google sign-in did not return a credential.";
+    window.dispatchEvent(new CustomEvent(AuthErrorEvent, { detail: { message } }));
+    console.error(message);
+    return;
+  }
+  try {
+    await loginWithGoogle({ credential: response.credential });
+  } catch (er) {
+    // loginWithGoogle already dispatches AuthErrorEvent for API failures.
+    console.error(er);
+  }
+}
 
 /**
  * Docs for js API:
@@ -20,7 +35,7 @@ export function install(app: any) {
     google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       auto_select: false,
-      callback: loginWithGoogle,
+      callback: handleGoogleCredential,
       use_fedcm_for_prompt: true
     });
 

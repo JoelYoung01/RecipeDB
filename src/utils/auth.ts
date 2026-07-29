@@ -1,6 +1,7 @@
 import type { UserResponse } from "@/types/User";
 
 export const AuthLoginEvent = "auth:login";
+export const AuthErrorEvent = "auth:error";
 
 export type AuthRedirectPayload = {
   code: string;
@@ -97,19 +98,26 @@ function dispatchLogin(access_token: string, user: unknown) {
 }
 
 export async function loginWithGoogle(payload: { credential: string }) {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login-google/`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload)
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login-google/`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await readAuthResponse(response);
+  if (!response.ok) {
+    const parsed = parseDetail(data?.detail ?? data);
+    const message = parsed.message || "Google sign-in failed";
+    const error = new AuthApiError(message, {
+      status: response.status,
+      detail: data?.detail
     });
-    if (!response.ok) throw new Error(`Error logging in with google: ${response.statusText}`);
-    const { access_token, user } = await response.json();
-
-    dispatchLogin(access_token, user);
-  } catch (er) {
-    console.error(er);
+    window.dispatchEvent(new CustomEvent(AuthErrorEvent, { detail: { message: error.message } }));
+    throw error;
   }
+
+  const token = data as unknown as TokenPayload;
+  dispatchLogin(token.access_token, token.user);
+  return token;
 }
 
 export async function registerWithPassword(payload: {
