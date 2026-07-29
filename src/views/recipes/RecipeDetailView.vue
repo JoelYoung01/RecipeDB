@@ -72,16 +72,18 @@ onMounted(getRecipeDetails);
   <div v-if="recipe" class="relative">
     <div class="relative h-56 overflow-hidden">
       <img :src="imageUrl" :alt="recipe.name" class="size-full object-cover" />
-      <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-background" />
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-background/55 via-transparent to-background"
+      />
       <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
         <Button
           size="icon-sm"
           variant="secondary"
-          class="rounded-full bg-black/40 text-white backdrop-blur"
+          class="rounded-full bg-background/50 text-foreground backdrop-blur"
           :aria-label="'Back'"
           @click="router.push(returnUrl)"
         >
-          <ArrowLeft class="size-4" />
+          <ArrowLeft class="size-4 opacity-80" />
         </Button>
         <Button
           v-if="owned"
@@ -100,9 +102,10 @@ onMounted(getRecipeDetails);
       </div>
     </div>
 
-    <div class="-mt-4 rounded-t-2xl border border-border bg-card px-5 pt-5 pb-8">
+    <!-- No top border: hero gradient already divides — avoid stacked hard edges -->
+    <div class="-mt-4 rounded-t-2xl border border-t-0 border-border bg-card px-5 pt-5 pb-8">
       <div class="flex items-start justify-between gap-3">
-        <h1 class="text-xl font-bold leading-tight">{{ recipe.name }}</h1>
+        <h1 class="text-xl font-bold tracking-tight leading-tight">{{ recipe.name }}</h1>
         <Button size="sm" class="shrink-0" @click="scrollToIngredients">Cook</Button>
       </div>
 
@@ -117,11 +120,11 @@ onMounted(getRecipeDetails);
       </p>
 
       <div class="mt-4 grid grid-cols-2 gap-2">
-        <div class="rounded-xl border border-border bg-secondary/50 px-3 py-3 text-center">
+        <div class="rounded-xl bg-secondary/50 px-3 py-3 text-center">
           <p class="text-xs text-muted-foreground">Total time</p>
           <p class="mt-1 text-sm font-semibold">{{ formattedTime }}</p>
         </div>
-        <div class="rounded-xl border border-border bg-secondary/50 px-3 py-3 text-center">
+        <div class="rounded-xl bg-secondary/50 px-3 py-3 text-center">
           <p class="text-xs text-muted-foreground">Ingredients</p>
           <p class="mt-1 text-sm font-semibold">{{ recipe.ingredients.length }}</p>
         </div>
@@ -129,7 +132,9 @@ onMounted(getRecipeDetails);
 
       <section class="mt-5">
         <h2 class="mb-1 text-sm font-semibold">About</h2>
-        <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ recipe.description }}</p>
+        <p class="text-base leading-relaxed text-muted-foreground whitespace-pre-wrap">
+          {{ recipe.description }}
+        </p>
         <p v-if="recipe.public && owned" class="mt-2 text-xs text-[#4ade80]">
           This recipe is public.
         </p>
@@ -137,7 +142,7 @@ onMounted(getRecipeDetails);
 
       <section id="ingredients" class="mt-5 scroll-mt-4">
         <h2 class="mb-2 text-sm font-semibold">Ingredients</h2>
-        <ul class="space-y-1.5 text-sm">
+        <ul class="space-y-1.5 text-base">
           <li
             v-for="ingredient in recipe.ingredients"
             :key="ingredient.id"
@@ -154,16 +159,18 @@ onMounted(getRecipeDetails);
 
       <section class="mt-5">
         <h2 class="mb-1 text-sm font-semibold">Instructions</h2>
-        <pre class="font-sans text-sm whitespace-pre-wrap text-muted-foreground">{{
-          recipe.instructions
-        }}</pre>
+        <pre
+          class="font-sans text-base leading-relaxed whitespace-pre-wrap text-muted-foreground"
+          >{{ recipe.instructions }}</pre
+        >
       </section>
 
       <section v-if="recipe.notes" class="mt-5">
         <h2 class="mb-1 text-sm font-semibold">Notes</h2>
-        <pre class="font-sans text-sm whitespace-pre-wrap text-muted-foreground">{{
-          recipe.notes
-        }}</pre>
+        <pre
+          class="font-sans text-base leading-relaxed whitespace-pre-wrap text-muted-foreground"
+          >{{ recipe.notes }}</pre
+        >
       </section>
 
       <Button v-if="owned" variant="destructive" size="sm" class="mt-8" @click="deleteOpen = true">

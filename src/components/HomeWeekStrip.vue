@@ -318,7 +318,7 @@ defineExpose({
             </div>
             <div
               class="mx-auto mt-1.5 size-1.5 rounded-full"
-              :class="plannedKeys.has(toDateKey(day)) ? 'bg-[#22c55e]' : 'bg-[#3f3f46]'"
+              :class="plannedKeys.has(toDateKey(day)) ? 'bg-[#22c55e]' : 'bg-[#3f463f]'"
             />
           </div>
         </div>

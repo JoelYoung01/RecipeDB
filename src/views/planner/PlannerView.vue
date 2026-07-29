@@ -298,7 +298,7 @@ onActivated(() => {
               </template>
               <template v-else>
                 <div class="flex items-center gap-2">
-                  <span class="size-1.5 rounded-full bg-[#3f3f46]" />
+                  <span class="size-1.5 rounded-full bg-[#3f463f]" />
                   <span class="text-sm text-muted-foreground">Open night</span>
                 </div>
               </template>

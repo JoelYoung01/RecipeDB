@@ -65,7 +65,7 @@ async function onSubmit() {
 
 <template>
   <div
-    class="app-scroll flex h-full min-h-0 flex-col items-center justify-center gap-8 overflow-y-auto overscroll-y-contain bg-gradient-to-b from-[#111113] via-background to-background px-6 py-10"
+    class="app-scroll flex h-full min-h-0 flex-col items-center justify-center gap-8 overflow-y-auto overscroll-y-contain bg-gradient-to-b from-elevated via-background to-background px-6 py-10"
   >
     <div class="flex flex-col items-center gap-3 text-center">
       <img :src="chefHat" alt="" class="size-16 object-contain" />

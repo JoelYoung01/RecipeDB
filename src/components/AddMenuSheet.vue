@@ -110,7 +110,7 @@ function onAfterLeave() {
     <Transition name="scrim">
       <div
         v-if="open"
-        class="fixed inset-0 z-50 bg-black/55"
+        class="fixed inset-0 z-50 bg-background/70"
         aria-hidden="true"
         @click="open = false"
       />
@@ -121,19 +121,19 @@ function onAfterLeave() {
         role="dialog"
         aria-modal="true"
         aria-label="Add new"
-        class="sheet-panel fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md rounded-t-[20px] border border-b-0 border-border bg-card px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)]"
+        class="sheet-panel fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md rounded-t-[20px] border border-b-0 border-border bg-card px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]"
         :class="{ 'is-dragging': dragging }"
         :style="{ '--drag-y': `${dragY}px` }"
       >
         <div
-          class="flex cursor-grab touch-none items-center justify-center pt-2.5 pb-2 active:cursor-grabbing"
+          class="flex cursor-grab touch-none items-center justify-center pt-3 pb-2 active:cursor-grabbing"
           aria-label="Drag or tap to close"
           @pointerdown="onHandlePointerDown"
           @pointermove="onHandlePointerMove"
           @pointerup="endDrag"
           @pointercancel="onHandlePointerCancel"
         >
-          <div class="h-1 w-9 rounded-full bg-[#3f3f46]" />
+          <div class="h-1 w-9 rounded-full bg-[#3f463f]" />
         </div>
         <p class="px-1 pb-2.5 text-xs font-semibold tracking-[0.06em] text-faint uppercase">
           Add new
@@ -143,7 +143,7 @@ function onAfterLeave() {
             v-for="action in createActions"
             :key="action.id"
             type="button"
-            class="flex items-center gap-3.5 rounded-xl px-2.5 py-3 text-left transition-colors active:opacity-80"
+            class="flex items-center gap-3.5 rounded-xl px-3 py-3 text-left transition-colors active:opacity-80"
             :class="action.highlighted ? 'bg-secondary' : 'hover:bg-secondary/60'"
             @click="go(action.href)"
           >
@@ -152,7 +152,7 @@ function onAfterLeave() {
             >
               <component
                 :is="icons[action.id]"
-                class="size-[17px] text-[#22c55e]"
+                class="size-[17px] text-[#22c55e]/80"
                 :stroke-width="2"
               />
             </span>
@@ -170,7 +170,7 @@ function onAfterLeave() {
             v-for="action in quickActions"
             :key="action.id"
             type="button"
-            class="flex items-center gap-3.5 rounded-xl px-2.5 py-3 text-left transition-colors hover:bg-secondary/60 active:opacity-80"
+            class="flex items-center gap-3.5 rounded-xl px-3 py-3 text-left transition-colors hover:bg-secondary/60 active:opacity-80"
             @click="go(action.href)"
           >
             <span
@@ -178,7 +178,7 @@ function onAfterLeave() {
             >
               <component
                 :is="icons[action.id]"
-                class="size-[17px] text-muted-foreground"
+                class="size-[17px] text-faint"
                 :stroke-width="2"
               />
             </span>

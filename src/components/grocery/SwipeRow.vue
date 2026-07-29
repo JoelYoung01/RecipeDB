@@ -183,7 +183,7 @@ defineExpose({ close });
     <div class="absolute inset-y-0 right-0 z-0 flex w-32 items-stretch">
       <button
         type="button"
-        class="flex flex-1 items-center justify-center bg-[#3f3f46] text-[#fafafa] transition-opacity active:opacity-80"
+        class="flex flex-1 items-center justify-center bg-[#3f463f] text-foreground transition-opacity active:opacity-80"
         :tabindex="openLeft ? 0 : -1"
         aria-label="View recipe"
         @click.stop="onView"
@@ -192,7 +192,7 @@ defineExpose({ close });
       </button>
       <button
         type="button"
-        class="flex flex-1 items-center justify-center bg-[#dc2626] text-white transition-opacity active:opacity-80"
+        class="flex flex-1 items-center justify-center bg-[#dc2626] text-primary-foreground transition-opacity active:opacity-80"
         :tabindex="openLeft ? 0 : -1"
         aria-label="Remove from list"
         @click.stop="onDelete"
