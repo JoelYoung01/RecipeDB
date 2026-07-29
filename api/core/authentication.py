@@ -378,3 +378,4 @@ def verify_google_token(encoded_google_token: str):
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_active_user)]
+AdminUserDep = Annotated[User, Depends(get_admin_user)]

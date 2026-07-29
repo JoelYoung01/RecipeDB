@@ -19,6 +19,7 @@ Standard commands live in `README.md`, `package.json`, and `pyproject.toml`. Bel
 
 - The SQLite DB lives at `data/database.db`. Create dirs and seed once: `mkdir -p data/uploads data/logs && set -a && . ./.env && set +a && uv run alembic upgrade head && uv run python -m api.scripts.load_data`. The seed creates verified admin + test password users and 10 sample recipes. Seeding is state setup, so it is intentionally NOT in the startup update script.
 - In production, Alembic runs as part of deploy via the Docker entrypoint (`scripts/docker-entrypoint.sh`): `alembic upgrade head` before uvicorn starts. That updates the persistent `data/` volume when a new image is rolled out. Local `fastapi dev` does **not** auto-migrate — run `uv run alembic upgrade head` yourself when the schema changes.
+- Admins can also apply pending migrations via `POST /api/admin/migrations/upgrade/` (Bearer token for an `admin` user). Useful if the volume was behind after a deploy that did not restart the container, or for one-off recovery.
 
 ## Running the services
 
