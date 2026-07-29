@@ -532,7 +532,7 @@ onUnmounted(() => {
         <h1 class="truncate text-lg font-bold">{{ headerTitle }}</h1>
       </div>
       <span
-        v-if="session?.stubbed !== false"
+        v-if="session?.stubbed === true"
         class="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold text-faint"
       >
         Stub LLM
