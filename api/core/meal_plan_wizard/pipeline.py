@@ -13,8 +13,7 @@ from sqlmodel import select
 
 from api.core.database import SessionDep
 from api.core.image_gen.client import ImageGenClient, get_image_gen_client
-from api.core.image_gen.persist import save_cover_upload
-from api.core.image_gen.prompts import build_recipe_image_prompt, recipe_image_keywords
+from api.core.image_gen.service import generate_recipe_cover_upload
 from api.core.llm.client import ChatMessage, LlmClient, get_llm_client
 from api.core.llm.tools import search_user_recipes
 from api.core.logging import logger
@@ -605,34 +604,15 @@ class MealPlanWizardPipeline:
     ) -> int | None:
         """Best-effort cover image via the configured provider. Never fails commit."""
         try:
-            prompt = build_recipe_image_prompt(
-                built.title,
-                built.description,
-                built.ingredients,
-            )
-            keywords = recipe_image_keywords(built.title, built.ingredients)
-            image = self.image_gen.generate(
-                prompt,
-                recipe_title=built.title,
-                keywords=keywords,
-            )
-            if image is None:
-                return None
-            upload = save_cover_upload(
+            upload = generate_recipe_cover_upload(
                 user=user,
-                image=image,
-                recipe_title=built.title,
                 db=db,
+                title=built.title,
+                description=built.description,
+                ingredients=built.ingredients,
+                image_gen=self.image_gen,
             )
-            if upload is None:
-                return None
-            logger.info(
-                "Attached cover upload %s to recipe %r via %s",
-                upload.id,
-                built.title,
-                image.source,
-            )
-            return upload.id
+            return upload.id if upload else None
         except Exception as exc:  # noqa: BLE001 — cover art must not block planning
             logger.warning("Cover image generation failed for %r: %s", built.title, exc)
             return None
