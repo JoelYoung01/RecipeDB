@@ -1,14 +1,23 @@
-"""OpenRouter-ready LLM client. Uses a deterministic stub until credentials exist."""
+"""OpenRouter LLM client with a deterministic stub fallback."""
 
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 import random
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
+
 from api.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 @dataclass
@@ -199,8 +208,72 @@ class StubLlmClient(LlmClient):
         }
 
 
+def _extract_json_payload(text: str) -> Any:
+    """Parse JSON from a model reply, tolerating markdown fences / prose."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        raise ValueError("Empty LLM response")
+
+    candidates: list[str] = [cleaned]
+    for match in re.finditer(r"```(?:json)?\s*([\s\S]*?)```", cleaned, re.IGNORECASE):
+        candidates.append(match.group(1).strip())
+
+    # Largest object / array substrings as a last resort.
+    for opener, closer in (("{", "}"), ("[", "]")):
+        start = cleaned.find(opener)
+        end = cleaned.rfind(closer)
+        if start != -1 and end > start:
+            candidates.append(cleaned[start : end + 1])
+
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            errors.append(str(exc))
+    raise ValueError(
+        "Could not parse JSON from LLM response: "
+        + (errors[-1] if errors else "unknown")
+    )
+
+
+def _normalize_parsed(parsed: Any, *, mode: str) -> dict[str, Any]:
+    """Coerce common model shapes into {ideas: [...]} or {recipes: [...]}."""
+    if isinstance(parsed, dict):
+        if mode == "ideate":
+            if isinstance(parsed.get("ideas"), list):
+                return parsed
+            for key in ("options", "meals", "suggestions", "dinner_ideas"):
+                if isinstance(parsed.get(key), list):
+                    return {"ideas": parsed[key]}
+        else:
+            if isinstance(parsed.get("recipes"), list):
+                return parsed
+            for key in ("dinners", "meals", "dishes"):
+                if isinstance(parsed.get(key), list):
+                    return {"recipes": parsed[key]}
+        # Single idea / recipe object
+        if mode == "ideate" and ("title" in parsed or "justification" in parsed):
+            return {"ideas": [parsed]}
+        if mode == "build" and (
+            "ingredients" in parsed or "instructions" in parsed or "title" in parsed
+        ):
+            return {"recipes": [parsed]}
+        return parsed
+
+    if isinstance(parsed, list):
+        return {"ideas": parsed} if mode == "ideate" else {"recipes": parsed}
+
+    raise ValueError(f"Unexpected LLM JSON type: {type(parsed).__name__}")
+
+
+def _infer_mode(messages: list[ChatMessage]) -> str:
+    last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+    return "build" if "BUILD_RECIPES" in last_user else "ideate"
+
+
 class OpenRouterLlmClient(LlmClient):
-    """Placeholder for real OpenRouter calls once credentials are available."""
+    """Chat Completions client against OpenRouter's OpenAI-compatible API."""
 
     def __init__(self, api_key: str, model: str):
         self.api_key = api_key
@@ -213,10 +286,82 @@ class OpenRouterLlmClient(LlmClient):
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.4,
     ) -> LlmTurnResult:
-        # Intentionally unimplemented until OPENROUTER_API_KEY is provided.
-        raise NotImplementedError(
-            "OpenRouter client is not wired yet. Unset OPENROUTER_API_KEY "
-            "to use the stub client, or implement the HTTP call here."
+        mode = _infer_mode(messages)
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "temperature": temperature,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": settings.FRONTEND_HOST,
+            "X-Title": settings.PROJECT_NAME,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    OPENROUTER_CHAT_URL, headers=headers, json=payload
+                )
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+
+        if response.status_code >= 400:
+            detail = response.text[:500]
+            raise RuntimeError(f"OpenRouter error {response.status_code}: {detail}")
+
+        try:
+            body = response.json()
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("OpenRouter returned non-JSON response") from exc
+
+        choices = body.get("choices") or []
+        if not choices:
+            raise RuntimeError("OpenRouter response missing choices")
+
+        message = choices[0].get("message") or {}
+        content = message.get("content") or ""
+        if isinstance(content, list):
+            # Some providers return content parts; join text segments.
+            content = "".join(
+                part.get("text", "") if isinstance(part, dict) else str(part)
+                for part in content
+            )
+
+        raw_tool_calls = message.get("tool_calls") or []
+        tool_calls: list[dict[str, Any]] = [
+            tc for tc in raw_tool_calls if isinstance(tc, dict)
+        ]
+
+        text = content if isinstance(content, str) else str(content)
+        parsed: Any = None
+        if text.strip():
+            try:
+                parsed = _normalize_parsed(_extract_json_payload(text), mode=mode)
+            except ValueError as exc:
+                # Tool-only turns may omit JSON content; otherwise fail loudly so
+                # the wizard does not silently pad with filler ideas/recipes.
+                if tool_calls:
+                    logger.warning(
+                        "OpenRouter reply was not valid structured JSON "
+                        "(mode=%s); returning tool_calls only",
+                        mode,
+                    )
+                else:
+                    raise RuntimeError(
+                        f"OpenRouter returned non-JSON content for {mode}: {exc}"
+                    ) from exc
+
+        return LlmTurnResult(
+            content=text,
+            parsed=parsed,
+            tool_calls=tool_calls,
+            stubbed=False,
         )
 
 

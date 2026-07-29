@@ -60,7 +60,7 @@ The admin seed also receives `SUPERUSER_GID` when set.
 ## Meal-plan wizard LLM
 
 - Routes under `/api/meal-plan-wizard/`. Pipeline stages: create session → ideate (SSE) → select → build (SSE) → commit.
-- Without `OPENROUTER_API_KEY`, the backend uses a deterministic stub LLM (`api/core/llm/client.py`). Set the key (+ optional `OPENROUTER_MODEL`) later to swap in the real client; tool helpers for user-scoped recipe search live in `api/core/llm/tools.py`.
+- Without `OPENROUTER_API_KEY`, the backend uses a deterministic stub LLM (`api/core/llm/client.py`). Set the key to call OpenRouter (`api/core/llm/client.py` → `OpenRouterLlmClient`). Optional `OPENROUTER_MODEL` defaults to `inception/mercury-2`. Tool helpers for user-scoped recipe search live in `api/core/llm/tools.py`.
 
 ## Lint / test / build
 

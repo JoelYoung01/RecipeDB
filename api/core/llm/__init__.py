@@ -1,4 +1,4 @@
-"""LLM client abstractions for meal-plan wizard and future OpenRouter wiring."""
+"""LLM client abstractions for the meal-plan wizard (stub or OpenRouter)."""
 
 from api.core.llm.client import LlmClient, get_llm_client
 

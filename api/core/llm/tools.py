@@ -11,7 +11,7 @@ from api.models import Recipe, User
 
 
 def tool_definitions() -> list[dict[str, Any]]:
-    """JSON-schema style tool defs for a future OpenRouter tool-calling turn."""
+    """JSON-schema style tool defs for an OpenRouter tool-calling turn."""
     return [
         {
             "type": "function",
