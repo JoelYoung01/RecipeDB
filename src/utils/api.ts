@@ -1,13 +1,35 @@
 import { TOKEN_STORAGE_KEY } from "@/stores/session";
+import { parseApiErrorBody } from "./errors";
 
 export class ApiError extends Error {
   public status: number;
   public ok: boolean;
+  public userMessage: string;
+  public detail: unknown;
+  public code?: string;
 
-  constructor(message: string, response: Response) {
+  constructor(
+    message: string,
+    response: Response,
+    options?: { userMessage?: string; detail?: unknown; code?: string }
+  ) {
     super(message || response.statusText);
+    this.name = "ApiError";
     this.status = response.status;
     this.ok = response.ok;
+    this.userMessage = options?.userMessage || message || response.statusText;
+    this.detail = options?.detail;
+    this.code = options?.code;
+  }
+}
+
+async function readErrorBody(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
 }
 
@@ -30,13 +52,24 @@ export async function doFetch(url: string, options?: RequestInit) {
     }
   };
 
-  const response = await fetch(url, builtOptions);
+  let response: Response;
+  try {
+    response = await fetch(url, builtOptions);
+  } catch {
+    const networkMessage = "Network error — check your connection and try again.";
+    throw new ApiError(networkMessage, new Response(null, { status: 503 }), {
+      userMessage: networkMessage
+    });
+  }
 
   if (!response.ok) {
-    const json = await response.json();
-    const content = json?.detail || (await response.text());
-    const message = `(${response.status}) ${content || response.statusText}`;
-    throw new ApiError(message, response);
+    const body = await readErrorBody(response);
+    const parsed = parseApiErrorBody(body);
+    throw new ApiError(parsed.userMessage, response, {
+      userMessage: parsed.userMessage,
+      detail: parsed.detail,
+      code: parsed.code
+    });
   }
 
   if (response.status === 204) return;

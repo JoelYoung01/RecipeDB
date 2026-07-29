@@ -110,7 +110,9 @@ def update_grocery_item_state(
 ):
     key = normalize_item_key(body.item_key)
     if not key:
-        raise HTTPException(status_code=400, detail="item_key is required")
+        raise HTTPException(
+            status_code=400, detail="Missing grocery item. Refresh and try again."
+        )
 
     if body.status is not None and body.status not in {
         GroceryItemStatus.dismissed.value,
@@ -118,7 +120,7 @@ def update_grocery_item_state(
     }:
         raise HTTPException(
             status_code=400,
-            detail='status must be "dismissed", "deleted", or null',
+            detail="That grocery status isn’t valid. Refresh and try again.",
         )
 
     existing = session.exec(

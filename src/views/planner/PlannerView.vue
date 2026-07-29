@@ -15,7 +15,7 @@ import { usePlannerStore } from "@/stores/planner";
 import { useRecipesStore } from "@/stores/recipes";
 import { syncAfterPlanMutation } from "@/stores/sync";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
-import { del, post } from "@/utils";
+import { del, post, toast } from "@/utils";
 import { ChevronRight, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onActivated, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -126,6 +126,7 @@ async function getPlannedRecipes(force = false) {
     selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
   } catch (error) {
     console.error("Error fetching planned recipes:", error);
+    toast.fromError(error, "Couldn’t load your meal plan.");
   }
 }
 
@@ -169,8 +170,10 @@ async function assignRecipe() {
     syncAfterPlanMutation();
     await getPlannedRecipes(true);
     showRecipeDialog.value = false;
+    toast.success("Meal plan updated.");
   } catch (error) {
     console.error("Error assigning recipe:", error);
+    toast.fromError(error, "Couldn’t update this day’s plan.");
   }
 }
 
@@ -179,8 +182,10 @@ async function removePlanned(planned: PlannedRecipeDetail) {
     await del(`/planned-recipe/${planned.id}/`);
     syncAfterPlanMutation();
     await getPlannedRecipes(true);
+    toast.success("Removed from plan.");
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t remove that meal.");
   }
 }
 

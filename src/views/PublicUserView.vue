@@ -2,7 +2,7 @@
 import defaultUser from "@/assets/account-circle.svg";
 import RecipeCard from "@/components/RecipeCard.vue";
 import type { PublicUser, RecipeDashboard } from "@/types";
-import { get } from "@/utils";
+import { get, toast } from "@/utils";
 import { onMounted } from "vue";
 import { useRoute } from "vue-router";
 
@@ -23,6 +23,7 @@ onMounted(async () => {
     recipes.value = list;
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t load this cook’s profile.");
   }
   loading.value = false;
 });

@@ -79,6 +79,7 @@ def login_with_password(payload: PasswordLoginPayload, session: SessionDep):
 
         detail = {
             "code": "email_not_verified",
+            "user_message": "Email address is not verified. Enter the code we sent you.",
             "message": "Email address is not verified. Enter the code we sent you.",
             "redirect_to": verify_email_redirect_path(user.email),
             "email": user.email,

@@ -15,7 +15,7 @@ import {
   type MealPlanWizardSession,
   type MealPlanWizardStep
 } from "@/types";
-import { get, patch, post, postSse } from "@/utils";
+import { get, getErrorMessage, patch, post, postSse, toast } from "@/utils";
 import { ArrowLeft, Check, ChevronDown, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -227,6 +227,7 @@ async function loadPlannedForWeek(days: Date[]): Promise<Record<string, string>>
     return titles;
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t load existing dinners for this week.");
     return {};
   }
 }
@@ -301,7 +302,8 @@ async function runIdeate(refinement?: string) {
     if (!error.value) uiStep.value = "select";
   } catch (e) {
     if ((e as Error).name !== "AbortError") {
-      error.value = e instanceof Error ? e.message : "Ideation failed";
+      error.value = getErrorMessage(e, "Ideation failed");
+      toast.fromError(e, "Ideation failed");
     }
   } finally {
     running.value = false;
@@ -342,7 +344,8 @@ async function confirmSelectionAndBuild(refinement?: string) {
     );
     await runBuild(refinement);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : "Could not continue";
+    error.value = getErrorMessage(e, "Could not continue");
+    toast.fromError(e, "Could not continue");
     busy.value = false;
   }
 }
@@ -376,7 +379,8 @@ async function runBuild(refinement?: string, ideaIds?: string[]) {
     if (!error.value) uiStep.value = "review";
   } catch (e) {
     if ((e as Error).name !== "AbortError") {
-      error.value = e instanceof Error ? e.message : "Build failed";
+      error.value = getErrorMessage(e, "Build failed");
+      toast.fromError(e, "Build failed");
     }
   } finally {
     running.value = false;
@@ -454,6 +458,7 @@ async function rewindTo(step: UiStep) {
         });
       } catch (e) {
         console.error(e);
+        toast.fromError(e, "Couldn’t reset the wizard step.");
       }
     }
     selectedIdeaIds.value = [];
@@ -470,7 +475,8 @@ async function rewindTo(step: UiStep) {
     selectedIdeaIds.value = rewound.selected_idea_ids;
     uiStep.value = step;
   } catch (e) {
-    error.value = e instanceof Error ? e.message : "Could not go back";
+    error.value = getErrorMessage(e, "Could not go back");
+    toast.fromError(e, "Could not go back");
   }
 }
 
@@ -483,9 +489,11 @@ async function commitPlan() {
     await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {});
     // Wizard creates recipes + planned meals; grocery derives from the plan.
     syncAfterPlanMutation({ recipesChanged: true });
+    toast.success("Meal plan saved.");
     router.push(paths.planner);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : "Could not save plan";
+    error.value = getErrorMessage(e, "Could not save plan");
+    toast.fromError(e, "Could not save plan");
   } finally {
     busy.value = false;
   }

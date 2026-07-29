@@ -48,13 +48,14 @@ def update_ingredient(
 
     if not existing_ingredient:
         raise HTTPException(
-            status_code=404, detail=f"Ingredient with id {ingredient_id} not found."
+            status_code=404,
+            detail="That ingredient couldn’t be found.",
         )
 
     if currentUser.id != existing_ingredient.created_by_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the creator of this ingredient.",
+            detail="You can only change ingredients on your own recipes.",
         )
 
     update_stmt = (
@@ -78,13 +79,14 @@ def delete_ingredient(
     ).first()
     if not existing_ingredient:
         raise HTTPException(
-            status_code=404, detail=f"Ingredient with id {ingredient_id} not found."
+            status_code=404,
+            detail="That ingredient couldn’t be found.",
         )
 
     if existing_ingredient.created_by_id != current_user.id:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "You did not create this ingredient, therefore you cannot destroy it.",
+            "You can only remove ingredients from your own recipes.",
         )
 
     session.delete(existing_ingredient)

@@ -8,6 +8,7 @@ import { useGroceryStore } from "@/stores/grocery";
 import { usePlannerStore } from "@/stores/planner";
 import { useRecipesStore } from "@/stores/recipes";
 import { useSessionStore } from "@/stores/session";
+import { toast } from "@/utils";
 import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -79,6 +80,7 @@ async function loadWeekPlans(rangeStart: Date, rangeEnd: Date) {
     plansReady.value = true;
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t load this week’s plan.");
     plansReady.value = true;
   } finally {
     loading.value = false;
@@ -90,6 +92,7 @@ async function loadBadges() {
     await Promise.all([recipesStore.fetchCount(), groceryStore.fetchSummary()]);
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t load recipe and grocery counts.");
   }
 }
 

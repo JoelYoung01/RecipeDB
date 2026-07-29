@@ -100,7 +100,7 @@ async def delete_upload_by_path(
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found or access denied.",
+            detail="That file couldn’t be found or you don’t have access.",
         )
 
     # Delete the file
@@ -141,7 +141,7 @@ async def delete_upload_by_id(
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found or access denied.",
+            detail="That file couldn’t be found or you don’t have access.",
         )
 
     # Delete the file

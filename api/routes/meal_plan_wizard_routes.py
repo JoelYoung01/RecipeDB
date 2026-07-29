@@ -97,7 +97,10 @@ def _serialize(session: WizardSession) -> MealPlanWizardSessionResponse:
 def _get_owned_session(session_id: str, user_id: int) -> WizardSession:
     session = wizard_sessions.get(session_id, user_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Wizard session not found")
+        raise HTTPException(
+            status_code=404,
+            detail="That meal-plan session couldn’t be found. Start a new plan.",
+        )
     return session
 
 

@@ -4,6 +4,7 @@ import RecipeCardSkeleton from "@/components/RecipeCardSkeleton.vue";
 import { Input } from "@/components/ui/input";
 import { useRecipesStore } from "@/stores/recipes";
 import type { RecipeCard as RecipeCardType } from "@/types";
+import { toast } from "@/utils";
 import { Search } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 
@@ -47,6 +48,7 @@ async function runSearch() {
     searchResults.value = await recipesStore.search(q);
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t search recipes.");
   }
   searching.value = false;
 }

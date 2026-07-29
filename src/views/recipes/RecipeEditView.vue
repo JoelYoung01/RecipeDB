@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { paths } from "@/sitemap";
 import { syncAfterRecipeMutation } from "@/stores/sync";
 import type { IngredientCreate, RecipeCreate, RecipeDetail, UploadSlim } from "@/types";
-import { ApiError, del, get, post, put } from "@/utils";
+import { ApiError, del, get, getErrorMessage, post, put, toast } from "@/utils";
 import { LoaderCircle, Plus, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onMounted, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -90,12 +90,8 @@ async function generateCoverImage() {
     form.cover_image_id = upload.id;
   } catch (er) {
     console.error(er);
-    coverError.value =
-      er instanceof ApiError
-        ? typeof er.message === "string"
-          ? er.message
-          : "Could not find a cover image."
-        : "Could not find a cover image.";
+    coverError.value = getErrorMessage(er, "Could not find a cover image.");
+    toast.fromError(er, "Could not find a cover image.");
   }
   generatingCover.value = false;
 }
@@ -111,6 +107,7 @@ async function getRecipeDetails() {
       router.push({ name: "not-found" });
     } else {
       console.error(er);
+      toast.fromError(er, "Couldn’t load this recipe.");
     }
   }
   loading.value = false;
@@ -133,9 +130,11 @@ async function saveChanges() {
 
     await saveIngredients(recipeId);
     syncAfterRecipeMutation();
+    toast.success(creating.value ? "Recipe created." : "Recipe saved.");
     router.push(returnUrl.value);
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t save this recipe.");
   }
   saving.value = false;
 }

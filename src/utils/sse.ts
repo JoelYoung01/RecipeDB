@@ -1,5 +1,6 @@
 import { TOKEN_STORAGE_KEY } from "@/stores/session";
 import { ApiError } from "./api";
+import { parseApiErrorBody } from "./errors";
 
 export type SseHandler<T> = (event: T) => void;
 
@@ -28,14 +29,18 @@ export async function postSse<T extends { status?: string }>(
   });
 
   if (!response.ok) {
-    let message = response.statusText;
+    let body: unknown = null;
     try {
-      const json = await response.json();
-      message = `(${response.status}) ${json?.detail || message}`;
+      body = await response.json();
     } catch {
-      message = `(${response.status}) ${message}`;
+      body = null;
     }
-    throw new ApiError(message, response);
+    const parsed = parseApiErrorBody(body);
+    throw new ApiError(parsed.userMessage, response, {
+      userMessage: parsed.userMessage,
+      detail: parsed.detail,
+      code: parsed.code
+    });
   }
 
   if (!response.body) {

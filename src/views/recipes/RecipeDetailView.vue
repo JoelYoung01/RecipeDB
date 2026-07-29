@@ -13,7 +13,7 @@ import { useSessionStore } from "@/stores/session";
 import { syncAfterRecipeMutation } from "@/stores/sync";
 import { paths } from "@/sitemap";
 import type { RecipeDetail } from "@/types";
-import { ApiError, del, get } from "@/utils";
+import { ApiError, del, get, toast } from "@/utils";
 import { ArrowLeft, Pencil } from "@lucide/vue";
 import { computed, onMounted } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
@@ -45,6 +45,7 @@ async function getRecipeDetails() {
       router.push({ name: "not-found" });
     } else {
       console.error(er);
+      toast.fromError(er, "Couldn’t load this recipe.");
     }
   }
   loading.value = false;
@@ -55,10 +56,13 @@ async function deleteRecipe() {
   loading.value = true;
   try {
     await del(`/recipe/${route.params.recipeId}/`);
+    deleteOpen.value = false;
     syncAfterRecipeMutation();
+    toast.success("Recipe deleted.");
     router.push(returnUrl.value);
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t delete this recipe.");
   }
   loading.value = false;
 }

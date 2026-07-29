@@ -31,7 +31,7 @@ async def get_current_user(
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Please sign in again to continue.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -55,12 +55,15 @@ async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(
+            status_code=400, detail="This account is disabled. Contact support."
+        )
     if not current_user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "code": "email_not_verified",
+                "user_message": "Verify your email to continue.",
                 "message": "Email address is not verified",
                 "redirect_to": verify_email_redirect_path(current_user.email),
                 "email": current_user.email,
@@ -73,7 +76,9 @@ async def get_admin_user(
     current_active_user: Annotated[User, Depends(get_current_active_user)],
 ):
     if not current_active_user.admin:
-        raise HTTPException(status_code=403, detail="User is not admin")
+        raise HTTPException(
+            status_code=403, detail="Admin access is required for that action."
+        )
     return current_active_user
 
 
@@ -192,7 +197,9 @@ def authenticate_password_user(
         )
 
     if user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(
+            status_code=400, detail="This account is disabled. Contact support."
+        )
 
     return user
 
@@ -202,6 +209,7 @@ def email_not_verified_http_exception(email: str) -> HTTPException:
         status_code=status.HTTP_403_FORBIDDEN,
         detail={
             "code": "email_not_verified",
+            "user_message": "Email address is not verified. Enter the code we sent you.",
             "message": "Email address is not verified. Enter the code we sent you.",
             "redirect_to": verify_email_redirect_path(email),
             "email": normalize_email(email),
@@ -355,13 +363,13 @@ def verify_access_token(
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials: Token has expired",
+            detail="Your session has expired. Please sign in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials: Token is invalid",
+            detail="Your session is invalid. Please sign in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

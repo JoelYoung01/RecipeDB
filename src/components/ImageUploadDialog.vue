@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { mediaUrl } from "@/lib/media";
 import type { UploadSlim } from "@/types";
-import { del, get, postFile } from "@/utils";
+import { del, get, getErrorMessage, postFile, toast } from "@/utils";
 import { ImagePlus, Trash2 } from "@lucide/vue";
 import { computed, useTemplateRef, watch } from "vue";
 
@@ -53,7 +53,8 @@ async function processFile(file: File) {
     model.value = fileDetail.value.id;
   } catch (er) {
     console.error(er);
-    errorMsg.value = `${er}`;
+    errorMsg.value = getErrorMessage(er, "Couldn’t upload that image.");
+    toast.fromError(er, "Couldn’t upload that image.");
   }
   uploading.value = false;
 }
@@ -73,6 +74,7 @@ async function clearFile() {
     fileDetail.value = undefined;
   } catch (er) {
     console.error(er);
+    toast.fromError(er, "Couldn’t remove that image.");
   }
   deleting.value = false;
 }
@@ -90,7 +92,8 @@ watch(
       fileDetail.value = await get(`/upload/${val}/`);
     } catch (er) {
       console.error(er);
-      errorMsg.value = `${er}`;
+      errorMsg.value = getErrorMessage(er, "Couldn’t load that image.");
+      toast.fromError(er, "Couldn’t load that image.");
     }
     loading.value = false;
   },
