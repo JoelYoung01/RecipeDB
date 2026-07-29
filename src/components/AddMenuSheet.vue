@@ -152,7 +152,7 @@ function onAfterLeave() {
             >
               <component
                 :is="icons[action.id]"
-                class="size-[17px] text-[#22c55e]/80"
+                class="size-[17px] text-[#22c55e]/55"
                 :stroke-width="2"
               />
             </span>

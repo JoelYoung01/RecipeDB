@@ -8,5 +8,5 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div data-slot="skeleton" :class="cn('animate-pulse rounded-md bg-[#2f2f35]', props.class)" />
+  <div data-slot="skeleton" :class="cn('animate-pulse rounded-md bg-[#2a2f2b]', props.class)" />
 </template>
