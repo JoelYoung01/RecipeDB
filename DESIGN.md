@@ -32,7 +32,7 @@ Neutrals are near-black / near-white (never pure `#000` / `#fff`) and lightly sa
 | `--card` | `#181b18` | Rows, sheets, surfaces |
 | `--elevated` | `#151816` | Tab bar / closer chrome (lighter than canvas) |
 | `--secondary` / muted | `#1f231f` | Highlighted rows, soft fills |
-| `--border` / `--input` | `#2a2f2b` | Hairlines, card borders |
+| `--border` / `--input` | `#323834` | Hairlines, card borders |
 | `--foreground` | `#f4f7f5` | Primary text / on-primary |
 | `--muted-foreground` | `#9aa39c` | Secondary text |
 | `--faint` | `#6b746e` | Tertiary / placeholders / inactive icons |

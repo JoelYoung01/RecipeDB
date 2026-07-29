@@ -176,11 +176,7 @@ function onAfterLeave() {
             <span
               class="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-secondary"
             >
-              <component
-                :is="icons[action.id]"
-                class="size-[17px] text-faint"
-                :stroke-width="2"
-              />
+              <component :is="icons[action.id]" class="size-[17px] text-faint" :stroke-width="2" />
             </span>
             <span class="min-w-0 flex-1">
               <span class="block text-[14.5px] font-semibold">{{ action.title }}</span>

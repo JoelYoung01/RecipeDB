@@ -220,7 +220,7 @@ onActivated(() => {
         class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(`${paths.recipeImport}?method=link`)"
       >
-        <Plus class="size-[18px] shrink-0 text-[#22c55e]/75" :stroke-width="2" />
+        <Plus class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Import a recipe</span>
         <span class="text-[11.5px] text-faint">link · photo · manual</span>
       </button>
@@ -230,7 +230,7 @@ onActivated(() => {
         class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.recipes)"
       >
-        <Search class="size-[18px] shrink-0 text-[#22c55e]/75" :stroke-width="2" />
+        <Search class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Find a recipe</span>
         <span class="text-[11.5px] text-faint">
           <template v-if="recipeCount === 0 && recipesStore.count === null">
@@ -245,7 +245,7 @@ onActivated(() => {
         class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.list)"
       >
-        <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]/75" :stroke-width="2" />
+        <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
         <span class="flex-1 text-sm font-semibold">Grocery</span>
         <span
           class="rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"

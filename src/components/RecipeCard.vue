@@ -48,10 +48,7 @@ function open() {
       :src="image"
       :alt="recipe.name"
       :class="
-        cn(
-          'shrink-0 object-cover',
-          size === 'sm' ? 'size-14 rounded-[4px]' : 'size-20 rounded-sm'
-        )
+        cn('shrink-0 object-cover', size === 'sm' ? 'size-14 rounded-[4px]' : 'size-20 rounded-sm')
       "
     />
     <div class="min-w-0 flex-1 py-0.5">

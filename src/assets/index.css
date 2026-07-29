@@ -74,8 +74,9 @@
   --accent: #1f231f;
   --accent-foreground: #f4f7f5;
   --destructive: #ef4444;
-  --border: #2a2f2b;
-  --input: #2a2f2b;
+  /* Border brightness sits clearly above card (~11%) and canvas (~4%) */
+  --border: #323834;
+  --input: #323834;
   --ring: #22c55e;
   --elevated: #151816;
   --faint: #6b746e;
@@ -91,7 +92,7 @@
   --sidebar-primary-foreground: #f4f7f5;
   --sidebar-accent: #1f231f;
   --sidebar-accent-foreground: #f4f7f5;
-  --sidebar-border: #2a2f2b;
+  --sidebar-border: #323834;
   --sidebar-ring: #22c55e;
 }
 

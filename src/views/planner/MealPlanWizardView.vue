@@ -4,7 +4,14 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import { addDays, endOfDay, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
+import {
+  addDays,
+  endOfDay,
+  formatPrepTime,
+  startOfDay,
+  startOfWeekMonday,
+  toDateKey
+} from "@/lib/media";
 import { paths } from "@/sitemap";
 import {
   emptyWizardPrefs,
@@ -732,9 +739,7 @@ onUnmounted(() => {
     <section v-else-if="uiStep === 'select'" class="mt-5 space-y-4">
       <div class="flex items-end justify-between gap-2">
         <p class="text-sm text-muted-foreground">
-          <template v-if="selectionFull">
-            All set — deselect one if you want to swap.
-          </template>
+          <template v-if="selectionFull"> All set — deselect one if you want to swap. </template>
           <template v-else>
             Choose <span class="font-semibold text-foreground">{{ selectCount }}</span> of
             {{ session?.ideas.length ?? 0 }} ideas
@@ -830,9 +835,7 @@ onUnmounted(() => {
           :key="row.day"
           class="overflow-hidden rounded-xl border border-border bg-card"
           :class="
-            row.recipe && isMarkedForRegen(row.recipe.idea_id)
-              ? 'border-[rgba(34,197,94,0.4)]'
-              : ''
+            row.recipe && isMarkedForRegen(row.recipe.idea_id) ? 'border-[rgba(34,197,94,0.4)]' : ''
           "
         >
           <button
@@ -931,8 +934,8 @@ onUnmounted(() => {
           </div>
         </div>
         <p class="mt-0.5 text-xs text-muted-foreground">
-          Mark dinners above, then describe changes. Prior turns stay in context so the week
-          stays coherent.
+          Mark dinners above, then describe changes. Prior turns stay in context so the week stays
+          coherent.
         </p>
         <p class="mt-1.5 text-xs tabular-nums text-faint">
           {{ regenIdeaIds.length }} marked for regeneration
