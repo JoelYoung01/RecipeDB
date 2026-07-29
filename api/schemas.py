@@ -8,6 +8,14 @@ class HealthResponse(BaseModel):
     version: str
 
 
+class MigrationUpgradeResponse(BaseModel):
+    previous_revision: str | None
+    current_revision: str | None
+    head_revision: str | None
+    upgraded: bool
+    message: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str

@@ -20,6 +20,8 @@ COPY dist ./dist
 COPY api ./api
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Wire up db location
 RUN mkdir -p /app/data
@@ -27,4 +29,6 @@ VOLUME /app/data
 
 EXPOSE 8000
 
+# Migrate persistent SQLite on container start (deploy), then serve the app.
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["uv", "run", "--no-dev", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

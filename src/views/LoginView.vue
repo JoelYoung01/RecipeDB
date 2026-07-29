@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
-import { AuthApiError, loginWithPassword } from "@/utils";
-import { ref, watch } from "vue";
+import { AuthApiError, AuthErrorEvent, loginWithPassword } from "@/utils";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 const session = useSessionStore();
@@ -17,6 +17,18 @@ const submitting = ref(false);
 const errorMessage = ref<string | null>(null);
 const email = ref("");
 const password = ref("");
+
+function onAuthError(event: Event) {
+  const detail = (event as CustomEvent<{ message?: string }>).detail;
+  errorMessage.value = detail?.message || "Google sign-in failed";
+}
+
+onMounted(() => {
+  window.addEventListener(AuthErrorEvent, onAuthError);
+});
+onUnmounted(() => {
+  window.removeEventListener(AuthErrorEvent, onAuthError);
+});
 
 watch(
   () => session.currentUser,
