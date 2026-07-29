@@ -6,12 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { paths } from "@/sitemap";
-<<<<<<< HEAD
-import type { IngredientCreate, RecipeCreate, RecipeDetail, UploadSlim } from "@/types";
-=======
 import { syncAfterRecipeMutation } from "@/stores/sync";
-import type { IngredientCreate, RecipeCreate, RecipeDetail } from "@/types";
->>>>>>> origin/main
+import type { IngredientCreate, RecipeCreate, RecipeDetail, UploadSlim } from "@/types";
 import { ApiError, del, get, post, put } from "@/utils";
 import { LoaderCircle, Plus, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onMounted, reactive } from "vue";
