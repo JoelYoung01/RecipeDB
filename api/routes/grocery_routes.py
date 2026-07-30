@@ -37,9 +37,7 @@ def _build_grocery_items(
             PlannedRecipe.planned_for >= start,
             PlannedRecipe.planned_for <= end,
         )
-        .options(
-            selectinload(PlannedRecipe.recipe).selectinload(Recipe.ingredients)
-        )
+        .options(selectinload(PlannedRecipe.recipe).selectinload(Recipe.ingredients))
     ).all()
 
     aggregated = aggregate_grocery_items(list(planned))
@@ -54,9 +52,7 @@ def _build_grocery_items(
     items: list[GroceryItem] = []
     for raw in aggregated:
         state = state_by_key.get(raw["key"])
-        dismissed = bool(
-            state and state.status == GroceryItemStatus.dismissed.value
-        )
+        dismissed = bool(state and state.status == GroceryItemStatus.dismissed.value)
         deleted = bool(state and state.status == GroceryItemStatus.deleted.value)
         if deleted and not include_deleted:
             continue

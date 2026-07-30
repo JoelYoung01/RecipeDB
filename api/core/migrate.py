@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from sqlalchemy import create_engine
+
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine
-
 from api.core.config import settings
 
 logger = logging.getLogger(__name__)
