@@ -366,7 +366,13 @@ onActivated(() => {
       <div class="mt-4 grid grid-cols-2 gap-2">
         <Button
           variant="outline"
-          @click="currentPlannedRecipes.length ? openAssign() : (nightSearchOpen = true)"
+          @click="
+            currentPlannedRecipes.length
+              ? openAssign()
+              : window.setTimeout(() => {
+                  nightSearchOpen = true;
+                }, 0)
+          "
         >
           {{ currentPlannedRecipes.length ? "Change" : "Add recipes" }}
         </Button>
