@@ -119,6 +119,10 @@ function selectDay(date: Date) {
   }
   // Defer so the row’s pointerup isn’t treated as an outside-dismiss on the
   // dialog that is about to open (Reka Dialog listens for pointer events).
+  openNightSearch();
+}
+
+function openNightSearch() {
   window.setTimeout(() => {
     nightSearchOpen.value = true;
   }, 0);
@@ -366,13 +370,7 @@ onActivated(() => {
       <div class="mt-4 grid grid-cols-2 gap-2">
         <Button
           variant="outline"
-          @click="
-            currentPlannedRecipes.length
-              ? openAssign()
-              : window.setTimeout(() => {
-                  nightSearchOpen = true;
-                }, 0)
-          "
+          @click="currentPlannedRecipes.length ? openAssign() : openNightSearch()"
         >
           {{ currentPlannedRecipes.length ? "Change" : "Add recipes" }}
         </Button>

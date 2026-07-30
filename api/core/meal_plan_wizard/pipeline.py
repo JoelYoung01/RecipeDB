@@ -517,10 +517,12 @@ class MealPlanWizardPipeline:
         user: User,
         *,
         day_assignments: list[dict[str, str]] | None = None,
+        plan: bool = True,
     ) -> list[PlannedRecipe]:
-        """Create recipes as needed and plan them onto selected days.
+        """Create recipes as needed and optionally plan them onto selected days.
 
         day_assignments: optional [{day, idea_id}] — defaults to zip order.
+        plan: when False, persist recipes only (ad-hoc generate); skip PlannedRecipe rows.
         """
         if session.step not in ("review", "build", "committed"):
             raise ValueError("Finish building recipes before committing.")
@@ -584,6 +586,9 @@ class MealPlanWizardPipeline:
                 recipe_id = db_recipe.id
                 built.created_recipe_id = recipe_id
                 built.source = "generated"
+
+            if not plan:
+                continue
 
             # Store noon UTC so local-day keys stay stable across common offsets.
             day_start = datetime.fromisoformat(f"{day}T00:00:00").replace(tzinfo=UTC)

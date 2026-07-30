@@ -51,8 +51,13 @@ export function rewindWizard(
   });
 }
 
-export function commitWizard(sessionId: string): Promise<PlannedRecipeDetail[]> {
-  return post<PlannedRecipeDetail[]>(`/meal-plan-wizard/sessions/${sessionId}/commit/`, {});
+export function commitWizard(
+  sessionId: string,
+  opts?: { plan?: boolean }
+): Promise<PlannedRecipeDetail[]> {
+  return post<PlannedRecipeDetail[]>(`/meal-plan-wizard/sessions/${sessionId}/commit/`, {
+    plan: opts?.plan ?? true
+  });
 }
 
 /** Streamed ideation — emits progress events until the stream closes. */

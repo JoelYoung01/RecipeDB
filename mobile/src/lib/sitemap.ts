@@ -15,6 +15,8 @@ export const paths = {
   recipeEdit: (id: number | string) => `/recipes/${id}/edit`,
   planner: "/planner",
   plannerFill: "/planner/fill",
+  /** Ad-hoc LLM recipe generate (no planner assignment). */
+  recipeGenerate: "/planner/fill?mode=recipe",
   list: "/list",
   account: "/account"
 } as const;
@@ -22,6 +24,7 @@ export const paths = {
 export type AddMenuActionId =
   | "import-link"
   | "import-photo"
+  | "recipe-generate"
   | "recipe-scratch"
   | "plan-meal"
   | "shop-item";
@@ -54,6 +57,14 @@ export const addMenuActions: AddMenuAction[] = [
     href: `${paths.recipeImport}?method=photo`,
     group: "create",
     stub: true
+  },
+  {
+    id: "recipe-generate",
+    title: "Generate a recipe",
+    description: "Describe the vibe — AI writes it",
+    href: paths.recipeGenerate,
+    group: "create",
+    highlighted: true
   },
   {
     id: "recipe-scratch",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { addMenuActions } from "@/sitemap";
-import { CalendarDays, Camera, Link2, PenLine, ShoppingCart } from "@lucide/vue";
+import { CalendarDays, Camera, Link2, PenLine, ShoppingCart, Sparkles } from "@lucide/vue";
 import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -10,6 +10,7 @@ const router = useRouter();
 const icons = {
   "import-link": Link2,
   "import-photo": Camera,
+  "recipe-generate": Sparkles,
   "recipe-scratch": PenLine,
   "plan-meal": CalendarDays,
   "shop-item": ShoppingCart

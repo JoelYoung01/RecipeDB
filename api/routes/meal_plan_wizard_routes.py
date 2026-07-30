@@ -277,11 +277,14 @@ def commit_session(
 ):
     session = _get_owned_session(session_id, current_user.id)
     assignments = None
-    if body and body.assignments:
-        assignments = [a.model_dump() for a in body.assignments]
+    plan = True
+    if body:
+        if body.assignments:
+            assignments = [a.model_dump() for a in body.assignments]
+        plan = body.plan
     try:
         planned = pipeline.commit(
-            session, db, current_user, day_assignments=assignments
+            session, db, current_user, day_assignments=assignments, plan=plan
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

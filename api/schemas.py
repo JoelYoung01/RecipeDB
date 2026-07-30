@@ -350,3 +350,5 @@ class MealPlanWizardDayAssignment(BaseModel):
 
 class MealPlanWizardCommitRequest(BaseModel):
     assignments: list[MealPlanWizardDayAssignment] | None = None
+    # When False, persist generated recipes but do not create planned_recipe rows.
+    plan: bool = True
