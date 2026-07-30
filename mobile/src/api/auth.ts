@@ -213,3 +213,28 @@ export async function loginWithGoogle(payload: { credential: string }): Promise<
   }
   return data as unknown as TokenPayload;
 }
+
+/**
+ * Exchange a Sign in with Apple identity token for a RecipeDB session.
+ * `full_name` is only available on the FIRST authorization — Apple never
+ * repeats it — so pass it along whenever present.
+ */
+export async function loginWithApple(payload: {
+  identity_token: string;
+  full_name?: string | null;
+}): Promise<TokenPayload> {
+  const response = await fetch(`${API_URL}/auth/login-apple/`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await readAuthResponse(response);
+  if (!response.ok) {
+    const parsed = parseDetail(data?.detail ?? data, data);
+    throw new AuthApiError(parsed.message || "Apple sign-in failed", {
+      status: response.status,
+      detail: data?.detail
+    });
+  }
+  return data as unknown as TokenPayload;
+}

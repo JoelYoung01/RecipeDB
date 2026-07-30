@@ -1,4 +1,5 @@
 import { AuthApiError, loginWithPassword } from "@/api/auth";
+import { AppleLoginButton } from "@/components/AppleLoginButton";
 import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,11 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googlePending, setGooglePending] = useState(false);
+  const [oauthPending, setOauthPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const onSubmit = async () => {
-    if (submitting || googlePending) return;
+    if (submitting || oauthPending) return;
     setErrorMessage(null);
     setSubmitting(true);
     try {
@@ -60,13 +61,13 @@ export default function LoginScreen() {
           <Text className="font-sans-bold text-3xl tracking-tight">RecipeDB</Text>
         </View>
 
-        {googlePending ? (
+        {oauthPending ? (
           <View className="w-full max-w-[320px] items-center gap-6" accessibilityLiveRegion="polite">
             <View className="items-center gap-3">
               <LoaderCircle size={32} color={colors.primary} />
               <Text className="font-sans-medium text-sm">Signing you in…</Text>
               <Text className="text-center text-xs text-muted-foreground">
-                Finishing Google sign-in
+                Finishing sign-in
               </Text>
             </View>
             <View className="w-full gap-3">
@@ -123,7 +124,8 @@ export default function LoginScreen() {
                 <Text className="text-xs text-faint">or</Text>
                 <View className="h-px flex-1 bg-border" />
               </View>
-              <GoogleLoginButton onPendingChange={setGooglePending} onError={setErrorMessage} />
+              <AppleLoginButton onPendingChange={setOauthPending} onError={setErrorMessage} />
+              <GoogleLoginButton onPendingChange={setOauthPending} onError={setErrorMessage} />
             </View>
           </>
         )}

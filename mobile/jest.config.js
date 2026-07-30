@@ -10,6 +10,8 @@ module.exports = {
     "\\.mjs$": expoPreset.transform["\\.[jt]sx?$"],
   },
   moduleNameMapper: {
+    // Keep the more specific assets alias above the catch-all (tsconfig parity).
+    "^@/assets/(.*)$": "<rootDir>/assets/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css)$": "<rootDir>/test/css-stub.js",
   },

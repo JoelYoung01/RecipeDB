@@ -27,6 +27,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: process.env.RECIPEDB_IOS_BUNDLE_ID ?? "com.joelyoung.recipedb",
     buildNumber: process.env.RECIPEDB_IOS_BUILD_NUMBER ?? "1",
     supportsTablet: false,
+    // Sign in with Apple entitlement (the App ID must have the capability
+    // enabled in the Apple Developer portal).
+    usesAppleSignIn: true,
     config: {
       usesNonExemptEncryption: false,
     },
@@ -52,6 +55,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         photosPermission:
           "RecipeDB uses your photo library so you can pick recipe cover photos.",
         cameraPermission: "RecipeDB uses your camera so you can photograph recipes.",
+      },
+    ],
+    "expo-apple-authentication",
+    [
+      "expo-local-authentication",
+      {
+        faceIDPermission: "RecipeDB uses Face ID to unlock the app.",
       },
     ],
   ],
