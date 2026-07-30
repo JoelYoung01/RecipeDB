@@ -1,47 +1,10 @@
 import { checkSessionToken } from "@/api/auth";
+import { secureStorage as storage } from "@/lib/secure-storage";
 import type { UserResponse } from "@/types";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import { create } from "zustand";
 
 const TOKEN_KEY = "recipedb.access_token";
 const USER_KEY = "recipedb.session_user";
-
-/** iOS Keychain via expo-secure-store; localStorage on web (dev preview). */
-const storage = {
-  async get(key: string): Promise<string | null> {
-    if (Platform.OS === "web") {
-      try {
-        return globalThis.localStorage?.getItem(key) ?? null;
-      } catch {
-        return null;
-      }
-    }
-    return SecureStore.getItemAsync(key);
-  },
-  async set(key: string, value: string): Promise<void> {
-    if (Platform.OS === "web") {
-      try {
-        globalThis.localStorage?.setItem(key, value);
-      } catch {
-        /* private mode */
-      }
-      return;
-    }
-    await SecureStore.setItemAsync(key, value);
-  },
-  async remove(key: string): Promise<void> {
-    if (Platform.OS === "web") {
-      try {
-        globalThis.localStorage?.removeItem(key);
-      } catch {
-        /* private mode */
-      }
-      return;
-    }
-    await SecureStore.deleteItemAsync(key);
-  }
-};
 
 export type SessionStatus = "loading" | "authed" | "anon";
 

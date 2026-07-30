@@ -1,4 +1,5 @@
 import { updateUser } from "@/api/users";
+import { AppLockToggle } from "@/components/AppLockToggle";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +133,8 @@ export default function AccountScreen() {
             <Field label="Email" value={user?.email ?? ""} />
             <Field label="Last login" value={lastLogin} />
           </View>
+
+          <AppLockToggle />
 
           <Button variant="destructive" className="mt-6" onPress={() => void signOut()}>
             Sign out

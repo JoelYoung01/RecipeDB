@@ -1,8 +1,10 @@
 import "../global.css";
 
+import { AppLockGate } from "@/components/AppLockGate";
 import { Toaster } from "@/components/Toaster";
 import { colors } from "@/lib/colors";
 import { queryClient } from "@/lib/query-client";
+import { useAppLockStore } from "@/stores/app-lock";
 import { useSessionStore } from "@/stores/session";
 import {
   Figtree_400Regular,
@@ -29,9 +31,11 @@ export default function RootLayout() {
     Figtree_700Bold
   });
   const sessionStatus = useSessionStore((s) => s.status);
+  const appLockReady = useAppLockStore((s) => s.ready);
 
   useEffect(() => {
     void useSessionStore.getState().bootstrap();
+    void useAppLockStore.getState().bootstrap();
   }, []);
 
   // Refetch stale queries when the app returns to the foreground.
@@ -42,7 +46,9 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  const ready = fontsLoaded && sessionStatus !== "loading";
+  // Hold the splash screen until the lock preference is known so locked
+  // content never flashes before the gate mounts.
+  const ready = fontsLoaded && sessionStatus !== "loading" && appLockReady;
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -60,6 +66,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: colors.background }
           }}
         />
+        <AppLockGate />
         <Toaster />
       </SafeAreaProvider>
     </QueryClientProvider>
