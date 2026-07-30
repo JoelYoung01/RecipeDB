@@ -1,0 +1,6 @@
+# Mobile is a separate pnpm workspace with its own ESLint + Prettier config.
+mobile/
+dist/
+coverage/
+*.local
+auto-imports.d.ts

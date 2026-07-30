@@ -19,8 +19,6 @@ from api.core.meal_plan_wizard.session_store import (
     WizardSession,
     wizard_sessions,
 )
-
-logger = logging.getLogger(__name__)
 from api.schemas import (
     MealPlanWizardCommitRequest,
     MealPlanWizardCreate,
@@ -32,6 +30,8 @@ from api.schemas import (
     MealPlanWizardSessionResponse,
     PlannedRecipeDetail,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/meal-plan-wizard",

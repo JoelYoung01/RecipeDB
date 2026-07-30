@@ -209,8 +209,10 @@ def email_not_verified_http_exception(email: str) -> HTTPException:
         status_code=status.HTTP_403_FORBIDDEN,
         detail={
             "code": "email_not_verified",
-            "user_message": "Email address is not verified. Enter the code we sent you.",
-            "message": "Email address is not verified. Enter the code we sent you.",
+            "user_message": (
+                "Email address is not verified. Enter the code we sent you."
+            ),
+            "message": ("Email address is not verified. Enter the code we sent you."),
             "redirect_to": verify_email_redirect_path(email),
             "email": normalize_email(email),
         },

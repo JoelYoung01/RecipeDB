@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint",
+    "lint": "eslint .",
     "format": "prettier --write src app.config.ts",
     "prebuild:ios": "expo prebuild --platform ios",
     "export:web": "expo export --platform web"

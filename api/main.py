@@ -1,7 +1,6 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
 
 from api.core.config import settings
 from api.core.errors import register_exception_handlers
@@ -17,7 +16,6 @@ from api.routes import (
     upload_routes,
     user_routes,
 )
-
 
 app = FastAPI(docs_url="/api/docs", redoc_url="/api/redoc")
 

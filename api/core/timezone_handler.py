@@ -1,5 +1,6 @@
 from datetime import timezone
-from sqlalchemy import TypeDecorator, DateTime
+
+from sqlalchemy import DateTime, TypeDecorator
 
 
 class UTCDateTime(TypeDecorator):

@@ -70,7 +70,9 @@ def _message_from_detail(detail: Any, status_code: int) -> str:
         if parts:
             return "; ".join(parts)
 
-    return DEFAULT_USER_MESSAGES.get(status_code, "Something went wrong. Please try again.")
+    return DEFAULT_USER_MESSAGES.get(
+        status_code, "Something went wrong. Please try again."
+    )
 
 
 def _code_from_detail(detail: Any) -> str | None:
@@ -85,7 +87,9 @@ def error_body(status_code: int, detail: Any = None) -> dict[str, Any]:
     """Build the standardized error JSON body."""
     body: dict[str, Any] = {
         "user_message": _message_from_detail(detail, status_code),
-        "detail": detail if detail is not None else DEFAULT_USER_MESSAGES.get(status_code),
+        "detail": (
+            detail if detail is not None else DEFAULT_USER_MESSAGES.get(status_code)
+        ),
     }
     code = _code_from_detail(detail)
     if code:

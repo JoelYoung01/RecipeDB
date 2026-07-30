@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import logging
+from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Session, select
 
@@ -20,6 +20,7 @@ def _seed_owner(session: Session) -> User | None:
     if user is None:
         user = session.exec(select(User)).first()
     return user
+
 
 # Recipe name -> ingredient rows
 SAMPLE_INGREDIENTS: dict[str, list[dict]] = {
