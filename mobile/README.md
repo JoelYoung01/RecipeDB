@@ -1,6 +1,6 @@
 # Junket iOS app
 
-Native iOS app for Junket (formerly RecipeDB), built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
+Native iOS app for Junket, built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
 
 ## Stack
 
