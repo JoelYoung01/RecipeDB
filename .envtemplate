@@ -23,6 +23,10 @@ VITE_GOOGLE_CLIENT_ID=
 # Deployment Environment
 ENVIRONMENT=development
 
+# Extra allowed CORS origins (comma-separated). Add the Expo web preview
+# origin when developing the mobile app against a local backend.
+# BACKEND_CORS_ORIGINS=http://localhost:8081
+
 # Secret key
 # - Used to generate authentication tokens and HMAC email OTPs
 SECRET_KEY=
