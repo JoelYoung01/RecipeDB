@@ -123,7 +123,7 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="px-4 pt-4 pb-16">
+  <div class="px-4 pt-4 pb-24">
     <h1 class="sr-only">Recipes</h1>
 
     <div class="flex flex-col gap-2">
