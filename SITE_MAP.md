@@ -25,7 +25,7 @@ Layout: `layouts/AppShell.vue` (tab bar + add sheet). Children render in the she
 | `/recipes` | `recipes` | `views/recipes/RecipesView.vue` | Recipes | Results start at top; search floats at the bottom above the tab bar; swipe a row left to delete (owned), right to schedule (next open night preselected) |
 | `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Sliding week calendar; empty night opens recipe search + Create wizard CTA; filled night opens recipe detail; swipe left on a filled night to unplan |
 | `/planner/fill` | `planner-fill` | `views/planner/MealPlanWizardView.vue` | Planner | Fill-gaps / plan-week LLM wizard; `?mode=recipe` = ad-hoc generate (no plan) |
-| `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days) |
+| `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days); tap a row to cross off (2s undo), then it hides; swipe left for view/delete |
 | `/account` | `account` | `views/AccountView.vue` | — | Profile; opened from home avatar |
 
 ### Add menu (sheet, not a tab destination)
@@ -77,4 +77,4 @@ Preserve bookmarks from the Vuetify app:
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
 - **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; OpenRouter when `OPENROUTER_API_KEY` is set, else stub LLM)
 - **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
-- **Grocery list** — ingredients for planned meals in a sliding 7-day window; dismiss/delete state persisted per user
+- **Grocery list** — ingredients for planned meals in a sliding 7-day window; tap to cross off with a short undo window before hide; dismiss/delete state persisted per user
