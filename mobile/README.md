@@ -66,7 +66,7 @@ Native project settings (bundle id, build number) come from env vars read in `ap
 
 ## Releasing to your phone (TestFlight)
 
-`.github/workflows/MobileRelease.yaml` builds, signs, and uploads the app to TestFlight on every push to `main` that touches `mobile/`. Signing uses Xcode **cloud-managed signing** with an App Store Connect API key — no certificates or provisioning profiles to export and rotate by hand.
+`.github/workflows/MobileRelease.yaml` builds, signs, and uploads the app to TestFlight on every push to `main` that touches `mobile/`. Signing uses Xcode **cloud-managed signing** with an App Store Connect API key — no certificates or provisioning profiles to export and rotate by hand, and no registered devices needed (the archive is unsigned; distribution signing happens at export).
 
 Until the secrets below exist, the workflow skips the signed build with a warning (it stays green).
 

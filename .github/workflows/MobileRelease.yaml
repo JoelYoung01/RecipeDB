@@ -78,7 +78,12 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           cp "$RUNNER_TEMP/AuthKey.p8" ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
 
-      - name: Archive (cloud-managed signing)
+      # The archive is intentionally UNSIGNED: with automatic signing,
+      # `xcodebuild archive` always development-signs, and development
+      # profiles require a registered device ("Your team has no devices").
+      # Distribution signing happens in the export step instead, which needs
+      # no devices.
+      - name: Archive (unsigned)
         if: steps.creds.outputs.configured == 'true'
         env:
           JUNKET_IOS_BUNDLE_ID: ${{ vars.JUNKET_IOS_BUNDLE_ID }}
@@ -95,15 +100,14 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Junket.xcarchive" \
-            -allowProvisioningUpdates \
-            -allowProvisioningDeviceRegistration \
-            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Export IPA
+      # Signs the app for App Store distribution via cloud-managed signing:
+      # -allowProvisioningUpdates + the ASC API key let Xcode create/fetch the
+      # Apple Distribution certificate and App Store profile on the fly.
+      - name: Export IPA (distribution signing)
         if: steps.creds.outputs.configured == 'true'
         run: |
           cat > "$RUNNER_TEMP/exportOptions.plist" << EOF
