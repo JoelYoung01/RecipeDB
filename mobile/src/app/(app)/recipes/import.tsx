@@ -1,0 +1,93 @@
+import { ScreenHeader } from "@/components/ScreenHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Text } from "@/components/ui/text";
+import { colors } from "@/lib/colors";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Camera, Link2, PenLine } from "lucide-react-native";
+import { useState } from "react";
+import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+export default function RecipeImportScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ method?: string }>();
+  const method = params.method === "photo" ? "photo" : "link";
+  const [url, setUrl] = useState("");
+
+  return (
+    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+      <ScreenHeader title="Import a recipe" />
+      <ScrollView contentContainerClassName="px-4 pb-10 pt-2">
+        <Text className="text-sm text-muted-foreground">
+          Import tooling isn’t wired to the API yet — use these entry points or write from
+          scratch.
+        </Text>
+
+        <View className="mt-5 flex-row gap-2">
+          <Button
+            size="sm"
+            variant={method === "link" ? "default" : "outline"}
+            onPress={() => router.setParams({ method: "link" })}
+          >
+            <Link2 size={16} color={colors.foreground} />
+            Link
+          </Button>
+          <Button
+            size="sm"
+            variant={method === "photo" ? "default" : "outline"}
+            onPress={() => router.setParams({ method: "photo" })}
+          >
+            <Camera size={16} color={colors.foreground} />
+            Photo
+          </Button>
+        </View>
+
+        <View className="mt-5 rounded-xl border border-border bg-card p-4">
+          {method === "link" ? (
+            <>
+              <Label className="text-muted-foreground">Recipe URL</Label>
+              <Input
+                value={url}
+                onChangeText={setUrl}
+                placeholder="https://…"
+                editable={false}
+                className="mt-2 h-11 rounded-xl bg-secondary opacity-60"
+              />
+              <Button className="mt-4 w-full" disabled>
+                Import from link
+              </Button>
+              <Text className="mt-3 text-xs text-faint">
+                Coming soon — paste a URL and we’ll pull the recipe.
+              </Text>
+            </>
+          ) : (
+            <>
+              <View className="min-h-[180px] items-center justify-center rounded-xl border border-dashed border-border bg-secondary/50 px-4">
+                <Camera size={32} color={colors.green500} />
+                <Text className="mt-2 font-sans-semibold text-sm">Scan a photo</Text>
+                <Text className="mt-1 text-center text-xs text-muted-foreground">
+                  Cookbook pages and handwritten cards — not available yet.
+                </Text>
+              </View>
+              <Button className="mt-4 w-full" disabled>
+                Choose photo
+              </Button>
+            </>
+          )}
+        </View>
+
+        <Button
+          variant="outline"
+          className="mt-4 w-full"
+          onPress={() => router.push("/recipes/new")}
+        >
+          <PenLine size={16} color={colors.foreground} />
+          Write from scratch instead
+        </Button>
+      </ScrollView>
+    </View>
+  );
+}
