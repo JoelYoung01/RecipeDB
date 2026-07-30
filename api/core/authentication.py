@@ -379,9 +379,16 @@ def verify_google_token(encoded_google_token: str):
     from google.oauth2 import id_token
 
     request = google_req.Request()
+    # Skip built-in audience verification (single-audience only) and check
+    # `aud` against every allowed client: web app + optional iOS app.
     decoded_token = id_token.verify_oauth2_token(
-        encoded_google_token, request, settings.VITE_GOOGLE_CLIENT_ID
+        encoded_google_token, request, audience=None
     )
+    allowed_audiences = {settings.VITE_GOOGLE_CLIENT_ID}
+    if settings.GOOGLE_IOS_CLIENT_ID:
+        allowed_audiences.add(settings.GOOGLE_IOS_CLIENT_ID)
+    if decoded_token.get("aud") not in allowed_audiences:
+        raise ValueError("Token has wrong audience.")
     return decoded_token
 
 

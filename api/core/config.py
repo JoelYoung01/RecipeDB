@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     VITE_GOOGLE_CLIENT_ID: str
+    # Extra Google OAuth audience for the iOS app (optional). Native sign-in
+    # produces id_tokens whose `aud` is the iOS client, not the web client.
+    GOOGLE_IOS_CLIENT_ID: str | None = None
     VUE_STATIC_DIR: str = "dist"
     UPLOAD_DIR: str = "data/uploads"
     LOGS_DIR: str = "data/logs"

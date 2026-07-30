@@ -11,6 +11,10 @@ VITE_API_URL=http://localhost:8000/api
 # Google Auth
 VITE_GOOGLE_CLIENT_ID=
 
+# Optional: iOS OAuth client for the RecipeDB iOS app (mobile/).
+# When set, the API also accepts Google id_tokens issued to this client.
+# GOOGLE_IOS_CLIENT_ID=
+
 
 # =======================================================
 #               Only needed at Runtime
