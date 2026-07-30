@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
-import { SwipeRow } from "@/components/grocery/SwipeRow";
+import { SwipeRow } from "@/components/SwipeRow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";

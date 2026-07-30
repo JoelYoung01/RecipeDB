@@ -1,4 +1,5 @@
 import { createPlan, deletePlan } from "@/api/planner";
+import { SwipeRow } from "@/components/SwipeRow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
@@ -193,6 +194,17 @@ export default function PlannerScreen() {
     }
   };
 
+  const unplanDay = async (plans: PlannedRecipeDetail[]) => {
+    if (!plans.length) return;
+    try {
+      await Promise.all(plans.map((pr) => deletePlan(pr.id)));
+      syncAfterPlanMutation();
+      toast.success("Removed from plan.");
+    } catch (er) {
+      toast.fromError(er, "Couldn’t remove that meal.");
+    }
+  };
+
   return (
     <>
       <ScrollView
@@ -248,9 +260,8 @@ export default function PlannerScreen() {
                     const dayPlans = plannedByDay.get(key) ?? [];
                     const isSelected = key === selectedKey;
                     const isToday = key === todayKey;
-                    return (
+                    const row = (
                       <Pressable
-                        key={key}
                         accessibilityRole="button"
                         onPress={() => onDayPress(day, dayPlans)}
                         className={
@@ -321,6 +332,22 @@ export default function PlannerScreen() {
                           )}
                         </View>
                       </Pressable>
+                    );
+
+                    if (!dayPlans.length) {
+                      return <View key={key}>{row}</View>;
+                    }
+
+                    return (
+                      <SwipeRow
+                        key={key}
+                        canSwipeRight={false}
+                        actionWidth={72}
+                        deleteLabel="Unplan"
+                        onDelete={() => void unplanDay(dayPlans)}
+                      >
+                        {row}
+                      </SwipeRow>
                     );
                   })}
                 </View>

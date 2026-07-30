@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PlanNightSearchDialog from "@/components/planner/PlanNightSearchDialog.vue";
 import RecipeCard from "@/components/RecipeCard.vue";
+import SwipeRow from "@/components/SwipeRow.vue";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -212,6 +213,21 @@ async function removePlanned(planned: PlannedRecipeDetail) {
   }
 }
 
+/** Unplan every meal on a night (swipe-left delete on a filled day row). */
+async function unplanDay(date: Date) {
+  const plans = plannedByDay.value.get(toDateKey(date)) ?? [];
+  if (!plans.length) return;
+  try {
+    await Promise.all(plans.map((pr) => del(`/planned-recipe/${pr.id}/`)));
+    syncAfterPlanMutation();
+    await getPlannedRecipes(true);
+    toast.success("Removed from plan.");
+  } catch (er) {
+    console.error(er);
+    toast.fromError(er, "Couldn’t remove that meal.");
+  }
+}
+
 watch(selectedDate, () => {
   selectedIds.value = currentPlannedRecipes.value.map((p) => p.recipe.id);
 });
@@ -273,74 +289,102 @@ onActivated(() => {
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border bg-card">
-          <button
+          <SwipeRow
             v-for="(day, dayIndex) in week.days"
             :key="toDateKey(day)"
-            type="button"
-            class="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-b-0"
-            :class="
-              toDateKey(day) === toDateKey(selectedDate)
-                ? 'bg-[rgba(34,197,94,0.1)]'
-                : 'active:bg-secondary/50'
-            "
-            @click="selectDay(day)"
+            class="rounded-none"
+            :action-width="72"
+            :can-swipe-left="(plannedByDay.get(toDateKey(day)) ?? []).length > 0"
+            :can-swipe-right="false"
           >
-            <div class="w-11 shrink-0 text-center">
-              <div
-                class="text-[10px] font-semibold uppercase tracking-wide"
-                :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-faint'"
-              >
-                {{ DAY_LABELS[dayIndex] }}
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors"
+              :class="[
+                dayIndex === 6 ? 'border-b-0' : '',
+                toDateKey(day) === toDateKey(selectedDate)
+                  ? 'bg-[rgba(34,197,94,0.1)]'
+                  : 'active:bg-secondary/50'
+              ]"
+              @click="selectDay(day)"
+            >
+              <div class="w-11 shrink-0 text-center">
+                <div
+                  class="text-[10px] font-semibold uppercase tracking-wide"
+                  :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-faint'"
+                >
+                  {{ DAY_LABELS[dayIndex] }}
+                </div>
+                <div
+                  class="mt-0.5 text-base font-bold leading-none"
+                  :class="
+                    toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'
+                  "
+                >
+                  {{ day.getDate() }}
+                </div>
               </div>
-              <div
-                class="mt-0.5 text-base font-bold leading-none"
-                :class="toDateKey(day) === toDateKey(today) ? 'text-[#22c55e]' : 'text-foreground'"
-              >
-                {{ day.getDate() }}
-              </div>
-            </div>
 
-            <div class="min-w-0 flex-1">
-              <template v-if="showDaySkeletons && week.weekIndex === 0">
-                <div class="flex items-center gap-2">
-                  <Skeleton class="size-9 rounded-lg" />
-                  <div class="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton class="h-3.5 w-2/3" />
-                    <Skeleton class="h-2.5 w-1/3" />
+              <div class="min-w-0 flex-1">
+                <template v-if="showDaySkeletons && week.weekIndex === 0">
+                  <div class="flex items-center gap-2">
+                    <Skeleton class="size-9 rounded-lg" />
+                    <div class="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton class="h-3.5 w-2/3" />
+                      <Skeleton class="h-2.5 w-1/3" />
+                    </div>
                   </div>
-                </div>
-              </template>
-              <template v-else-if="(plannedByDay.get(toDateKey(day)) ?? []).length">
-                <div class="flex items-center gap-2">
-                  <img
-                    v-for="planned in (plannedByDay.get(toDateKey(day)) ?? []).slice(0, 1)"
-                    :key="planned.id"
-                    :src="mediaUrl(planned.recipe.cover_image?.url)"
-                    :alt="planned.recipe.name"
-                    class="size-9 shrink-0 rounded-lg object-cover"
-                  />
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold">
-                      {{ (plannedByDay.get(toDateKey(day)) ?? [])[0]?.recipe.name }}
-                    </p>
-                    <p
-                      v-if="(plannedByDay.get(toDateKey(day)) ?? []).length > 1"
-                      class="truncate text-[11px] text-muted-foreground"
-                    >
-                      +{{ (plannedByDay.get(toDateKey(day)) ?? []).length - 1 }} more
-                    </p>
-                    <p v-else class="truncate text-[11px] text-muted-foreground">Dinner planned</p>
+                </template>
+                <template v-else-if="(plannedByDay.get(toDateKey(day)) ?? []).length">
+                  <div class="flex items-center gap-2">
+                    <img
+                      v-for="planned in (plannedByDay.get(toDateKey(day)) ?? []).slice(0, 1)"
+                      :key="planned.id"
+                      :src="mediaUrl(planned.recipe.cover_image?.url)"
+                      :alt="planned.recipe.name"
+                      draggable="false"
+                      class="size-9 shrink-0 rounded-lg object-cover"
+                    />
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-semibold">
+                        {{ (plannedByDay.get(toDateKey(day)) ?? [])[0]?.recipe.name }}
+                      </p>
+                      <p
+                        v-if="(plannedByDay.get(toDateKey(day)) ?? []).length > 1"
+                        class="truncate text-[11px] text-muted-foreground"
+                      >
+                        +{{ (plannedByDay.get(toDateKey(day)) ?? []).length - 1 }} more
+                      </p>
+                      <p v-else class="truncate text-[11px] text-muted-foreground">
+                        Dinner planned
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </template>
-              <template v-else>
-                <div class="flex items-center gap-2">
-                  <span class="size-1.5 rounded-full bg-[#3f463f]" />
-                  <span class="text-sm text-muted-foreground">Open night</span>
-                </div>
-              </template>
-            </div>
-          </button>
+                </template>
+                <template v-else>
+                  <div class="flex items-center gap-2">
+                    <span class="size-1.5 rounded-full bg-[#3f463f]" />
+                    <span class="text-sm text-muted-foreground">Open night</span>
+                  </div>
+                </template>
+              </div>
+            </button>
+
+            <template #actions="{ open, close }">
+              <button
+                type="button"
+                class="flex flex-1 items-center justify-center bg-[#dc2626] text-primary-foreground transition-opacity active:opacity-80"
+                :tabindex="open ? 0 : -1"
+                :aria-label="`Unplan ${toDateKey(day)}`"
+                @click.stop="
+                  close();
+                  unplanDay(day);
+                "
+              >
+                <Trash2 class="size-5" :stroke-width="2" />
+              </button>
+            </template>
+          </SwipeRow>
         </div>
       </section>
     </div>

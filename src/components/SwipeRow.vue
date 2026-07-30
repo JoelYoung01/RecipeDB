@@ -188,7 +188,7 @@ defineExpose({ close });
 </script>
 
 <template>
-  <div class="relative overflow-hidden rounded-xl">
+  <div :class="cn('relative overflow-hidden rounded-xl', props.class)">
     <div v-if="canSwipeRight" class="absolute inset-y-0 left-0 flex" aria-hidden="true">
       <slot name="hint" />
     </div>
@@ -203,12 +203,7 @@ defineExpose({ close });
 
     <div
       ref="rowEl"
-      :class="
-        cn(
-          'relative z-10 cursor-grab touch-pan-y bg-card select-none active:cursor-grabbing',
-          props.class
-        )
-      "
+      class="relative z-10 cursor-grab touch-pan-y bg-card select-none active:cursor-grabbing"
       :style="style"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
