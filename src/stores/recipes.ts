@@ -86,6 +86,12 @@ export const useRecipesStore = defineStore("recipes", () => {
     return get<RecipeCard[]>(`/recipe/search/?searchText=${encodeURIComponent(q)}`);
   }
 
+  /** Drop a deleted recipe immediately so the list doesn’t wait for a refetch. */
+  function removeLocal(id: number) {
+    recipes.value = recipes.value.filter((r) => r.id !== id);
+    if (count.value !== null) count.value = Math.max(0, count.value - 1);
+  }
+
   function invalidate() {
     loaded.value = false;
     count.value = null;
@@ -113,6 +119,7 @@ export const useRecipesStore = defineStore("recipes", () => {
     ensureLoaded,
     loadMore,
     search,
+    removeLocal,
     invalidate,
     reset
   };

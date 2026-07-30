@@ -1,25 +1,40 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils";
-import { Eye, Trash2 } from "@lucide/vue";
 import { computed, ref } from "vue";
 
+/**
+ * Swipeable list row. Drag right past the commit threshold to fire
+ * `swipe-right` (quick action), drag left to reveal the `actions` tray.
+ * Content may itself be interactive (whole-row buttons, checkboxes): pointer
+ * capture is deferred until the drag axis locks horizontal, so plain taps keep
+ * their native click behavior and clicks after a drag are suppressed.
+ */
 const props = withDefaults(
   defineProps<{
     disabled?: boolean;
     class?: string;
+    /** Width (px) of the action tray revealed by swiping left. */
+    actionWidth?: number;
+    canSwipeLeft?: boolean;
+    canSwipeRight?: boolean;
   }>(),
-  { disabled: false, class: undefined }
+  {
+    disabled: false,
+    class: undefined,
+    actionWidth: 128,
+    canSwipeLeft: true,
+    canSwipeRight: true
+  }
 );
 
 const emit = defineEmits<{
-  dismiss: [];
-  delete: [];
-  view: [];
+  /** Row swiped right past the commit threshold (released). */
+  swipeRight: [];
 }>();
 
-const ACTION_WIDTH = 128;
-const DISMISS_THRESHOLD = 72;
+const COMMIT_THRESHOLD = 72;
 const OPEN_THRESHOLD = 40;
+const MAX_RIGHT = 180;
 
 const offset = ref(0);
 const dragging = ref(false);
@@ -32,27 +47,24 @@ let startOffset = 0;
 let axis: "x" | "y" | null = null;
 let activePointerId: number | null = null;
 let settling = false;
+let suppressClick = false;
 
 const style = computed(() => ({
   transform: `translate3d(${offset.value}px, 0, 0)`,
   transition: dragging.value ? "none" : "transform 180ms ease-out"
 }));
 
+const minOffset = computed(() => (props.canSwipeLeft ? -props.actionWidth : 0));
+const maxOffset = computed(() => (props.canSwipeRight ? MAX_RIGHT : 0));
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function isInteractive(target: EventTarget | null) {
-  if (!(target instanceof Element)) return false;
-  return Boolean(
-    target.closest('button, a, input, textarea, select, [role="checkbox"], [data-slot="checkbox"]')
-  );
-}
-
 function onPointerDown(event: PointerEvent) {
   if (props.disabled || event.button !== 0) return;
-  if (isInteractive(event.target)) return;
 
+  suppressClick = false;
   dragging.value = true;
   settling = false;
   axis = null;
@@ -60,12 +72,16 @@ function onPointerDown(event: PointerEvent) {
   startX = event.clientX;
   startY = event.clientY;
   startOffset = offset.value;
-  rowEl.value?.setPointerCapture?.(event.pointerId);
 }
 
 function onPointerMove(event: PointerEvent) {
   if (!dragging.value || props.disabled || settling) return;
-  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  if (activePointerId === null || event.pointerId !== activePointerId) return;
+  // Stale mouse drag: released outside the row before capture engaged.
+  if (event.buttons === 0) {
+    cancelDrag();
+    return;
+  }
 
   const dx = event.clientX - startX;
   const dy = event.clientY - startY;
@@ -77,16 +93,14 @@ function onPointerMove(event: PointerEvent) {
       cancelDrag();
       return;
     }
+    rowEl.value?.setPointerCapture?.(event.pointerId);
   }
 
-  if (axis !== "x") return;
   event.preventDefault();
-  offset.value = clamp(startOffset + dx, -ACTION_WIDTH, 180);
+  offset.value = clamp(startOffset + dx, minOffset.value, maxOffset.value);
 }
 
-function cancelDrag() {
-  dragging.value = false;
-  axis = null;
+function releaseCapture() {
   const pid = activePointerId;
   activePointerId = null;
   if (pid !== null && rowEl.value?.hasPointerCapture?.(pid)) {
@@ -96,7 +110,13 @@ function cancelDrag() {
       /* already released */
     }
   }
-  if (!openLeft.value) offset.value = 0;
+}
+
+function cancelDrag() {
+  dragging.value = false;
+  axis = null;
+  releaseCapture();
+  offset.value = openLeft.value ? -props.actionWidth : 0;
 }
 
 function settleDrag() {
@@ -107,33 +127,26 @@ function settleDrag() {
   const finalOffset = offset.value;
   dragging.value = false;
   axis = null;
-
-  const pid = activePointerId;
-  activePointerId = null;
-  if (pid !== null && rowEl.value?.hasPointerCapture?.(pid)) {
-    try {
-      rowEl.value.releasePointerCapture(pid);
-    } catch {
-      /* already released */
-    }
-  }
+  releaseCapture();
 
   if (finalAxis !== "x") {
-    if (!openLeft.value) offset.value = 0;
+    offset.value = openLeft.value ? -props.actionWidth : 0;
     settling = false;
     return;
   }
 
-  if (finalOffset >= DISMISS_THRESHOLD) {
+  suppressClick = true;
+
+  if (props.canSwipeRight && finalOffset >= COMMIT_THRESHOLD) {
     offset.value = 0;
     openLeft.value = false;
     settling = false;
-    emit("dismiss");
+    emit("swipeRight");
     return;
   }
 
-  if (finalOffset <= -OPEN_THRESHOLD) {
-    offset.value = -ACTION_WIDTH;
+  if (props.canSwipeLeft && finalOffset <= -OPEN_THRESHOLD) {
+    offset.value = -props.actionWidth;
     openLeft.value = true;
   } else {
     offset.value = 0;
@@ -143,8 +156,13 @@ function settleDrag() {
 }
 
 function onPointerUp(event: PointerEvent) {
-  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  if (activePointerId === null || event.pointerId !== activePointerId) return;
   settleDrag();
+}
+
+function onPointerCancel(event: PointerEvent) {
+  if (activePointerId === null || event.pointerId !== activePointerId) return;
+  cancelDrag();
 }
 
 function close() {
@@ -152,18 +170,18 @@ function close() {
   openLeft.value = false;
 }
 
-function onContentClick() {
-  if (openLeft.value) close();
-}
-
-function onDelete() {
-  close();
-  emit("delete");
-}
-
-function onView() {
-  close();
-  emit("view");
+function onClickCapture(event: MouseEvent) {
+  if (suppressClick) {
+    suppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (openLeft.value) {
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+  }
 }
 
 defineExpose({ close });
@@ -171,32 +189,16 @@ defineExpose({ close });
 
 <template>
   <div class="relative overflow-hidden rounded-xl">
-    <div
-      class="absolute inset-y-0 left-0 flex w-28 items-center justify-start bg-[rgba(34,197,94,0.22)] pl-4"
-      aria-hidden="true"
-    >
-      <span class="text-xs font-semibold text-[#4ade80]">Dismiss</span>
+    <div v-if="canSwipeRight" class="absolute inset-y-0 left-0 flex" aria-hidden="true">
+      <slot name="hint" />
     </div>
 
-    <div class="absolute inset-y-0 right-0 z-0 flex w-32 items-stretch">
-      <button
-        type="button"
-        class="flex flex-1 items-center justify-center bg-[#3f463f] text-foreground transition-opacity active:opacity-80"
-        :tabindex="openLeft ? 0 : -1"
-        aria-label="View recipe"
-        @click.stop="onView"
-      >
-        <Eye class="size-5" :stroke-width="2" />
-      </button>
-      <button
-        type="button"
-        class="flex flex-1 items-center justify-center bg-[#dc2626] text-primary-foreground transition-opacity active:opacity-80"
-        :tabindex="openLeft ? 0 : -1"
-        aria-label="Remove from list"
-        @click.stop="onDelete"
-      >
-        <Trash2 class="size-5" :stroke-width="2" />
-      </button>
+    <div
+      v-if="canSwipeLeft"
+      class="absolute inset-y-0 right-0 z-0 flex items-stretch"
+      :style="{ width: `${actionWidth}px` }"
+    >
+      <slot name="actions" :open="openLeft" :close="close" />
     </div>
 
     <div
@@ -211,8 +213,8 @@ defineExpose({ close });
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-      @click="onContentClick"
+      @pointercancel="onPointerCancel"
+      @click.capture="onClickCapture"
     >
       <slot :open="openLeft" />
     </div>

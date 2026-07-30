@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import SwipeRow from "@/components/grocery/SwipeRow.vue";
+import SwipeRow from "@/components/SwipeRow.vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { paths } from "@/sitemap";
 import { useGroceryStore } from "@/stores/grocery";
 import type { GroceryItem } from "@/types";
-import { EyeOff, ShoppingCart } from "@lucide/vue";
+import { Eye, EyeOff, ShoppingCart, Trash2 } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
@@ -195,13 +195,40 @@ onActivated(() => load());
           {{ group.category }}
         </h2>
         <div class="flex flex-col gap-1.5">
-          <SwipeRow
-            v-for="item in group.items"
-            :key="item.key"
-            @dismiss="onDismiss(item)"
-            @delete="onDelete(item)"
-            @view="onViewRecipe(item)"
-          >
+          <SwipeRow v-for="item in group.items" :key="item.key" @swipe-right="onDismiss(item)">
+            <template #hint>
+              <div class="flex w-28 items-center bg-[rgba(34,197,94,0.22)] pl-4">
+                <span class="text-xs font-semibold text-[#4ade80]">Dismiss</span>
+              </div>
+            </template>
+
+            <template #actions="{ open, close }">
+              <button
+                type="button"
+                class="flex flex-1 items-center justify-center bg-[#3f463f] text-foreground transition-opacity active:opacity-80"
+                :tabindex="open ? 0 : -1"
+                aria-label="View recipe"
+                @click.stop="
+                  close();
+                  onViewRecipe(item);
+                "
+              >
+                <Eye class="size-5" :stroke-width="2" />
+              </button>
+              <button
+                type="button"
+                class="flex flex-1 items-center justify-center bg-[#dc2626] text-primary-foreground transition-opacity active:opacity-80"
+                :tabindex="open ? 0 : -1"
+                aria-label="Remove from list"
+                @click.stop="
+                  close();
+                  onDelete(item);
+                "
+              >
+                <Trash2 class="size-5" :stroke-width="2" />
+              </button>
+            </template>
+
             <div
               class="flex items-start gap-3 border border-border px-3 py-3"
               :class="item.dismissed ? 'opacity-55' : ''"
