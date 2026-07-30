@@ -5,10 +5,20 @@
  * (set them in `mobile/.env` for local dev or in CI for release builds).
  */
 
-/** Base URL of the Junket API, e.g. https://recipe-db.joelyoung.dev/api */
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+
+/**
+ * Base URL of the Junket API, e.g. https://recipe-db.joelyoung.dev/api.
+ * A native app needs an absolute URL, so ignore empty or relative values
+ * (CI passes unset GitHub vars through as empty strings, and the web app's
+ * API_URL var is the relative `/api`).
+ */
 export const API_URL: string =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (__DEV__ ? "http://localhost:8000/api" : "https://recipe-db.joelyoung.dev/api");
+  envApiUrl && /^https?:\/\//.test(envApiUrl)
+    ? envApiUrl
+    : __DEV__
+      ? "http://localhost:8000/api"
+      : "https://recipe-db.joelyoung.dev/api";
 
 /** Origin the API is served from — used to resolve relative upload URLs. */
 export const API_ORIGIN: string = API_URL.replace(/\/api\/?$/, "");
