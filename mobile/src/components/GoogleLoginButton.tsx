@@ -12,18 +12,25 @@ import { Platform } from "react-native";
 
 WebBrowser.maybeCompleteAuthSession();
 
-/**
- * Native Google sign-in via expo-auth-session (system browser sheet).
- * Hidden when no client ID is configured for the current platform.
- * The resulting Google ID token is exchanged at POST /auth/login-google/.
- */
-export function GoogleLoginButton({
-  onPendingChange,
-  onError
-}: {
+interface GoogleLoginButtonProps {
   onPendingChange: (pending: boolean) => void;
   onError: (message: string) => void;
-}) {
+}
+
+/**
+ * Native Google sign-in via expo-auth-session (system browser sheet).
+ * Hidden when no client ID is configured for the current platform — the
+ * availability check must happen BEFORE the auth-request hook runs, because
+ * expo-auth-session throws when its client id is missing.
+ */
+export function GoogleLoginButton(props: GoogleLoginButtonProps) {
+  const available =
+    Platform.OS === "web" ? Boolean(GOOGLE_WEB_CLIENT_ID) : Boolean(GOOGLE_IOS_CLIENT_ID);
+  if (!available) return null;
+  return <ConfiguredGoogleLoginButton {...props} />;
+}
+
+function ConfiguredGoogleLoginButton({ onPendingChange, onError }: GoogleLoginButtonProps) {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
     webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
@@ -59,10 +66,6 @@ export function GoogleLoginButton({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
-
-  const available =
-    Platform.OS === "web" ? Boolean(GOOGLE_WEB_CLIENT_ID) : Boolean(GOOGLE_IOS_CLIENT_ID);
-  if (!available) return null;
 
   return (
     <Button
