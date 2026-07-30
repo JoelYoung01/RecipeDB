@@ -66,7 +66,16 @@ const canContinueDays = computed(() => selectedDays.value.length > 0);
 
 const skippedCount = computed(() => weekDayKeys.value.length - selectedDays.value.length);
 
-const openNightKeys = computed(() => weekDayKeys.value.filter((key) => !plannedTitles.value[key]));
+const todayKey = computed(() => toDateKey(today));
+
+function isDayPast(dayOrKey: Date | string): boolean {
+  const key = typeof dayOrKey === "string" ? dayOrKey : toDateKey(dayOrKey);
+  return key < todayKey.value;
+}
+
+const openNightKeys = computed(() =>
+  weekDayKeys.value.filter((key) => !plannedTitles.value[key] && !isDayPast(key))
+);
 
 const alreadyPlannedCount = computed(() => Object.keys(plannedTitles.value).length);
 
@@ -204,7 +213,7 @@ function weekFromSeed(seed: Date): Date[] {
 
 function clampDaysToWeek(keys: string[], weekKeys: string[]): string[] {
   const allowed = new Set(weekKeys);
-  return [...new Set(keys.filter((k) => allowed.has(k)))].sort();
+  return [...new Set(keys.filter((k) => allowed.has(k) && !isDayPast(k)))].sort();
 }
 
 function isDaySelected(key: string) {
@@ -216,8 +225,8 @@ function plannedTitleFor(key: string): string | null {
 }
 
 function toggleDay(key: string) {
-  // Only the 7 nights in this wizard's week can be toggled.
-  if (!weekKeySet.value.has(key)) return;
+  // Only the 7 nights in this wizard's week can be toggled; past days stay locked.
+  if (!weekKeySet.value.has(key) || isDayPast(key)) return;
   if (isDaySelected(key)) {
     selectedDays.value = selectedDays.value.filter((d) => d !== key);
   } else {
@@ -565,10 +574,10 @@ onMounted(async () => {
   plannedTitles.value = await loadPlannedForWeek(weekDays.value);
   loadingDays.value = false;
 
-  // Auto-skip nights that already have a dinner. Prefer the caller's day list
-  // (fill-gaps / plan-week / autofill), then drop anything already planned.
+  // Auto-skip nights that already have a dinner or are in the past. Prefer the
+  // caller's day list (fill-gaps / plan-week / autofill), then drop planned/past.
   const preferred = fromQuery.length ? clampDaysToWeek(fromQuery, keys) : [...keys];
-  selectedDays.value = preferred.filter((key) => !plannedTitles.value[key]);
+  selectedDays.value = preferred.filter((key) => !plannedTitles.value[key] && !isDayPast(key));
 });
 
 onUnmounted(() => {
@@ -661,10 +670,14 @@ onUnmounted(() => {
           type="button"
           class="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0"
           :class="
-            isDaySelected(toDateKey(day))
-              ? 'bg-[rgba(34,197,94,0.14)]'
-              : 'bg-transparent opacity-70'
+            isDayPast(day)
+              ? 'cursor-not-allowed bg-transparent opacity-40'
+              : isDaySelected(toDateKey(day))
+                ? 'bg-[rgba(34,197,94,0.14)]'
+                : 'bg-transparent opacity-70'
           "
+          :disabled="isDayPast(day)"
+          :aria-disabled="isDayPast(day) || undefined"
           :aria-pressed="isDaySelected(toDateKey(day))"
           @click="toggleDay(toDateKey(day))"
         >
@@ -685,14 +698,20 @@ onUnmounted(() => {
             >
               {{ DAY_LABELS[i] }} · {{ day.getDate() }}
               <span
-                v-if="toDateKey(day) === toDateKey(today)"
+                v-if="toDateKey(day) === todayKey"
                 class="ml-1 text-[11px] font-bold uppercase tracking-wide text-[#22c55e]"
               >
                 Today
               </span>
             </p>
             <p
-              v-if="plannedTitleFor(toDateKey(day))"
+              v-if="isDayPast(day)"
+              class="mt-0.5 truncate text-[12px] text-faint"
+            >
+              Past
+            </p>
+            <p
+              v-else-if="plannedTitleFor(toDateKey(day))"
               class="mt-0.5 truncate text-[12px]"
               :class="isDaySelected(toDateKey(day)) ? 'text-muted-foreground' : 'text-[#86efac]/80'"
             >
@@ -709,21 +728,25 @@ onUnmounted(() => {
           <span
             class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
             :class="
-              isDaySelected(toDateKey(day))
-                ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
-                : plannedTitleFor(toDateKey(day))
-                  ? 'bg-secondary text-muted-foreground'
-                  : 'bg-secondary text-faint'
+              isDayPast(day)
+                ? 'bg-secondary text-faint'
+                : isDaySelected(toDateKey(day))
+                  ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
+                  : plannedTitleFor(toDateKey(day))
+                    ? 'bg-secondary text-muted-foreground'
+                    : 'bg-secondary text-faint'
             "
           >
             {{
-              isDaySelected(toDateKey(day))
-                ? plannedTitleFor(toDateKey(day))
-                  ? "Replan"
-                  : "Plan"
-                : plannedTitleFor(toDateKey(day))
-                  ? "Kept"
-                  : "Skip"
+              isDayPast(day)
+                ? "Past"
+                : isDaySelected(toDateKey(day))
+                  ? plannedTitleFor(toDateKey(day))
+                    ? "Replan"
+                    : "Plan"
+                  : plannedTitleFor(toDateKey(day))
+                    ? "Kept"
+                    : "Skip"
             }}
           </span>
         </button>

@@ -106,10 +106,13 @@ export default function MealPlanWizardScreen() {
     setLocalPrefs({ ...savedPrefs });
   }
 
+  const todayKey = toDateKey(today);
+  const isDayPast = (key: string) => key < todayKey;
+
   const selectCount = session?.select_count ?? selectedDays.length;
   const canContinueDays = selectedDays.length > 0;
   const skippedCount = weekDayKeys.length - selectedDays.length;
-  const openNightKeys = weekDayKeys.filter((key) => !plannedTitles[key]);
+  const openNightKeys = weekDayKeys.filter((key) => !plannedTitles[key] && !isDayPast(key));
   const alreadyPlannedCount = Object.keys(plannedTitles).length;
   const selectionFull = selectedIdeaIds.length >= selectCount && selectCount > 0;
   const canContinueSelect = selectedIdeaIds.length === selectCount && selectCount > 0;
@@ -169,11 +172,12 @@ export default function MealPlanWizardScreen() {
         const preferred = daysFromQuery.length
           ? [...new Set(daysFromQuery.filter((k) => allowed.has(k)))].sort()
           : [...keys];
-        setSelectedDays(preferred.filter((key) => !titles[key]));
+        setSelectedDays(preferred.filter((key) => !titles[key] && !isDayPast(key)));
       })
       .catch((er) => {
         toast.fromError(er, "Couldn’t load existing dinners for this week.");
-        setSelectedDays(daysFromQuery.length ? daysFromQuery : [...keys]);
+        const fallback = daysFromQuery.length ? daysFromQuery : [...keys];
+        setSelectedDays(fallback.filter((key) => !isDayPast(key)));
       })
       .finally(() => setLoadingDays(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,11 +187,11 @@ export default function MealPlanWizardScreen() {
 
   const clampDaysToWeek = (keys: string[]) => {
     const allowed = new Set(weekDayKeys);
-    return [...new Set(keys.filter((k) => allowed.has(k)))].sort();
+    return [...new Set(keys.filter((k) => allowed.has(k) && !isDayPast(k)))].sort();
   };
 
   const toggleDay = (key: string) => {
-    if (!weekDayKeys.includes(key)) return;
+    if (!weekDayKeys.includes(key) || isDayPast(key)) return;
     tapHaptic();
     setSelectedDays((days) =>
       days.includes(key) ? days.filter((d) => d !== key) : clampDaysToWeek([...days, key])
@@ -459,8 +463,6 @@ export default function MealPlanWizardScreen() {
       .filter(Boolean)
       .join(" ");
 
-  const todayKey = toDateKey(today);
-
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-background"
@@ -546,44 +548,52 @@ export default function MealPlanWizardScreen() {
                 const key = toDateKey(day);
                 const selected = selectedDays.includes(key);
                 const plannedTitle = plannedTitles[key] ?? null;
+                const past = isDayPast(key);
                 return (
                   <Pressable
                     key={key}
                     accessibilityRole="button"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{ selected, disabled: past }}
+                    disabled={past}
                     onPress={() => toggleDay(key)}
                     className={
-                      selected
-                        ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/15 px-3 py-3"
-                        : "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-70"
+                      past
+                        ? "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-40"
+                        : selected
+                          ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/15 px-3 py-3"
+                          : "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-70"
                     }
                     style={i === 6 ? { borderBottomWidth: 0 } : undefined}
                   >
                     <View
                       className={
-                        selected
+                        selected && !past
                           ? "h-5 w-5 items-center justify-center rounded-md border border-primary bg-primary"
                           : "h-5 w-5 items-center justify-center rounded-md border border-border bg-secondary/40"
                       }
                     >
-                      {selected ? <Check size={13} color={colors.foreground} strokeWidth={3} /> : null}
+                      {selected && !past ? (
+                        <Check size={13} color={colors.foreground} strokeWidth={3} />
+                      ) : null}
                     </View>
                     <View className="min-w-0 flex-1">
                       <Text
                         className={
-                          selected
+                          selected && !past
                             ? "font-sans-semibold text-sm text-foreground"
                             : "font-sans-semibold text-sm text-muted-foreground"
                         }
                       >
                         {DAY_LABELS[i]} · {day.getDate()}
-                        {key === todayKey ? (
+                        {key === todayKey && !past ? (
                           <Text className="font-sans-bold text-[11px] uppercase text-[#22c55e]">
                             {"  Today"}
                           </Text>
                         ) : null}
                       </Text>
-                      {plannedTitle ? (
+                      {past ? (
+                        <Text className="mt-0.5 text-[12px] text-faint">Past</Text>
+                      ) : plannedTitle ? (
                         <Text
                           className={
                             selected
@@ -602,19 +612,33 @@ export default function MealPlanWizardScreen() {
                     </View>
                     <View
                       className={
-                        selected ? "rounded-full bg-[#22c55e]/20 px-2 py-0.5" : "rounded-full bg-secondary px-2 py-0.5"
+                        past
+                          ? "rounded-full bg-secondary px-2 py-0.5"
+                          : selected
+                            ? "rounded-full bg-[#22c55e]/20 px-2 py-0.5"
+                            : "rounded-full bg-secondary px-2 py-0.5"
                       }
                     >
                       <Text
                         className={
-                          selected
-                            ? "font-sans-semibold text-[11px] text-success-soft"
-                            : plannedTitle
-                              ? "font-sans-semibold text-[11px] text-muted-foreground"
-                              : "font-sans-semibold text-[11px] text-faint"
+                          past
+                            ? "font-sans-semibold text-[11px] text-faint"
+                            : selected
+                              ? "font-sans-semibold text-[11px] text-success-soft"
+                              : plannedTitle
+                                ? "font-sans-semibold text-[11px] text-muted-foreground"
+                                : "font-sans-semibold text-[11px] text-faint"
                         }
                       >
-                        {selected ? (plannedTitle ? "Replan" : "Plan") : plannedTitle ? "Kept" : "Skip"}
+                        {past
+                          ? "Past"
+                          : selected
+                            ? plannedTitle
+                              ? "Replan"
+                              : "Plan"
+                            : plannedTitle
+                              ? "Kept"
+                              : "Skip"}
                       </Text>
                     </View>
                   </Pressable>
