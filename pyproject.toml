@@ -1,7 +1,7 @@
 [project]
-name = "julep"
+name = "junket"
 version = "0.0.1"
-description = "Julep - FastAPI backend"
+description = "Junket - FastAPI backend"
 requires-python = ">=3.12"
 dependencies = [
     "alembic==1.14.1",

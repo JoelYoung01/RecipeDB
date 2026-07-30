@@ -1,5 +1,5 @@
 /**
- * Julep design tokens — mirrors DESIGN.md and the web app's
+ * Junket design tokens — mirrors DESIGN.md and the web app's
  * src/assets/index.css (zinc dark + green accent, dark only).
  *
  * Fonts: iOS needs an exact font-family name per weight, so weights are

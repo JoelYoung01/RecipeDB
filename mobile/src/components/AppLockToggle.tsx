@@ -65,7 +65,7 @@ export function AppLockToggle() {
         <View className="min-w-0 flex-1">
           <Text className="font-sans-semibold text-sm">{label} unlock</Text>
           <Text className="mt-0.5 text-xs text-muted-foreground">
-            Require {label} when opening Julep
+            Require {label} when opening Junket
           </Text>
         </View>
         <Switch

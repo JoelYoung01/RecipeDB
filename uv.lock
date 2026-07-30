@@ -708,7 +708,7 @@ wheels = [
 ]
 
 [[package]]
-name = "julep"
+name = "junket"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [

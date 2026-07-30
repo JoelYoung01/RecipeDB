@@ -68,7 +68,7 @@ export default function RegisterScreen() {
             style={{ width: 64, height: 64 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-3xl tracking-tight">Julep</Text>
+          <Text className="font-sans-bold text-3xl tracking-tight">Junket</Text>
           <Text className="max-w-xs text-center text-sm text-muted-foreground">
             Create an account to save and plan recipes.
           </Text>

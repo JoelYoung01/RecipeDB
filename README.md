@@ -1,4 +1,4 @@
-# Julep
+# Junket
 
 Personal recipe box, meal planner, and grocery list. (Formerly RecipeDB — the GitHub repo keeps the old name for now.)
 

@@ -1,7 +1,7 @@
 import { secureStorage } from "@/lib/secure-storage";
 import { create } from "zustand";
 
-const APP_LOCK_KEY = "julep.app_lock";
+const APP_LOCK_KEY = "junket.app_lock";
 
 interface AppLockState {
   /** True once the persisted preference has been read. */
