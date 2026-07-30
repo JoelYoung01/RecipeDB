@@ -101,12 +101,14 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           cp "$RUNNER_TEMP/AuthKey.p8" ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
 
-      # The archive is intentionally UNSIGNED: with automatic signing,
-      # `xcodebuild archive` always development-signs, and development
-      # profiles require a registered device ("Your team has no devices").
-      # Distribution signing happens in the export step instead, which needs
-      # no devices.
-      - name: Archive (unsigned)
+      # The archive is AD-HOC signed (the same approach Xcode Cloud uses):
+      # no certificate or registered device is needed, unlike development
+      # signing ("Your team has no devices"), but the app's entitlements —
+      # e.g. Sign in with Apple — still get embedded. `-exportArchive`
+      # preserves only entitlements already present in a signature, so a
+      # fully unsigned archive ships without them (broke Apple sign-in at
+      # runtime). Distribution signing happens in the export step.
+      - name: Archive (ad-hoc signed)
         if: steps.creds.outputs.configured == 'true'
         env:
           JUNKET_IOS_BUNDLE_ID: ${{ vars.JUNKET_IOS_BUNDLE_ID }}
@@ -123,9 +125,10 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Junket.xcarchive" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY=- \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       # Signs the app for App Store distribution via cloud-managed signing:
       # -allowProvisioningUpdates + the ASC API key let Xcode create/fetch the
@@ -161,6 +164,23 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Regression guard: a wrongly-signed archive exports and uploads fine
+      # but ships without capability entitlements, breaking Sign in with
+      # Apple only at runtime. Fail the build instead.
+      - name: Verify entitlements in signed IPA
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -n 1)
+          unzip -q -o "$IPA" -d "$RUNNER_TEMP/ipa-verify"
+          APP=$(ls -d "$RUNNER_TEMP"/ipa-verify/Payload/*.app | head -n 1)
+          codesign -d --entitlements :- "$APP" > "$RUNNER_TEMP/entitlements.txt" 2>/dev/null \
+            || codesign -d --entitlements - "$APP" > "$RUNNER_TEMP/entitlements.txt"
+          cat "$RUNNER_TEMP/entitlements.txt"
+          if ! grep -q "com.apple.developer.applesignin" "$RUNNER_TEMP/entitlements.txt"; then
+            echo "::error::Signed app is missing the Sign in with Apple entitlement — check archive signing settings."
+            exit 1
+          fi
 
       - name: Upload IPA artifact
         if: steps.creds.outputs.configured == 'true'
