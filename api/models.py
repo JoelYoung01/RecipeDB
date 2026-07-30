@@ -45,6 +45,7 @@ class User(BaseIndexedDbModel, table=True):
     email_verified: bool = False
     hashed_password: str | None = None
     google_user_id: str | None = Field(default=None, index=True)
+    apple_user_id: str | None = Field(default=None, index=True)
     last_login: datetime | None = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc), sa_type=UTCDateTime
     )

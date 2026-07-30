@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api"
-    PROJECT_NAME: str = "RecipeDB"
+    PROJECT_NAME: str = "Junket"
     # Deployed git SHA (or "dev" locally). Used by /api/health/ for release verification.
     APP_VERSION: str = "dev"
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     VITE_GOOGLE_CLIENT_ID: str
+    # Extra Google OAuth audience for the iOS app (optional). Native sign-in
+    # produces id_tokens whose `aud` is the iOS client, not the web client.
+    GOOGLE_IOS_CLIENT_ID: str | None = None
+    # Sign in with Apple: identity tokens minted by the iOS app carry its
+    # bundle identifier as `aud`. Must match `ios.bundleIdentifier` in
+    # mobile/app.config.ts (JUNKET_IOS_BUNDLE_ID override).
+    APPLE_APP_BUNDLE_ID: str = "com.joelyoung.junket"
     VUE_STATIC_DIR: str = "dist"
     UPLOAD_DIR: str = "data/uploads"
     LOGS_DIR: str = "data/logs"

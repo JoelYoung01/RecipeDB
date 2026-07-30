@@ -1,36 +1,18 @@
-# Vue + FastAPI Template
+# Junket
 
-This template should help get you started developing with a static Vue 3 web application built with Vite and styled with Tailwind CSS + shadcn-vue. See `DESIGN.md` and `SITE_MAP.md` for the UI system and routes.
+Personal recipe box, meal planner, and grocery list. (Formerly RecipeDB — the GitHub repo keeps the old name for now.)
 
-## Recommended IDE Setup
+**The iOS app is the primary product** — a native Expo / React Native app in [`mobile/`](./mobile/README.md) with the full experience: recipe library, AI meal-plan wizard, week planner, swipeable grocery list. The FastAPI server (`api/`) and the Vue web app (`src/`) support it: the server is the system of record; the web app is a companion UI that shares the same API and design system.
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+| Part | Where | Stack | Docs |
+|---|---|---|---|
+| **iOS app** | `mobile/` | Expo SDK 57, React Native, NativeWind, expo-router | [`mobile/README.md`](./mobile/README.md) |
+| API server | `api/` | FastAPI, SQLModel, SQLite, Alembic, uv | this file + [`docs/cursor-cloud-agents.md`](./docs/cursor-cloud-agents.md) |
+| Web app | `src/` | Vue 3, Vite, Tailwind CSS v4, shadcn-vue | [`DESIGN.md`](./DESIGN.md), [`SITE_MAP.md`](./SITE_MAP.md) |
 
-## Type Support for `.vue` Imports in TS
+## Setup
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-### Step 1 - Create new Repo
-
-Create a new project in Github. You can either reference this template repo, or create an empty repository and clone this template repo. To clone, follow this process:
-
-```bash
-git clone git@github.com:JoelYoung01/VueStaticSiteTemplate.git <project_name_here>
-cd <project_name_here>
-git init
-git add .
-git commit -m "Initial Commit"
-git remote add origin <new_repo_url>
-git push -u origin main
-```
-
-### Step 2 - Setup Environment
+### Step 1 - Environment
 
 Copy `.envtemplate` to a new file, `.env`, and fill out applicable values.
 
@@ -44,11 +26,14 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### Step 3 - Install Dependencies
+### Step 2 - Install dependencies
 
 ```bash
-# Install Vite deps
+# Web app deps
 pnpm i
+
+# iOS app deps
+cd mobile && pnpm i && cd ..
 
 # Create the virtual environment (.venv) and install Python deps from uv.lock
 uv sync
@@ -56,53 +41,49 @@ uv sync
 
 `uv sync` reads `pyproject.toml` / `uv.lock` and creates a `.venv` in the project root. When using VSCode, select `.venv` as your Python interpreter (`Ctrl` + `Shift` + `P` -> `Python: Select Interpreter`).
 
-### Run / Build / Deploy
-
-#### Compile and Hot-Reload for Development
+### Step 3 - Database
 
 ```bash
-# Export env vars for both processes (see .envtemplate)
+mkdir -p data/uploads data/logs
 set -a && . ./.env && set +a
-
-# Run Vite Dev Server
-pnpm dev
-
-# Run FastAPI Dev Server (uv run uses the project's .venv)
-uv run fastapi dev api/main.py
+uv run alembic upgrade head
+uv run python -m api.scripts.load_data   # seed users + sample recipes
 ```
 
-Auth supports email/password (with OTP email verification) and Google OAuth. Seeded locals after `uv run python -m api.scripts.load_data` (sign in via the normal login form):
+## Development
+
+```bash
+# Export env vars first (required by both server and web dev builds)
+set -a && . ./.env && set +a
+
+# API server (docs at http://localhost:8000/api/docs)
+uv run fastapi dev api/main.py
+
+# iOS app — web preview for quick iteration; see mobile/README.md for device builds
+cd mobile && pnpm web
+
+# Web app (http://localhost:5173)
+pnpm dev
+```
+
+Auth supports email/password (with OTP email verification), Google OAuth, and Sign in with Apple (iOS app). Seeded locals after `uv run python -m api.scripts.load_data` (sign in via the normal login form):
 
 - Admin: `admin@example.com` / `adminpass123`
 - Test: `test@example.com` / `testpass123`
 
 See `docs/cursor-cloud-agents.md` for the full auth flow.
 
-#### Type-Check, Compile and Minify for Production
+## Checks
 
 ```bash
-pnpm build
+pnpm lint          # web app eslint (runs with --fix)
+pnpm build         # web app type-check + production build
+
+cd mobile
+pnpm lint && pnpm typecheck && pnpm test   # iOS app
 ```
 
-#### Lint with [ESLint](https://eslint.org/)
+## Deployment
 
-```bash
-pnpm lint
-```
-
-## S3 Deployment
-
-This repo comes with a GitHub Action that will deploy the site to an S3 bucket. To set this up, you'll need to add the following environment variables and secrets to your GitHub repository:
-
-Environment Variables
-
-- `APP_NAME` _lower-snake-case_
-- `APP_TITLE` _Display Name_
-
-Secrets:
-
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `S3_BUCKET`
-
-The actions are set up to deploy to 3 environments; dev, stage, and prod. It is recommended to set up S3_BUCKET environment secret per environment.
+- **Server + web app**: pushes to `main` build a Docker image (web bundle baked in) and deploy it via webhook — `.github/workflows/CI_CD.yaml`.
+- **iOS app**: pushes to `main` touching `mobile/` build, sign, and upload to TestFlight from a macOS runner — `.github/workflows/MobileRelease.yaml`. Apple credential setup is documented in [`mobile/README.md`](./mobile/README.md).

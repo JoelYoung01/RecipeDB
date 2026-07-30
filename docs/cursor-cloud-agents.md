@@ -2,10 +2,11 @@
 
 Detailed setup, run, and testing notes for Cursor Cloud agents working in this repo. `AGENTS.md` links here so that this context is only loaded when needed.
 
-This is a single repo containing two services that run together in development:
+This is a single repo containing the backend plus two clients:
 
 - Backend: FastAPI app in `api/` (entry `api/main.py`), SQLite database (no external DB needed), migrations via Alembic. Python deps are managed with `uv` (`pyproject.toml` + `uv.lock`); `uv sync` creates a `.venv` in the repo root. Run backend commands with `uv run ...` (no manual venv activation needed).
-- Frontend: Vue 3 + Vite + Tailwind CSS + shadcn-vue SPA in `src/` (dev server on port 5173). See `DESIGN.md` and `SITE_MAP.md` for UI/routing.
+- iOS app (primary product): Expo / React Native app in `mobile/` with its own pnpm workspace (`cd mobile && pnpm install`). See "iOS app" below and `mobile/README.md`.
+- Web frontend: Vue 3 + Vite + Tailwind CSS + shadcn-vue SPA in `src/` (dev server on port 5173). See `DESIGN.md` and `SITE_MAP.md` for UI/routing.
 
 Standard commands live in `README.md`, `package.json`, and `pyproject.toml`. Below are only the non-obvious caveats.
 
@@ -37,6 +38,7 @@ Password auth and Google OAuth are both supported.
 - `POST /api/auth/resend-verification/` — resend OTP (rate-limited; generic response).
 - `POST /api/auth/login/` — email/password. If the account exists but is unverified, the API returns **403** with `detail.redirect_to` / `Location: /verify-email?email=...` so the SPA must follow the server-directed page (and may refresh the OTP).
 - `POST /api/auth/login-google/` — unchanged Google ID token exchange; Google users are treated as email-verified (and can link to an existing password account with the same email).
+- `POST /api/auth/login-apple/` — Sign in with Apple identity-token exchange (`identity_token`, optional `full_name`). Verified against Apple's JWKS with `APPLE_APP_BUNDLE_ID` as the audience; same create-or-link-by-email behavior as Google. Native iOS only — the button never renders in the Expo web preview, so it cannot be manually tested in this VM (unit tests + curl error paths only).
 
 OTP codes are HMAC-hashed at rest, expire after `EMAIL_OTP_EXPIRE_MINUTES` (default 15), and attempt-limited. Without SMTP env vars the backend logs the OTP; configure `SMTP_*` + `EMAILS_FROM_EMAIL` to send real mail.
 
@@ -73,8 +75,16 @@ The admin seed also receives `SUPERUSER_GID` when set.
 - Failures are soft: commit still succeeds if search/download fails. The edit-page button surfaces a 404 when nothing suitable is found.
 - Openverse requires outbound HTTPS to `api.openverse.org` (and the image CDN hosts in results, often `live.staticflickr.com`).
 
+## iOS app (`mobile/`)
+
+- Separate pnpm project: `cd mobile && pnpm install` (do not mix with the root web `package.json`). Uses pnpm 10 with `node-linker=hoisted` (`mobile/.npmrc`) for Metro compatibility.
+- Testing on Linux (no Mac/simulator in the VM): run the Expo **web preview** — `cd mobile && pnpm web` (Metro dev server on port 8081, opens the same app rendered via react-native-web). Point it at the local API with the backend running; the default dev API URL is `http://localhost:8000/api`. Sign in with the seeded password users below.
+- Native-only surfaces that the web preview cannot exercise: Sign in with Apple (`expo-apple-authentication`) and the Face ID / Touch ID app lock (`expo-local-authentication`; the Account → Security toggle hides itself when no biometric hardware is enrolled, which includes web). Cover these with the Jest suites and `expo prebuild` checks instead.
+- Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test` (Jest; RNTL v14 `render`/`fireEvent` are async — `await` them). Bundling sanity: `pnpm exec expo export --platform web`; native config sanity: `pnpm exec expo prebuild --platform ios --no-install` (generates the gitignored `ios/`).
+- Real iOS builds require macOS and run in CI (`.github/workflows/MobileRelease.yaml`); do not attempt `pod install`/`xcodebuild` in the Linux VM.
+
 ## Lint / test / build
 
-- Frontend lint: `pnpm lint` (ESLint; note it runs with `--fix`). Build (includes `vue-tsc` type-check): `pnpm build`.
+- Web frontend lint: `pnpm lint` (ESLint; note it runs with `--fix`). Build (includes `vue-tsc` type-check): `pnpm build`.
 - Python linters `flake8`/`black`/`isort` are in the `dev` dependency group; run them via `uv run flake8 api alembic` / `uv run black api alembic`. They have pre-existing findings in `api/core/seed_database.py` (long seed strings) and the Alembic migrations; these are not from new work.
-- There is no automated test suite (no pytest/vitest configured).
+- The mobile app has a Jest suite (`cd mobile && pnpm test`). There is no automated test suite for the API or web frontend (no pytest/vitest configured).

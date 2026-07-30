@@ -16,7 +16,7 @@ import requests
 from api.core.image_gen.client import ImageGenClient, ImageGenResult
 from api.core.logging import logger
 
-DEFAULT_UA = "RecipeDB/0.0.1 (recipe cover search; https://github.com/local)"
+DEFAULT_UA = "Junket/0.0.1 (recipe cover search; https://github.com/local)"
 MAX_BYTES = 8 * 1024 * 1024  # 8 MiB safety cap
 TIMEOUT_S = 20
 # Hosts that commonly block hotlinking / bots — try others first.

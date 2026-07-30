@@ -1,0 +1,52 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/MobileCI.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/MobileCI.yaml"
+
+jobs:
+  Validate:
+    name: Lint, typecheck, test, bundle
+    runs-on: [ubuntu-latest]
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: mobile/package.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit & component tests
+        run: pnpm test
+
+      - name: Validate native project generation (expo prebuild)
+        run: pnpm exec expo prebuild --platform ios --no-install
+
+      - name: Validate JS bundle (expo export)
+        run: pnpm exec expo export --platform web

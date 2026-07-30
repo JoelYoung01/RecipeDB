@@ -343,6 +343,55 @@ def create_access_token_for_user(user: User, session: SessionDep) -> Token:
     return db_token
 
 
+def get_or_create_user_from_apple_token(
+    apple_token: dict, display_name: str | None, session: SessionDep
+) -> User:
+    db_user = session.exec(
+        select(User).where(User.apple_user_id == apple_token["sub"])
+    ).first()
+
+    if db_user is not None:
+        if not db_user.email_verified:
+            db_user.email_verified = True
+            session.add(db_user)
+            session.commit()
+            session.refresh(db_user)
+        return db_user
+
+    # Apple only omits the email claim when the app didn't request the email
+    # scope; Junket always requests it.
+    raw_email = apple_token.get("email")
+    if not raw_email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Apple did not share an email address for this account.",
+        )
+    email = normalize_email(raw_email)
+
+    # Link an existing account with the same email. Apple addresses are
+    # verified by Apple, including private-relay ones.
+    db_user = get_user_by_email(session, email)
+    if db_user is None:
+        db_user = User.model_validate(
+            {
+                "username": email,
+                "email": email,
+                "display_name": (display_name or "").strip() or email.split("@")[0],
+                "apple_user_id": apple_token["sub"],
+                "email_verified": True,
+                "last_login": datetime.now(tz=timezone.utc),
+            }
+        )
+        session.add(db_user)
+    else:
+        db_user.apple_user_id = apple_token["sub"]
+        db_user.email_verified = True
+        session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
+
+
 def create_access_token(google_token, session: SessionDep):
     user = get_or_create_user_from_google_token(google_token, session)
     return create_access_token_for_user(user, session)
@@ -379,10 +428,43 @@ def verify_google_token(encoded_google_token: str):
     from google.oauth2 import id_token
 
     request = google_req.Request()
+    # Skip built-in audience verification (single-audience only) and check
+    # `aud` against every allowed client: web app + optional iOS app.
     decoded_token = id_token.verify_oauth2_token(
-        encoded_google_token, request, settings.VITE_GOOGLE_CLIENT_ID
+        encoded_google_token, request, audience=None
     )
+    allowed_audiences = {settings.VITE_GOOGLE_CLIENT_ID}
+    if settings.GOOGLE_IOS_CLIENT_ID:
+        allowed_audiences.add(settings.GOOGLE_IOS_CLIENT_ID)
+    if decoded_token.get("aud") not in allowed_audiences:
+        raise ValueError("Token has wrong audience.")
     return decoded_token
+
+
+_APPLE_ISSUER = "https://appleid.apple.com"
+_APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
+_apple_jwk_client: jwt.PyJWKClient | None = None
+
+
+def _get_apple_jwk_client() -> jwt.PyJWKClient:
+    global _apple_jwk_client
+    if _apple_jwk_client is None:
+        _apple_jwk_client = jwt.PyJWKClient(
+            _APPLE_JWKS_URL, cache_keys=True, lifespan=3600
+        )
+    return _apple_jwk_client
+
+
+def verify_apple_token(encoded_apple_token: str) -> dict:
+    """Verify a Sign in with Apple identity token against Apple's JWKS."""
+    signing_key = _get_apple_jwk_client().get_signing_key_from_jwt(encoded_apple_token)
+    return jwt.decode(
+        encoded_apple_token,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=settings.APPLE_APP_BUNDLE_ID,
+        issuer=_APPLE_ISSUER,
+    )
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_active_user)]

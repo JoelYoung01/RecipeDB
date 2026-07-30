@@ -9,10 +9,12 @@ from api.core.authentication import (
     can_resend_otp,
     create_access_token,
     create_access_token_for_user,
+    get_or_create_user_from_apple_token,
     get_user_by_email,
     issue_email_otp,
     register_password_user,
     verify_access_token,
+    verify_apple_token,
     verify_email_redirect_path,
     verify_google_token,
     verify_user_email_otp,
@@ -21,6 +23,7 @@ from api.core.config import settings
 from api.core.database import SessionDep
 from api.models import EmailVerificationChallenge, Token, User
 from api.schemas import (
+    AppleLoginPayload,
     AuthRedirectResponse,
     GoogleLoginPayload,
     PasswordLoginPayload,
@@ -156,6 +159,25 @@ def login_with_google(payload: GoogleLoginPayload, session: SessionDep):
         )
     access_token = create_access_token(google_token, session)
     return access_token
+
+
+@router.post("/login-apple/", response_model=TokenResponse)
+def login_with_apple(payload: AppleLoginPayload, session: SessionDep):
+    """Exchange a Sign in with Apple identity token for a session."""
+    try:
+        apple_token = verify_apple_token(payload.identity_token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Apple token: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_or_create_user_from_apple_token(apple_token, payload.full_name, session)
+    if user.disabled:
+        raise HTTPException(
+            status_code=400, detail="This account is disabled. Contact support."
+        )
+    return create_access_token_for_user(user, session)
 
 
 @router.get("/verify-session/", response_model=TokenResponse)

@@ -38,6 +38,13 @@ class GoogleLoginPayload(BaseModel):
     credential: str
 
 
+class AppleLoginPayload(BaseModel):
+    identity_token: str
+    # Apple shares the user's name only on FIRST authorization, and only with
+    # the client — it is never inside the identity token.
+    full_name: str | None = None
+
+
 class RegisterPayload(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=1024)

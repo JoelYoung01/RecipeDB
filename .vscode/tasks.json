@@ -103,7 +103,7 @@
         "-f",
         "'Dockerfile'",
         "-t",
-        "'recipedb:latest'",
+        "'junket:latest'",
         "'.'"
       ],
       "options": {
@@ -124,7 +124,7 @@
         "-d",
         "-p",
         "8000:8000/tcp",
-        "'recipedb:latest'",
+        "'junket:latest'",
       ],
       "options": {
         "cwd": "${workspaceFolder}"

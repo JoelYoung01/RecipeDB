@@ -82,7 +82,7 @@ async function onSubmit() {
   >
     <div class="flex flex-col items-center gap-3 text-center">
       <img :src="chefHat" alt="" class="size-20 object-contain" />
-      <h1 class="text-3xl font-bold tracking-tighter text-foreground">RecipeDB</h1>
+      <h1 class="text-3xl font-bold tracking-tighter text-foreground">Junket</h1>
     </div>
 
     <!--
