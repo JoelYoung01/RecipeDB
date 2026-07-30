@@ -10,8 +10,10 @@ Native iOS app for RecipeDB, built with [Expo](https://expo.dev) / React Native.
 | Navigation | `expo-router` (file-system routes, typed) |
 | Styling | NativeWind 4 (Tailwind CSS classes, shadcn-style components in `src/components/ui/`) |
 | Server state | `@tanstack/react-query` |
-| Local state | `zustand` (session, toasts) |
+| Local state | `zustand` (session, toasts, app lock) |
 | Auth storage | `expo-secure-store` (iOS Keychain) |
+| Sign-in | Email/password, Sign in with Apple (`expo-apple-authentication`), Google (`expo-auth-session`) |
+| App lock | Face ID / Touch ID via `expo-local-authentication` |
 | Fonts / icons | Figtree (`@expo-google-fonts`) / `lucide-react-native` |
 | Tests | Jest (`jest-expo`) + React Native Testing Library |
 
@@ -95,6 +97,19 @@ Also uses existing repo config: `vars.API_URL` (JS bundle API base) and `secrets
 
 Each run also attaches the raw `.ipa` as a workflow artifact for ad-hoc installs.
 
+### Sign in with Apple
+
+The login screen shows Apple's native sign-in button on iOS devices. Two requirements:
+
+1. The App ID (bundle ID) must have the **Sign in with Apple** capability enabled: [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list) → select the bundle ID → check *Sign In with Apple* → Save. (If CI created the App ID automatically, edit it there.) The entitlement itself is added by `expo prebuild` via the `expo-apple-authentication` plugin.
+2. The server verifies identity tokens against the app's bundle ID — set `APPLE_APP_BUNDLE_ID` in the server `.env` only if you override the default `com.joelyoung.recipedb`.
+
+No extra secret is needed: verification uses Apple's public keys.
+
+### Face ID unlock
+
+Account → Security → **Face ID unlock** gates the app behind Face ID / Touch ID (`expo-local-authentication`): unlock on cold start and whenever the app returns from the background, with device-passcode fallback and a sign-out escape hatch. The preference is stored in the Keychain; the row is hidden on devices without enrolled biometrics (and on web).
+
 ### Google sign-in on iOS (optional)
 
 Password login works out of the box. For the Google button:
@@ -118,8 +133,8 @@ mobile/
 │   ├── api/               # fetch client, SSE, per-resource API modules
 │   ├── components/        # screens' building blocks + ui/ primitives
 │   ├── hooks/             # react-query hooks per resource
-│   ├── stores/            # zustand: session (SecureStore), toasts
-│   ├── lib/               # dates, colors, media, haptics, sitemap
+│   ├── stores/            # zustand: session (SecureStore), toasts, app lock
+│   ├── lib/               # dates, colors, media, haptics, biometrics, sitemap
 │   └── types/             # API contracts (mirrors api/schemas.py)
 ├── assets/                # icon, splash, fonts, images
 └── test/                  # jest setup

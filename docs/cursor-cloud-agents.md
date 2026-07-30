@@ -38,6 +38,7 @@ Password auth and Google OAuth are both supported.
 - `POST /api/auth/resend-verification/` — resend OTP (rate-limited; generic response).
 - `POST /api/auth/login/` — email/password. If the account exists but is unverified, the API returns **403** with `detail.redirect_to` / `Location: /verify-email?email=...` so the SPA must follow the server-directed page (and may refresh the OTP).
 - `POST /api/auth/login-google/` — unchanged Google ID token exchange; Google users are treated as email-verified (and can link to an existing password account with the same email).
+- `POST /api/auth/login-apple/` — Sign in with Apple identity-token exchange (`identity_token`, optional `full_name`). Verified against Apple's JWKS with `APPLE_APP_BUNDLE_ID` as the audience; same create-or-link-by-email behavior as Google. Native iOS only — the button never renders in the Expo web preview, so it cannot be manually tested in this VM (unit tests + curl error paths only).
 
 OTP codes are HMAC-hashed at rest, expire after `EMAIL_OTP_EXPIRE_MINUTES` (default 15), and attempt-limited. Without SMTP env vars the backend logs the OTP; configure `SMTP_*` + `EMAILS_FROM_EMAIL` to send real mail.
 
@@ -78,6 +79,7 @@ The admin seed also receives `SUPERUSER_GID` when set.
 
 - Separate pnpm project: `cd mobile && pnpm install` (do not mix with the root web `package.json`). Uses pnpm 10 with `node-linker=hoisted` (`mobile/.npmrc`) for Metro compatibility.
 - Testing on Linux (no Mac/simulator in the VM): run the Expo **web preview** — `cd mobile && pnpm web` (Metro dev server on port 8081, opens the same app rendered via react-native-web). Point it at the local API with the backend running; the default dev API URL is `http://localhost:8000/api`. Sign in with the seeded password users below.
+- Native-only surfaces that the web preview cannot exercise: Sign in with Apple (`expo-apple-authentication`) and the Face ID / Touch ID app lock (`expo-local-authentication`; the Account → Security toggle hides itself when no biometric hardware is enrolled, which includes web). Cover these with the Jest suites and `expo prebuild` checks instead.
 - Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test` (Jest; RNTL v14 `render`/`fireEvent` are async — `await` them). Bundling sanity: `pnpm exec expo export --platform web`; native config sanity: `pnpm exec expo prebuild --platform ios --no-install` (generates the gitignored `ios/`).
 - Real iOS builds require macOS and run in CI (`.github/workflows/MobileRelease.yaml`); do not attempt `pod install`/`xcodebuild` in the Linux VM.
 
