@@ -25,7 +25,7 @@ export function SwipeRow({
   actionWidth = DEFAULT_ACTION_WIDTH,
   canSwipeRight = true,
   dismissLabel = "Dismiss",
-  deleteLabel = "Remove"
+  deleteLabel = "Remove from list"
 }: {
   children: ReactNode;
   onDismiss?: () => void;

@@ -529,7 +529,8 @@ class MealPlanWizardPipeline:
         """Create recipes as needed and optionally plan them onto selected days.
 
         day_assignments: optional [{day, idea_id}] — defaults to zip order.
-        plan: when False, persist recipes only (ad-hoc generate); skip PlannedRecipe rows.
+        plan: when False (ad-hoc generate), persist recipes only; no
+        PlannedRecipe rows.
         """
         if session.step not in ("review", "build", "committed"):
             raise ValueError("Finish building recipes before committing.")

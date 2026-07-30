@@ -704,12 +704,7 @@ onUnmounted(() => {
                 Today
               </span>
             </p>
-            <p
-              v-if="isDayPast(day)"
-              class="mt-0.5 truncate text-[12px] text-faint"
-            >
-              Past
-            </p>
+            <p v-if="isDayPast(day)" class="mt-0.5 truncate text-[12px] text-faint">Past</p>
             <p
               v-else-if="plannedTitleFor(toDateKey(day))"
               class="mt-0.5 truncate text-[12px]"
