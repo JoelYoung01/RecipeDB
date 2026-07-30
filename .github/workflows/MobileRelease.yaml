@@ -44,6 +44,18 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Expo SDK 57's prebuilt ExpoModulesJSI resolves a Swift package that
+      # requires Swift tools 6.2, which ships with Xcode 26. The macos-15
+      # image defaults to Xcode 16.4 (Swift 6.1), so select the newest
+      # installed Xcode 26 explicitly.
+      - name: Select Xcode 26
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
       - name: Setup Node.js
         if: steps.creds.outputs.configured == 'true'
         uses: actions/setup-node@v4
