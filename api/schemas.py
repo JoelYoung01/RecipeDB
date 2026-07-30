@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, computed_field
+from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator
+
+from api.core.recipe_text import normalize_instruction_newlines
 
 
 class HealthResponse(BaseModel):
@@ -118,6 +120,11 @@ class RecipeSlim(BaseModel):
     prep_time: float | None = None
     cover_image_id: int | None = None
 
+    @field_validator("instructions")
+    @classmethod
+    def _normalize_instructions(cls, value: str) -> str:
+        return normalize_instruction_newlines(value)
+
 
 class RecipeDetail(RecipeSlim):
     created_by: "UserResponse"
@@ -156,6 +163,11 @@ class RecipeCreate(BaseModel):
     prep_time: float | None = None
     cover_image_id: int | None = None
 
+    @field_validator("instructions")
+    @classmethod
+    def _normalize_instructions(cls, value: str) -> str:
+        return normalize_instruction_newlines(value)
+
 
 class RecipeUpdate(BaseModel):
     name: str | None = None
@@ -166,6 +178,13 @@ class RecipeUpdate(BaseModel):
     public: bool | None = None
     prep_time: float | None = None
     cover_image_id: int | None = None
+
+    @field_validator("instructions")
+    @classmethod
+    def _normalize_instructions(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_instruction_newlines(value)
 
 
 class TimeFrameRequest(BaseModel):
@@ -305,6 +324,11 @@ class MealPlanWizardBuiltRecipe(BaseModel):
     source: str = "generated"
     existing_recipe_id: int | None = None
     created_recipe_id: int | None = None
+
+    @field_validator("instructions")
+    @classmethod
+    def _normalize_instructions(cls, value: str) -> str:
+        return normalize_instruction_newlines(value)
 
 
 class MealPlanWizardProgressEvent(BaseModel):
