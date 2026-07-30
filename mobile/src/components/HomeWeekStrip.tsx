@@ -12,16 +12,23 @@ const SNAP_MS = 280;
 /**
  * Swipeable 3-panel week selector (prev / current / next) with planned-day
  * dots — port of the web HomeWeekStrip.
+ *
+ * Claims the gesture only after a clear horizontal drag so the parent
+ * ScrollView keeps vertical pans; once claimed, refuses termination so the
+ * page doesn't scroll while flipping weeks.
  */
 export function HomeWeekStrip({
   plannedKeys,
   onWeekChange,
-  onSelectDay
+  onSelectDay,
+  onHorizontalDragChange
 }: {
   plannedKeys: Set<string>;
   /** Fired with the center week, plus a range covering prev/current/next for dots. */
   onWeekChange: (weekStart: Date, weekDays: Date[], rangeStart: Date, rangeEnd: Date) => void;
   onSelectDay: (date: Date) => void;
+  /** Optional: parent can disable ScrollView while a horizontal week swipe is active. */
+  onHorizontalDragChange?: (dragging: boolean) => void;
 }) {
   const today = useMemo(() => startOfDay(), []);
   const thisWeekStart = useMemo(() => startOfWeekMonday(today), [today]);
@@ -33,6 +40,10 @@ export function HomeWeekStrip({
   const widthRef = useRef(0);
   const animatingRef = useRef(false);
   const dragStart = useRef(0);
+  const dragChangeRef = useRef(onHorizontalDragChange);
+  useEffect(() => {
+    dragChangeRef.current = onHorizontalDragChange;
+  }, [onHorizontalDragChange]);
 
   const daysForOffset = useCallback(
     (offset: number): Date[] => {
@@ -109,20 +120,28 @@ export function HomeWeekStrip({
       PanResponder.create({
         onMoveShouldSetPanResponder: (_e, g) =>
           !animatingRef.current && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+        onMoveShouldSetPanResponderCapture: (_e, g) =>
+          !animatingRef.current && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+        onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           dragStart.current = -widthRef.current;
+          dragChangeRef.current?.(true);
         },
         onPanResponderMove: (_e, g) => {
           translateX.setValue(dragStart.current + g.dx);
         },
         onPanResponderRelease: (_e, g) => {
+          dragChangeRef.current?.(false);
           const w = widthRef.current || 1;
           const commit =
             Math.abs(g.dx) >= w * SWIPE_THRESHOLD_RATIO || Math.abs(g.vx) >= SWIPE_VELOCITY;
           if (commit) snapToRef.current(g.dx < 0 ? 1 : -1);
           else snapToRef.current(0);
         },
-        onPanResponderTerminate: () => snapToRef.current(0)
+        onPanResponderTerminate: () => {
+          dragChangeRef.current?.(false);
+          snapToRef.current(0);
+        }
       }),
     [translateX]
   );

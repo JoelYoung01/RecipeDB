@@ -8,7 +8,8 @@ import {
   ChevronRight,
   Link2,
   PenLine,
-  ShoppingCart
+  ShoppingCart,
+  Sparkles
 } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { Sheet } from "./ui/sheet";
@@ -17,6 +18,7 @@ import { Text } from "./ui/text";
 const ACTION_ICONS: Record<AddMenuActionId, typeof Link2> = {
   "import-link": Link2,
   "import-photo": Camera,
+  "recipe-generate": Sparkles,
   "recipe-scratch": PenLine,
   "plan-meal": CalendarPlus,
   "shop-item": ShoppingCart

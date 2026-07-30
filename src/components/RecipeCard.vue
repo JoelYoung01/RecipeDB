@@ -44,9 +44,11 @@ function open() {
     "
     @click="open"
   >
+    <!-- draggable=false keeps native image drag from hijacking swipe gestures -->
     <img
       :src="image"
       :alt="recipe.name"
+      draggable="false"
       :class="
         cn('shrink-0 object-cover', size === 'sm' ? 'size-14 rounded-[4px]' : 'size-20 rounded-sm')
       "

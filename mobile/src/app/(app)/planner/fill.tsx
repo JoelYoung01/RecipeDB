@@ -17,7 +17,7 @@ import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { WizardPrefsFields } from "@/components/wizard/WizardPrefsFields";
 import { WizardProgressPanel } from "@/components/wizard/WizardProgressPanel";
-import { syncAfterPlanMutation } from "@/hooks/sync";
+import { syncAfterPlanMutation, syncAfterRecipeMutation } from "@/hooks/sync";
 import { useWizardPrefs } from "@/hooks/use-wizard-prefs";
 import { colors } from "@/lib/colors";
 import {
@@ -46,27 +46,33 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review";
-const STEP_ORDER: UiStep[] = ["days", "prefs", "ideate", "select", "build", "review"];
 
 export default function MealPlanWizardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ days?: string }>();
+  const params = useLocalSearchParams<{ days?: string; mode?: string }>();
   const { prefs: savedPrefs, savePrefs, loaded: prefsLoaded } = useWizardPrefs();
 
   const today = useMemo(() => startOfDay(), []);
+  /** Ad-hoc generate from the + menu — one recipe, never assigned to a night. */
+  const recipeMode = params.mode === "recipe";
+  const STEP_ORDER: UiStep[] = recipeMode
+    ? ["prefs", "ideate", "select", "build", "review"]
+    : ["days", "prefs", "ideate", "select", "build", "review"];
 
-  const [uiStep, setUiStep] = useState<UiStep>("days");
+  const [uiStep, setUiStep] = useState<UiStep>(recipeMode ? "prefs" : "days");
   const [session, setSession] = useState<MealPlanWizardSession | null>(null);
   const [localPrefs, setLocalPrefs] = useState(emptyWizardPrefs());
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState<string[]>(() =>
+    recipeMode ? [toDateKey(today)] : []
+  );
   const [selectedIdeaIds, setSelectedIdeaIds] = useState<string[]>([]);
   const [liveEvents, setLiveEvents] = useState<MealPlanWizardProgressEvent[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [refineText, setRefineText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [loadingDays, setLoadingDays] = useState(true);
+  const [loadingDays, setLoadingDays] = useState(!recipeMode);
   const [plannedTitles, setPlannedTitles] = useState<Record<string, string>>({});
   const [expandedDays, setExpandedDays] = useState<string[]>([]);
   const [regenIdeaIds, setRegenIdeaIds] = useState<string[]>([]);
@@ -100,10 +106,13 @@ export default function MealPlanWizardScreen() {
     setLocalPrefs({ ...savedPrefs });
   }
 
+  const todayKey = toDateKey(today);
+  const isDayPast = (key: string) => key < todayKey;
+
   const selectCount = session?.select_count ?? selectedDays.length;
   const canContinueDays = selectedDays.length > 0;
   const skippedCount = weekDayKeys.length - selectedDays.length;
-  const openNightKeys = weekDayKeys.filter((key) => !plannedTitles[key]);
+  const openNightKeys = weekDayKeys.filter((key) => !plannedTitles[key] && !isDayPast(key));
   const alreadyPlannedCount = Object.keys(plannedTitles).length;
   const selectionFull = selectedIdeaIds.length >= selectCount && selectCount > 0;
   const canContinueSelect = selectedIdeaIds.length === selectCount && selectCount > 0;
@@ -128,17 +137,28 @@ export default function MealPlanWizardScreen() {
     return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
   }, [weekDays, today]);
 
-  const headerTitle = {
-    days: "Which nights?",
-    prefs: "Set the vibe",
-    ideate: "Cooking up ideas",
-    select: "Pick your dinners",
-    build: "Building recipes",
-    review: "Lock the plan"
-  }[uiStep];
+  const headerTitle = recipeMode
+    ? {
+        days: "Generate a recipe",
+        prefs: "What are you craving?",
+        ideate: "Cooking up ideas",
+        select: "Pick one idea",
+        build: "Building your recipe",
+        review: "Save your recipe"
+      }[uiStep]
+    : {
+        days: "Which nights?",
+        prefs: "Set the vibe",
+        ideate: "Cooking up ideas",
+        select: "Pick your dinners",
+        build: "Building recipes",
+        review: "Lock the plan"
+      }[uiStep];
 
   // ---- bootstrap: load existing dinners for the week, preselect open nights ----
   useEffect(() => {
+    // recipeMode seeds selectedDays / loadingDays in useState (placeholder day only).
+    if (recipeMode) return;
     const keys = weekDays.map(toDateKey);
     fetchPlansBetween(weekDays[0]!, endOfDay(weekDays[6]!))
       .then((plans) => {
@@ -152,11 +172,12 @@ export default function MealPlanWizardScreen() {
         const preferred = daysFromQuery.length
           ? [...new Set(daysFromQuery.filter((k) => allowed.has(k)))].sort()
           : [...keys];
-        setSelectedDays(preferred.filter((key) => !titles[key]));
+        setSelectedDays(preferred.filter((key) => !titles[key] && !isDayPast(key)));
       })
       .catch((er) => {
         toast.fromError(er, "Couldn’t load existing dinners for this week.");
-        setSelectedDays(daysFromQuery.length ? daysFromQuery : [...keys]);
+        const fallback = daysFromQuery.length ? daysFromQuery : [...keys];
+        setSelectedDays(fallback.filter((key) => !isDayPast(key)));
       })
       .finally(() => setLoadingDays(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,11 +187,11 @@ export default function MealPlanWizardScreen() {
 
   const clampDaysToWeek = (keys: string[]) => {
     const allowed = new Set(weekDayKeys);
-    return [...new Set(keys.filter((k) => allowed.has(k)))].sort();
+    return [...new Set(keys.filter((k) => allowed.has(k) && !isDayPast(k)))].sort();
   };
 
   const toggleDay = (key: string) => {
-    if (!weekDayKeys.includes(key)) return;
+    if (!weekDayKeys.includes(key) || isDayPast(key)) return;
     tapHaptic();
     setSelectedDays((days) =>
       days.includes(key) ? days.filter((d) => d !== key) : clampDaysToWeek([...days, key])
@@ -378,16 +399,20 @@ export default function MealPlanWizardScreen() {
     }
   };
 
+  const leaveWizard = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(recipeMode ? "/recipes" : "/planner");
+  };
+
   const goBack = async () => {
     tapHaptic();
-    if (uiStep === "days") {
-      if (router.canGoBack()) router.back();
-      else router.replace("/planner");
+    if (uiStep === "days" || (recipeMode && uiStep === "prefs")) {
+      leaveWizard();
       return;
     }
     const previous: Record<UiStep, UiStep> = {
       days: "days",
-      prefs: "days",
+      prefs: recipeMode ? "prefs" : "days",
       ideate: "prefs",
       select: "prefs",
       build: "select",
@@ -404,13 +429,25 @@ export default function MealPlanWizardScreen() {
     setError("");
     setBusy(true);
     try {
-      await commitWizard(current.id);
+      await commitWizard(current.id, { plan: !recipeMode });
+      if (recipeMode) {
+        const refreshed = await fetchWizardSession(current.id);
+        setSession(refreshed);
+        sessionRef.current = refreshed;
+        const recipeId = refreshed.built_recipes[0]?.created_recipe_id;
+        syncAfterRecipeMutation();
+        toast.success("Recipe saved.");
+        if (recipeId != null) router.replace(`/recipes/${recipeId}` as never);
+        else router.replace("/recipes");
+        return;
+      }
       syncAfterPlanMutation({ recipesChanged: true });
       toast.success("Meal plan saved.");
       router.replace("/planner");
     } catch (e) {
-      setError(getErrorMessage(e, "Could not save plan"));
-      toast.fromError(e, "Could not save plan");
+      const msg = recipeMode ? "Could not save recipe" : "Could not save plan";
+      setError(getErrorMessage(e, msg));
+      toast.fromError(e, msg);
     } finally {
       setBusy(false);
     }
@@ -425,8 +462,6 @@ export default function MealPlanWizardScreen() {
     ]
       .filter(Boolean)
       .join(" ");
-
-  const todayKey = toDateKey(today);
 
   return (
     <KeyboardAvoidingView
@@ -453,7 +488,7 @@ export default function MealPlanWizardScreen() {
           </Pressable>
           <View className="min-w-0 flex-1">
             <Text className="font-sans-bold text-[11px] uppercase tracking-[1px] text-success-soft">
-              Meal plan wizard
+              {recipeMode ? "Recipe wizard" : "Meal plan wizard"}
             </Text>
             <Text className="font-sans-bold text-lg" numberOfLines={1}>
               {headerTitle}
@@ -513,44 +548,52 @@ export default function MealPlanWizardScreen() {
                 const key = toDateKey(day);
                 const selected = selectedDays.includes(key);
                 const plannedTitle = plannedTitles[key] ?? null;
+                const past = isDayPast(key);
                 return (
                   <Pressable
                     key={key}
                     accessibilityRole="button"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{ selected, disabled: past }}
+                    disabled={past}
                     onPress={() => toggleDay(key)}
                     className={
-                      selected
-                        ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/15 px-3 py-3"
-                        : "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-70"
+                      past
+                        ? "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-40"
+                        : selected
+                          ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/15 px-3 py-3"
+                          : "flex-row items-center gap-3 border-b border-border px-3 py-3 opacity-70"
                     }
                     style={i === 6 ? { borderBottomWidth: 0 } : undefined}
                   >
                     <View
                       className={
-                        selected
+                        selected && !past
                           ? "h-5 w-5 items-center justify-center rounded-md border border-primary bg-primary"
                           : "h-5 w-5 items-center justify-center rounded-md border border-border bg-secondary/40"
                       }
                     >
-                      {selected ? <Check size={13} color={colors.foreground} strokeWidth={3} /> : null}
+                      {selected && !past ? (
+                        <Check size={13} color={colors.foreground} strokeWidth={3} />
+                      ) : null}
                     </View>
                     <View className="min-w-0 flex-1">
                       <Text
                         className={
-                          selected
+                          selected && !past
                             ? "font-sans-semibold text-sm text-foreground"
                             : "font-sans-semibold text-sm text-muted-foreground"
                         }
                       >
                         {DAY_LABELS[i]} · {day.getDate()}
-                        {key === todayKey ? (
+                        {key === todayKey && !past ? (
                           <Text className="font-sans-bold text-[11px] uppercase text-[#22c55e]">
                             {"  Today"}
                           </Text>
                         ) : null}
                       </Text>
-                      {plannedTitle ? (
+                      {past ? (
+                        <Text className="mt-0.5 text-[12px] text-faint">Past</Text>
+                      ) : plannedTitle ? (
                         <Text
                           className={
                             selected
@@ -569,19 +612,33 @@ export default function MealPlanWizardScreen() {
                     </View>
                     <View
                       className={
-                        selected ? "rounded-full bg-[#22c55e]/20 px-2 py-0.5" : "rounded-full bg-secondary px-2 py-0.5"
+                        past
+                          ? "rounded-full bg-secondary px-2 py-0.5"
+                          : selected
+                            ? "rounded-full bg-[#22c55e]/20 px-2 py-0.5"
+                            : "rounded-full bg-secondary px-2 py-0.5"
                       }
                     >
                       <Text
                         className={
-                          selected
-                            ? "font-sans-semibold text-[11px] text-success-soft"
-                            : plannedTitle
-                              ? "font-sans-semibold text-[11px] text-muted-foreground"
-                              : "font-sans-semibold text-[11px] text-faint"
+                          past
+                            ? "font-sans-semibold text-[11px] text-faint"
+                            : selected
+                              ? "font-sans-semibold text-[11px] text-success-soft"
+                              : plannedTitle
+                                ? "font-sans-semibold text-[11px] text-muted-foreground"
+                                : "font-sans-semibold text-[11px] text-faint"
                         }
                       >
-                        {selected ? (plannedTitle ? "Replan" : "Plan") : plannedTitle ? "Kept" : "Skip"}
+                        {past
+                          ? "Past"
+                          : selected
+                            ? plannedTitle
+                              ? "Replan"
+                              : "Plan"
+                            : plannedTitle
+                              ? "Kept"
+                              : "Skip"}
                       </Text>
                     </View>
                   </Pressable>
@@ -629,7 +686,7 @@ export default function MealPlanWizardScreen() {
                 variant="outline"
                 className="flex-1"
                 disabled={busy}
-                onPress={() => void rewindTo("days")}
+                onPress={() => (recipeMode ? leaveWizard() : void rewindTo("days"))}
               >
                 Back
               </Button>
@@ -799,7 +856,9 @@ export default function MealPlanWizardScreen() {
         {uiStep === "review" ? (
           <View className="mt-5 gap-4">
             <Text className="text-sm text-muted-foreground">
-              Here’s your week. Expand a night for the full recipe, or mark dinners to regenerate.
+              {recipeMode
+                ? "Here’s your recipe. Expand for the full write-up, or mark it to regenerate."
+                : "Here’s your week. Expand a night for the full recipe, or mark dinners to regenerate."}
             </Text>
 
             <View className="gap-2">
@@ -976,7 +1035,7 @@ export default function MealPlanWizardScreen() {
                 Back
               </Button>
               <Button className="flex-1" disabled={busy} onPress={() => void commitPlan()}>
-                {busy ? "Saving…" : "Save to planner"}
+                {busy ? "Saving…" : recipeMode ? "Save recipe" : "Save to planner"}
               </Button>
             </View>
           </View>

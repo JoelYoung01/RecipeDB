@@ -7,7 +7,7 @@ import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
 import { addDays, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import { usePlannerStore } from "@/stores/planner";
-import { syncAfterPlanMutation } from "@/stores/sync";
+import { syncAfterPlanMutation, syncAfterRecipeMutation } from "@/stores/sync";
 import {
   emptyWizardPrefs,
   type MealPlanWizardBuiltRecipe,
@@ -17,7 +17,7 @@ import {
 } from "@/types";
 import { get, getErrorMessage, patch, post, postSse, toast } from "@/utils";
 import { ArrowLeft, Check, ChevronDown, LoaderCircle, RefreshCw, Sparkles } from "@lucide/vue";
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
@@ -28,6 +28,9 @@ const { prefs: savedPrefs, save: persistPrefs } = useMealPlanWizardPrefs();
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review";
+
+/** Ad-hoc generate from the + menu — one recipe, never assigned to a night. */
+const recipeMode = computed(() => route.query.mode === "recipe");
 
 const uiStep = ref<UiStep>("days");
 const session = ref<MealPlanWizardSession | null>(null);
@@ -63,7 +66,16 @@ const canContinueDays = computed(() => selectedDays.value.length > 0);
 
 const skippedCount = computed(() => weekDayKeys.value.length - selectedDays.value.length);
 
-const openNightKeys = computed(() => weekDayKeys.value.filter((key) => !plannedTitles.value[key]));
+const todayKey = computed(() => toDateKey(today));
+
+function isDayPast(dayOrKey: Date | string): boolean {
+  const key = typeof dayOrKey === "string" ? dayOrKey : toDateKey(dayOrKey);
+  return key < todayKey.value;
+}
+
+const openNightKeys = computed(() =>
+  weekDayKeys.value.filter((key) => !plannedTitles.value[key] && !isDayPast(key))
+);
 
 const alreadyPlannedCount = computed(() => Object.keys(plannedTitles.value).length);
 
@@ -111,22 +123,30 @@ function isIdeaDisabled(id: string) {
   return selectionFull.value && !isIdeaSelected(id);
 }
 
-const STEP_ORDER: UiStep[] = ["days", "prefs", "ideate", "select", "build", "review"];
+const STEP_ORDER = computed<UiStep[]>(() =>
+  recipeMode.value
+    ? ["prefs", "ideate", "select", "build", "review"]
+    : ["days", "prefs", "ideate", "select", "build", "review"]
+);
 
-const stepIndex = computed(() => STEP_ORDER.indexOf(uiStep.value));
+const stepIndex = computed(() => STEP_ORDER.value.indexOf(uiStep.value));
 
 function previousStep(step: UiStep): UiStep {
-  if (step === "prefs") return "days";
+  if (step === "prefs") return recipeMode.value ? "prefs" : "days";
   if (step === "ideate") return "prefs";
   if (step === "select") return "prefs";
   if (step === "build") return "select";
   if (step === "review") return "select";
-  return "days";
+  return recipeMode.value ? "prefs" : "days";
+}
+
+async function leaveWizard() {
+  router.push(recipeMode.value ? paths.recipes : paths.planner);
 }
 
 async function goBack() {
-  if (uiStep.value === "days") {
-    router.push(paths.planner);
+  if (uiStep.value === "days" || (recipeMode.value && uiStep.value === "prefs")) {
+    await leaveWizard();
     return;
   }
   const target = previousStep(uiStep.value);
@@ -137,6 +157,22 @@ async function goBack() {
 }
 
 const headerTitle = computed(() => {
+  if (recipeMode.value) {
+    switch (uiStep.value) {
+      case "prefs":
+        return "What are you craving?";
+      case "ideate":
+        return "Cooking up ideas";
+      case "select":
+        return "Pick one idea";
+      case "build":
+        return "Building your recipe";
+      case "review":
+        return "Save your recipe";
+      default:
+        return "Generate a recipe";
+    }
+  }
   switch (uiStep.value) {
     case "days":
       return "Which nights?";
@@ -177,7 +213,7 @@ function weekFromSeed(seed: Date): Date[] {
 
 function clampDaysToWeek(keys: string[], weekKeys: string[]): string[] {
   const allowed = new Set(weekKeys);
-  return [...new Set(keys.filter((k) => allowed.has(k)))].sort();
+  return [...new Set(keys.filter((k) => allowed.has(k) && !isDayPast(k)))].sort();
 }
 
 function isDaySelected(key: string) {
@@ -189,8 +225,8 @@ function plannedTitleFor(key: string): string | null {
 }
 
 function toggleDay(key: string) {
-  // Only the 7 nights in this wizard's week can be toggled.
-  if (!weekKeySet.value.has(key)) return;
+  // Only the 7 nights in this wizard's week can be toggled; past days stay locked.
+  if (!weekKeySet.value.has(key) || isDayPast(key)) return;
   if (isDaySelected(key)) {
     selectedDays.value = selectedDays.value.filter((d) => d !== key);
   } else {
@@ -485,15 +521,32 @@ async function commitPlan() {
   error.value = "";
   busy.value = true;
   try {
-    // Zip order: day[i] ↔ built_recipes[i]
-    await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {});
+    // Zip order: day[i] ↔ built_recipes[i]. recipeMode skips PlannedRecipe rows.
+    await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {
+      plan: !recipeMode.value
+    });
+    if (recipeMode.value) {
+      await refreshSession();
+      const recipeId = session.value?.built_recipes[0]?.created_recipe_id;
+      syncAfterRecipeMutation();
+      toast.success("Recipe saved.");
+      if (recipeId != null) {
+        router.push(paths.recipeDetail(recipeId));
+      } else {
+        router.push(paths.recipes);
+      }
+      return;
+    }
     // Wizard creates recipes + planned meals; grocery derives from the plan.
     syncAfterPlanMutation({ recipesChanged: true });
     toast.success("Meal plan saved.");
     router.push(paths.planner);
   } catch (e) {
-    error.value = getErrorMessage(e, "Could not save plan");
-    toast.fromError(e, "Could not save plan");
+    error.value = getErrorMessage(
+      e,
+      recipeMode.value ? "Could not save recipe" : "Could not save plan"
+    );
+    toast.fromError(e, recipeMode.value ? "Could not save recipe" : "Could not save plan");
   } finally {
     busy.value = false;
   }
@@ -501,6 +554,16 @@ async function commitPlan() {
 
 onMounted(async () => {
   localPrefs.value = { ...savedPrefs.value };
+
+  if (recipeMode.value) {
+    // Placeholder day satisfies the session quota (select_count = 1); never planned.
+    weekDays.value = weekFromSeed(today);
+    selectedDays.value = [toDateKey(today)];
+    loadingDays.value = false;
+    uiStep.value = "prefs";
+    return;
+  }
+
   const fromQuery = parseDaysFromQuery();
   // Scope the wizard to one week: prefer the week of the first queried day.
   const seed = fromQuery.length ? parseDateKey(fromQuery[0]!) ?? today : today;
@@ -511,10 +574,10 @@ onMounted(async () => {
   plannedTitles.value = await loadPlannedForWeek(weekDays.value);
   loadingDays.value = false;
 
-  // Auto-skip nights that already have a dinner. Prefer the caller's day list
-  // (fill-gaps / plan-week / autofill), then drop anything already planned.
+  // Auto-skip nights that already have a dinner or are in the past. Prefer the
+  // caller's day list (fill-gaps / plan-week / autofill), then drop planned/past.
   const preferred = fromQuery.length ? clampDaysToWeek(fromQuery, keys) : [...keys];
-  selectedDays.value = preferred.filter((key) => !plannedTitles.value[key]);
+  selectedDays.value = preferred.filter((key) => !plannedTitles.value[key] && !isDayPast(key));
 });
 
 onUnmounted(() => {
@@ -535,7 +598,7 @@ onUnmounted(() => {
       </button>
       <div class="min-w-0 flex-1">
         <p class="text-[11px] font-bold uppercase tracking-[0.08em] text-success-soft">
-          Meal plan wizard
+          {{ recipeMode ? "Recipe wizard" : "Meal plan wizard" }}
         </p>
         <h1 class="truncate text-lg font-bold">{{ headerTitle }}</h1>
       </div>
@@ -607,10 +670,14 @@ onUnmounted(() => {
           type="button"
           class="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-b-0"
           :class="
-            isDaySelected(toDateKey(day))
-              ? 'bg-[rgba(34,197,94,0.14)]'
-              : 'bg-transparent opacity-70'
+            isDayPast(day)
+              ? 'cursor-not-allowed bg-transparent opacity-40'
+              : isDaySelected(toDateKey(day))
+                ? 'bg-[rgba(34,197,94,0.14)]'
+                : 'bg-transparent opacity-70'
           "
+          :disabled="isDayPast(day)"
+          :aria-disabled="isDayPast(day) || undefined"
           :aria-pressed="isDaySelected(toDateKey(day))"
           @click="toggleDay(toDateKey(day))"
         >
@@ -631,14 +698,15 @@ onUnmounted(() => {
             >
               {{ DAY_LABELS[i] }} · {{ day.getDate() }}
               <span
-                v-if="toDateKey(day) === toDateKey(today)"
+                v-if="toDateKey(day) === todayKey"
                 class="ml-1 text-[11px] font-bold uppercase tracking-wide text-[#22c55e]"
               >
                 Today
               </span>
             </p>
+            <p v-if="isDayPast(day)" class="mt-0.5 truncate text-[12px] text-faint">Past</p>
             <p
-              v-if="plannedTitleFor(toDateKey(day))"
+              v-else-if="plannedTitleFor(toDateKey(day))"
               class="mt-0.5 truncate text-[12px]"
               :class="isDaySelected(toDateKey(day)) ? 'text-muted-foreground' : 'text-[#86efac]/80'"
             >
@@ -655,21 +723,25 @@ onUnmounted(() => {
           <span
             class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
             :class="
-              isDaySelected(toDateKey(day))
-                ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
-                : plannedTitleFor(toDateKey(day))
-                  ? 'bg-secondary text-muted-foreground'
-                  : 'bg-secondary text-faint'
+              isDayPast(day)
+                ? 'bg-secondary text-faint'
+                : isDaySelected(toDateKey(day))
+                  ? 'bg-[rgba(34,197,94,0.18)] text-[#86efac]'
+                  : plannedTitleFor(toDateKey(day))
+                    ? 'bg-secondary text-muted-foreground'
+                    : 'bg-secondary text-faint'
             "
           >
             {{
-              isDaySelected(toDateKey(day))
-                ? plannedTitleFor(toDateKey(day))
-                  ? "Replan"
-                  : "Plan"
-                : plannedTitleFor(toDateKey(day))
-                  ? "Kept"
-                  : "Skip"
+              isDayPast(day)
+                ? "Past"
+                : isDaySelected(toDateKey(day))
+                  ? plannedTitleFor(toDateKey(day))
+                    ? "Replan"
+                    : "Plan"
+                  : plannedTitleFor(toDateKey(day))
+                    ? "Kept"
+                    : "Skip"
             }}
           </span>
         </button>
@@ -707,7 +779,13 @@ onUnmounted(() => {
       </p>
       <WizardPrefsFields v-model="localPrefs" />
       <div class="mt-5 grid grid-cols-2 gap-2">
-        <Button variant="outline" :disabled="busy" @click="rewindTo('days')">Back</Button>
+        <Button
+          variant="outline"
+          :disabled="busy"
+          @click="recipeMode ? leaveWizard() : rewindTo('days')"
+        >
+          Back
+        </Button>
         <Button class="gap-1.5" :disabled="busy" @click="runIdeate()">
           <Sparkles class="size-3.5" />
           Generate ideas
@@ -828,7 +906,11 @@ onUnmounted(() => {
     <!-- REVIEW -->
     <section v-else-if="uiStep === 'review'" class="mt-5 space-y-4">
       <p class="text-sm text-muted-foreground">
-        Here’s your week. Expand a night for the full recipe, or mark dinners to regenerate.
+        {{
+          recipeMode
+            ? "Here’s your recipe. Expand for the full write-up, or mark it to regenerate."
+            : "Here’s your week. Expand a night for the full recipe, or mark dinners to regenerate."
+        }}
       </p>
 
       <div class="space-y-2">
@@ -962,7 +1044,9 @@ onUnmounted(() => {
 
       <div class="grid grid-cols-2 gap-2">
         <Button variant="outline" :disabled="busy" @click="rewindTo('select')">Back</Button>
-        <Button :disabled="busy" @click="commitPlan">Save to planner</Button>
+        <Button :disabled="busy" @click="commitPlan">
+          {{ recipeMode ? "Save recipe" : "Save to planner" }}
+        </Button>
       </div>
     </section>
   </div>

@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import SwipeRow from "@/components/grocery/SwipeRow.vue";
+import SwipeRow from "@/components/SwipeRow.vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { paths } from "@/sitemap";
 import { useGroceryStore } from "@/stores/grocery";
 import type { GroceryItem } from "@/types";
-import { EyeOff, ShoppingCart } from "@lucide/vue";
-import { computed, onActivated, onMounted, ref } from "vue";
+import { Eye, EyeOff, ShoppingCart, Trash2 } from "@lucide/vue";
+import { computed, onActivated, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
 defineOptions({ name: "ShoppingListView" });
+
+/** How long a crossed-off item stays visible so the user can undo. */
+const UNDO_MS = 2000;
 
 const router = useRouter();
 const groceryStore = useGroceryStore();
 
 const showDismissed = ref(false);
+/** Keys waiting out the undo window before a real dismiss is persisted. */
+const pendingHideKeys = ref<Set<string>>(new Set());
+const hideTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const visibleItems = computed(() => {
   if (showDismissed.value) {
@@ -57,6 +63,47 @@ const showSkeleton = computed(
   () => groceryStore.loading && groceryStore.items.length === 0 && !groceryStore.error
 );
 
+function isCrossed(item: GroceryItem) {
+  return item.dismissed || pendingHideKeys.value.has(item.key);
+}
+
+function clearPending(key: string) {
+  const timer = hideTimers.get(key);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    hideTimers.delete(key);
+  }
+  if (pendingHideKeys.value.has(key)) {
+    const next = new Set(pendingHideKeys.value);
+    next.delete(key);
+    pendingHideKeys.value = next;
+  }
+}
+
+function queueHide(item: GroceryItem) {
+  if (item.dismissed || pendingHideKeys.value.has(item.key)) return;
+  pendingHideKeys.value = new Set(pendingHideKeys.value).add(item.key);
+  const timer = setTimeout(() => {
+    hideTimers.delete(item.key);
+    pendingHideKeys.value = new Set([...pendingHideKeys.value].filter((key) => key !== item.key));
+    void groceryStore.setStatus(item, "dismissed");
+  }, UNDO_MS);
+  hideTimers.set(item.key, timer);
+}
+
+/** Whole-row tap: cross off with a short undo window, or restore. */
+function onRowTap(item: GroceryItem) {
+  if (pendingHideKeys.value.has(item.key)) {
+    clearPending(item.key);
+    return;
+  }
+  if (item.dismissed) {
+    void groceryStore.setStatus(item, null);
+    return;
+  }
+  queueHide(item);
+}
+
 async function load(force = false) {
   try {
     await groceryStore.ensureLoaded({ force });
@@ -65,19 +112,8 @@ async function load(force = false) {
   }
 }
 
-function onCheck(item: GroceryItem, checked: boolean | "indeterminate") {
-  if (checked === true) {
-    void groceryStore.setStatus(item, "dismissed");
-  } else {
-    void groceryStore.setStatus(item, null);
-  }
-}
-
-function onDismiss(item: GroceryItem) {
-  void groceryStore.setStatus(item, "dismissed");
-}
-
 function onDelete(item: GroceryItem) {
+  clearPending(item.key);
   void groceryStore.setStatus(item, "deleted");
 }
 
@@ -92,6 +128,10 @@ function onViewRecipe(item: GroceryItem) {
 
 onMounted(() => load());
 onActivated(() => load());
+onUnmounted(() => {
+  for (const timer of hideTimers.values()) clearTimeout(timer);
+  hideTimers.clear();
+});
 </script>
 
 <template>
@@ -195,28 +235,59 @@ onActivated(() => load());
           {{ group.category }}
         </h2>
         <div class="flex flex-col gap-1.5">
-          <SwipeRow
-            v-for="item in group.items"
-            :key="item.key"
-            @dismiss="onDismiss(item)"
-            @delete="onDelete(item)"
-            @view="onViewRecipe(item)"
-          >
-            <div
-              class="flex items-start gap-3 border border-border px-3 py-3"
-              :class="item.dismissed ? 'opacity-55' : ''"
+          <SwipeRow v-for="item in group.items" :key="item.key" @swipe-right="queueHide(item)">
+            <template #hint>
+              <div class="flex w-28 items-center bg-[rgba(34,197,94,0.22)] pl-4">
+                <span class="text-xs font-semibold text-[#4ade80]">Dismiss</span>
+              </div>
+            </template>
+
+            <template #actions="{ open, close }">
+              <button
+                type="button"
+                class="flex flex-1 items-center justify-center bg-[#3f463f] text-foreground transition-opacity active:opacity-80"
+                :tabindex="open ? 0 : -1"
+                aria-label="View recipe"
+                @click.stop="
+                  close();
+                  onViewRecipe(item);
+                "
+              >
+                <Eye class="size-5" :stroke-width="2" />
+              </button>
+              <button
+                type="button"
+                class="flex flex-1 items-center justify-center bg-[#dc2626] text-primary-foreground transition-opacity active:opacity-80"
+                :tabindex="open ? 0 : -1"
+                aria-label="Remove from list"
+                @click.stop="
+                  close();
+                  onDelete(item);
+                "
+              >
+                <Trash2 class="size-5" :stroke-width="2" />
+              </button>
+            </template>
+
+            <button
+              type="button"
+              class="flex w-full items-start gap-3 border border-border px-3 py-3 text-left transition-opacity"
+              :class="isCrossed(item) ? 'opacity-55' : ''"
+              :aria-pressed="isCrossed(item)"
+              :aria-label="isCrossed(item) ? `Restore ${item.name}` : `Cross off ${item.name}`"
+              @click="onRowTap(item)"
             >
               <Checkbox
-                class="mt-0.5"
-                :model-value="item.dismissed"
-                :aria-label="`Mark ${item.name} done`"
-                @update:model-value="(v) => onCheck(item, v)"
+                class="pointer-events-none mt-0.5"
+                tabindex="-1"
+                :model-value="isCrossed(item)"
+                :aria-hidden="true"
               />
               <div class="min-w-0 flex-1">
                 <div class="flex items-baseline justify-between gap-2">
                   <p
                     class="text-sm font-semibold leading-snug"
-                    :class="item.dismissed ? 'line-through text-muted-foreground' : ''"
+                    :class="isCrossed(item) ? 'line-through text-muted-foreground' : ''"
                   >
                     {{ item.name }}
                   </p>
@@ -231,7 +302,7 @@ onActivated(() => load());
                   {{ item.recipe_titles }}
                 </p>
               </div>
-            </div>
+            </button>
           </SwipeRow>
         </div>
       </section>

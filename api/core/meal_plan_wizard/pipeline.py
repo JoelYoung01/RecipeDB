@@ -25,6 +25,7 @@ from api.core.meal_plan_wizard.session_store import (
     WizardSession,
     WizardStep,
 )
+from api.core.recipe_text import normalize_instruction_newlines
 from api.models import Ingredient, PlannedRecipe, Recipe, User
 
 
@@ -369,7 +370,9 @@ class MealPlanWizardPipeline:
                 '"source":"generated","existing_recipe_id":null'
                 "}]}\n"
                 'Use source "library" and set existing_recipe_id when reusing '
-                'a library recipe; otherwise source "generated" and null id.'
+                'a library recipe; otherwise source "generated" and null id.\n'
+                "For instructions: use numbered steps (1. 2. 3. …) with a real "
+                "newline (\\n) between each step — never a single mashed paragraph."
             )
             user_prompt = (
                 "BUILD_RECIPES for these selected ideas:\n"
@@ -378,7 +381,9 @@ class MealPlanWizardPipeline:
                 + self._prefs_block(session.prefs)
                 + "\n\nUser library (may reuse by id later):\n"
                 + json.dumps(library_preview)
-                + "\n\nReturn one recipe object per selected idea, same titles."
+                + "\n\nReturn one recipe object per selected idea, same titles.\n"
+                "Write instructions as numbered steps separated by newlines, e.g.\n"
+                '"1. Heat the oil.\\n2. Add the onion.\\n3. Simmer 20 minutes."'
             )
             session.build_messages = [
                 {"role": "system", "content": system},
@@ -432,9 +437,11 @@ class MealPlanWizardPipeline:
                 idea_id=idea.id,
                 title=str(raw.get("title") or idea.title),
                 description=str(raw.get("description") or idea.justification),
-                instructions=str(
-                    raw.get("instructions")
-                    or "1. Prep ingredients.\n2. Cook.\n3. Serve."
+                instructions=normalize_instruction_newlines(
+                    str(
+                        raw.get("instructions")
+                        or "1. Prep ingredients.\n2. Cook.\n3. Serve."
+                    )
                 ),
                 notes=raw.get("notes"),
                 prep_time=(
@@ -517,10 +524,13 @@ class MealPlanWizardPipeline:
         user: User,
         *,
         day_assignments: list[dict[str, str]] | None = None,
+        plan: bool = True,
     ) -> list[PlannedRecipe]:
-        """Create recipes as needed and plan them onto selected days.
+        """Create recipes as needed and optionally plan them onto selected days.
 
         day_assignments: optional [{day, idea_id}] — defaults to zip order.
+        plan: when False (ad-hoc generate), persist recipes only; no
+        PlannedRecipe rows.
         """
         if session.step not in ("review", "build", "committed"):
             raise ValueError("Finish building recipes before committing.")
@@ -584,6 +594,9 @@ class MealPlanWizardPipeline:
                 recipe_id = db_recipe.id
                 built.created_recipe_id = recipe_id
                 built.source = "generated"
+
+            if not plan:
+                continue
 
             # Store noon UTC so local-day keys stay stable across common offsets.
             day_start = datetime.fromisoformat(f"{day}T00:00:00").replace(tzinfo=UTC)

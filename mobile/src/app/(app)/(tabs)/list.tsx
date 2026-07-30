@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/EmptyState";
-import { SwipeRow } from "@/components/grocery/SwipeRow";
+import { SwipeRow } from "@/components/SwipeRow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,18 +8,24 @@ import { useGroceryList, useSetGroceryStatus } from "@/hooks/use-grocery";
 import { colors } from "@/lib/colors";
 import { formatShortRange } from "@/lib/dates";
 import { getErrorMessage } from "@/api/errors";
+import { tapHaptic } from "@/lib/haptics";
 import { paths } from "@/lib/sitemap";
 import type { GroceryItem } from "@/types";
 import { useRouter } from "expo-router";
 import { EyeOff, ShoppingCart } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** How long a crossed-off item stays visible so the user can undo. */
+const UNDO_MS = 2000;
 
 export default function GroceryListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [showDismissed, setShowDismissed] = useState(false);
+  const [pendingHideKeys, setPendingHideKeys] = useState<Set<string>>(() => new Set());
+  const hideTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const list = useGroceryList();
   const setStatus = useSetGroceryStatus();
@@ -54,8 +60,58 @@ export default function GroceryListScreen() {
 
   const showSkeleton = list.isPending;
 
-  function onCheck(item: GroceryItem, checked: boolean) {
-    setStatus.mutate({ item, status: checked ? "dismissed" : null });
+  useEffect(
+    () => () => {
+      for (const timer of hideTimers.current.values()) clearTimeout(timer);
+      hideTimers.current.clear();
+    },
+    []
+  );
+
+  function isCrossed(item: GroceryItem) {
+    return item.dismissed || pendingHideKeys.has(item.key);
+  }
+
+  function clearPending(key: string) {
+    const timer = hideTimers.current.get(key);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      hideTimers.current.delete(key);
+    }
+    setPendingHideKeys((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  }
+
+  function queueHide(item: GroceryItem) {
+    if (item.dismissed || pendingHideKeys.has(item.key)) return;
+    setPendingHideKeys((prev) => new Set(prev).add(item.key));
+    const timer = setTimeout(() => {
+      hideTimers.current.delete(item.key);
+      setPendingHideKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(item.key);
+        return next;
+      });
+      setStatus.mutate({ item, status: "dismissed" });
+    }, UNDO_MS);
+    hideTimers.current.set(item.key, timer);
+  }
+
+  function onRowTap(item: GroceryItem) {
+    tapHaptic();
+    if (pendingHideKeys.has(item.key)) {
+      clearPending(item.key);
+      return;
+    }
+    if (item.dismissed) {
+      setStatus.mutate({ item, status: null });
+      return;
+    }
+    queueHide(item);
   }
 
   function onViewRecipe(item: GroceryItem) {
@@ -179,51 +235,67 @@ export default function GroceryListScreen() {
                 {group.category}
               </Text>
               <View className="gap-1.5">
-                {group.items.map((item) => (
-                  <SwipeRow
-                    key={item.key}
-                    onDismiss={() => setStatus.mutate({ item, status: "dismissed" })}
-                    onDelete={() => setStatus.mutate({ item, status: "deleted" })}
-                    onView={() => onViewRecipe(item)}
-                  >
-                    <View
-                      className={
-                        item.dismissed
-                          ? "flex-row items-start gap-3 rounded-xl border border-border px-3 py-3 opacity-55"
-                          : "flex-row items-start gap-3 rounded-xl border border-border px-3 py-3"
-                      }
+                {group.items.map((item) => {
+                  const crossed = isCrossed(item);
+                  return (
+                    <SwipeRow
+                      key={item.key}
+                      onDismiss={() => queueHide(item)}
+                      onDelete={() => {
+                        clearPending(item.key);
+                        setStatus.mutate({ item, status: "deleted" });
+                      }}
+                      onView={() => onViewRecipe(item)}
                     >
-                      <Checkbox
-                        className="mt-0.5 h-5 w-5"
-                        checked={item.dismissed}
-                        onCheckedChange={(v) => onCheck(item, v)}
-                      />
-                      <View className="min-w-0 flex-1">
-                        <View className="flex-row items-baseline justify-between gap-2">
-                          <Text
-                            className={
-                              item.dismissed
-                                ? "flex-1 font-sans-semibold text-sm leading-snug text-muted-foreground line-through"
-                                : "flex-1 font-sans-semibold text-sm leading-snug"
-                            }
-                          >
-                            {item.name}
-                          </Text>
-                          {item.quantity_display ? (
-                            <Text className="shrink-0 font-sans-medium text-xs text-[#86efac]">
-                              {item.quantity_display}
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ checked: crossed }}
+                        accessibilityLabel={
+                          crossed ? `Restore ${item.name}` : `Cross off ${item.name}`
+                        }
+                        onPress={() => onRowTap(item)}
+                        className={
+                          crossed
+                            ? "flex-row items-start gap-3 rounded-xl border border-border px-3 py-3 opacity-55"
+                            : "flex-row items-start gap-3 rounded-xl border border-border px-3 py-3"
+                        }
+                      >
+                        <View pointerEvents="none" className="mt-0.5">
+                          <Checkbox
+                            className="h-5 w-5"
+                            checked={crossed}
+                            onCheckedChange={() => {
+                              /* decorative — whole row handles toggle */
+                            }}
+                          />
+                        </View>
+                        <View className="min-w-0 flex-1">
+                          <View className="flex-row items-baseline justify-between gap-2">
+                            <Text
+                              className={
+                                crossed
+                                  ? "flex-1 font-sans-semibold text-sm leading-snug text-muted-foreground line-through"
+                                  : "flex-1 font-sans-semibold text-sm leading-snug"
+                              }
+                            >
+                              {item.name}
+                            </Text>
+                            {item.quantity_display ? (
+                              <Text className="shrink-0 font-sans-medium text-xs text-[#86efac]">
+                                {item.quantity_display}
+                              </Text>
+                            ) : null}
+                          </View>
+                          {item.recipe_titles ? (
+                            <Text numberOfLines={1} className="mt-0.5 text-xs text-muted-foreground">
+                              {item.recipe_titles}
                             </Text>
                           ) : null}
                         </View>
-                        {item.recipe_titles ? (
-                          <Text numberOfLines={1} className="mt-0.5 text-xs text-muted-foreground">
-                            {item.recipe_titles}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  </SwipeRow>
-                ))}
+                      </Pressable>
+                    </SwipeRow>
+                  );
+                })}
               </View>
             </View>
           ))}
