@@ -63,8 +63,8 @@ jobs:
       - name: Generate native iOS project (expo prebuild)
         if: steps.creds.outputs.configured == 'true'
         env:
-          RECIPEDB_IOS_BUNDLE_ID: ${{ vars.RECIPEDB_IOS_BUNDLE_ID }}
-          RECIPEDB_IOS_BUILD_NUMBER: ${{ github.run_number }}
+          JULEP_IOS_BUNDLE_ID: ${{ vars.JULEP_IOS_BUNDLE_ID }}
+          JULEP_IOS_BUILD_NUMBER: ${{ github.run_number }}
           EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
@@ -80,19 +80,19 @@ jobs:
       - name: Archive (cloud-managed signing)
         if: steps.creds.outputs.configured == 'true'
         env:
-          RECIPEDB_IOS_BUNDLE_ID: ${{ vars.RECIPEDB_IOS_BUNDLE_ID }}
-          RECIPEDB_IOS_BUILD_NUMBER: ${{ github.run_number }}
+          JULEP_IOS_BUNDLE_ID: ${{ vars.JULEP_IOS_BUNDLE_ID }}
+          JULEP_IOS_BUILD_NUMBER: ${{ github.run_number }}
           EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
         run: |
           xcodebuild -version
           xcodebuild archive \
-            -workspace ios/RecipeDB.xcworkspace \
-            -scheme RecipeDB \
+            -workspace ios/Julep.xcworkspace \
+            -scheme Julep \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/RecipeDB.xcarchive" \
+            -archivePath "$RUNNER_TEMP/Julep.xcarchive" \
             -allowProvisioningUpdates \
             -allowProvisioningDeviceRegistration \
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
@@ -125,7 +125,7 @@ jobs:
           </plist>
           EOF
           xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/RecipeDB.xcarchive" \
+            -archivePath "$RUNNER_TEMP/Julep.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist" \
             -allowProvisioningUpdates \
@@ -137,7 +137,7 @@ jobs:
         if: steps.creds.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: RecipeDB-ipa
+          name: Julep-ipa
           path: ${{ runner.temp }}/export/*.ipa
           retention-days: 30
 

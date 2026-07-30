@@ -13,7 +13,7 @@ interface AppleLoginButtonProps {
 /**
  * Native Sign in with Apple. iOS only — renders Apple's branded button (an
  * App Store requirement) once `isAvailableAsync` confirms device support,
- * and exchanges the identity token for a RecipeDB session.
+ * and exchanges the identity token for a Julep session.
  */
 export function AppleLoginButton({ onPendingChange, onError }: AppleLoginButtonProps) {
   const [available, setAvailable] = useState(false);

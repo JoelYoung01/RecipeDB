@@ -1,6 +1,6 @@
-# RecipeDB
+# Julep
 
-Personal recipe box, meal planner, and grocery list.
+Personal recipe box, meal planner, and grocery list. (Formerly RecipeDB — the GitHub repo keeps the old name for now.)
 
 **The iOS app is the primary product** — a native Expo / React Native app in [`mobile/`](./mobile/README.md) with the full experience: recipe library, AI meal-plan wizard, week planner, swipeable grocery list. The FastAPI server (`api/`) and the Vue web app (`src/`) support it: the server is the system of record; the web app is a companion UI that shares the same API and design system.
 
@@ -66,7 +66,7 @@ cd mobile && pnpm web
 pnpm dev
 ```
 
-Auth supports email/password (with OTP email verification) and Google OAuth. Seeded locals after `uv run python -m api.scripts.load_data` (sign in via the normal login form):
+Auth supports email/password (with OTP email verification), Google OAuth, and Sign in with Apple (iOS app). Seeded locals after `uv run python -m api.scripts.load_data` (sign in via the normal login form):
 
 - Admin: `admin@example.com` / `adminpass123`
 - Test: `test@example.com` / `testpass123`

@@ -1,5 +1,5 @@
 {
-  "name": "recipedb-mobile",
+  "name": "julep-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "packageManager": "pnpm@10.33.3",

@@ -30,7 +30,7 @@ export function LockScreen() {
     setPrompting(true);
     setFailed(false);
     try {
-      const ok = await authenticateBiometric("Unlock RecipeDB");
+      const ok = await authenticateBiometric("Unlock Julep");
       if (ok) useAppLockStore.getState().unlock();
       else setFailed(true);
     } catch {
@@ -68,7 +68,7 @@ export function LockScreen() {
             style={{ width: 72, height: 72 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-2xl tracking-tight">RecipeDB</Text>
+          <Text className="font-sans-bold text-2xl tracking-tight">Julep</Text>
           <Text className="text-sm text-muted-foreground">Locked</Text>
         </View>
 

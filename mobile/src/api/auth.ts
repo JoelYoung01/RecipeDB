@@ -196,7 +196,7 @@ export async function resendVerificationEmail(email: string): Promise<AuthRedire
   return data as unknown as AuthRedirectPayload;
 }
 
-/** Exchange a Google ID token for a RecipeDB session. */
+/** Exchange a Google ID token for a Julep session. */
 export async function loginWithGoogle(payload: { credential: string }): Promise<TokenPayload> {
   const response = await fetch(`${API_URL}/auth/login-google/`, {
     method: "POST",
@@ -215,7 +215,7 @@ export async function loginWithGoogle(payload: { credential: string }): Promise<
 }
 
 /**
- * Exchange a Sign in with Apple identity token for a RecipeDB session.
+ * Exchange a Sign in with Apple identity token for a Julep session.
  * `full_name` is only available on the FIRST authorization — Apple never
  * repeats it — so pass it along whenever present.
  */

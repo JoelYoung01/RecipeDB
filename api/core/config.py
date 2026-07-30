@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api"
-    PROJECT_NAME: str = "RecipeDB"
+    PROJECT_NAME: str = "Julep"
     # Deployed git SHA (or "dev" locally). Used by /api/health/ for release verification.
     APP_VERSION: str = "dev"
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     GOOGLE_IOS_CLIENT_ID: str | None = None
     # Sign in with Apple: identity tokens minted by the iOS app carry its
     # bundle identifier as `aud`. Must match `ios.bundleIdentifier` in
-    # mobile/app.config.ts (RECIPEDB_IOS_BUNDLE_ID override).
-    APPLE_APP_BUNDLE_ID: str = "com.joelyoung.recipedb"
+    # mobile/app.config.ts (JULEP_IOS_BUNDLE_ID override).
+    APPLE_APP_BUNDLE_ID: str = "com.joelyoung.julep"
     VUE_STATIC_DIR: str = "dist"
     UPLOAD_DIR: str = "data/uploads"
     LOGS_DIR: str = "data/logs"

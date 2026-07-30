@@ -5,7 +5,7 @@
  * (set them in `mobile/.env` for local dev or in CI for release builds).
  */
 
-/** Base URL of the RecipeDB API, e.g. https://recipe-db.joelyoung.dev/api */
+/** Base URL of the Julep API, e.g. https://recipe-db.joelyoung.dev/api */
 export const API_URL: string =
   process.env.EXPO_PUBLIC_API_URL ??
   (__DEV__ ? "http://localhost:8000/api" : "https://recipe-db.joelyoung.dev/api");
@@ -20,4 +20,4 @@ export const API_ORIGIN: string = API_URL.replace(/\/api\/?$/, "");
 export const GOOGLE_IOS_CLIENT_ID: string = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 export const GOOGLE_WEB_CLIENT_ID: string = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 
-export const APP_NAME = "RecipeDB";
+export const APP_NAME = "Julep";

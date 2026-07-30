@@ -3,8 +3,8 @@ import { secureStorage as storage } from "@/lib/secure-storage";
 import type { UserResponse } from "@/types";
 import { create } from "zustand";
 
-const TOKEN_KEY = "recipedb.access_token";
-const USER_KEY = "recipedb.session_user";
+const TOKEN_KEY = "julep.access_token";
+const USER_KEY = "julep.session_user";
 
 export type SessionStatus = "loading" | "authed" | "anon";
 

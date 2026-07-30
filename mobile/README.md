@@ -1,6 +1,6 @@
-# RecipeDB iOS app
+# Julep iOS app
 
-Native iOS app for RecipeDB, built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
+Native iOS app for Julep (formerly RecipeDB), built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
 
 ## Stack
 
@@ -39,7 +39,7 @@ pnpm start   # scan the QR code from Expo Go
 The app talks to the FastAPI backend. For local development start it from the repo root (see the root README), and the app's default `http://localhost:8000/api` will reach it. Point a device/simulator elsewhere with an env var:
 
 ```bash
-EXPO_PUBLIC_API_URL="https://recipe-db.example.dev/api" pnpm web
+EXPO_PUBLIC_API_URL="https://julep.example.dev/api" pnpm web
 ```
 
 ### Quality gates
@@ -62,7 +62,7 @@ CI runs all three plus `expo prebuild` / `expo export` sanity checks on every PR
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client for native Google sign-in | empty → Google button hidden |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web OAuth client (used by the web preview) | empty |
 
-Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `RECIPEDB_IOS_BUNDLE_ID`, `RECIPEDB_IOS_BUILD_NUMBER`.
+Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `JULEP_IOS_BUNDLE_ID`, `JULEP_IOS_BUILD_NUMBER`.
 
 ## Releasing to your phone (TestFlight)
 
@@ -74,7 +74,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 
 1. Join the [Apple Developer Program](https://developer.apple.com/programs/) ($99/year) with your Apple ID.
 2. In [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api), create a **Team key** with the **App Manager** role. Note the **Key ID** and **Issuer ID**, and download the `.p8` file (only downloadable once).
-3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, any name (e.g. RecipeDB), bundle ID `com.joelyoung.recipedb` (register it on the same page if prompted; must match `RECIPEDB_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `recipedb`).
+3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, any name (e.g. Julep), bundle ID `com.joelyoung.julep` (register it on the same page if prompted; must match `JULEP_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `julep`).
 4. Find your **Team ID** in [Apple Developer → Membership](https://developer.apple.com/account#MembershipDetailsCard) (10-character string).
 
 ### GitHub repository secrets
@@ -87,13 +87,13 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 | `ASC_PRIVATE_KEY` | Full contents of the `.p8` file (multiline is fine) |
 | `GOOGLE_IOS_CLIENT_ID` | Optional — iOS OAuth client id for Google sign-in |
 
-Also uses existing repo config: `vars.API_URL` (JS bundle API base) and `secrets.GOOGLE_CLIENT_ID` (web OAuth client). Optional `vars.RECIPEDB_IOS_BUNDLE_ID` overrides the bundle id.
+Also uses existing repo config: `vars.API_URL` (JS bundle API base) and `secrets.GOOGLE_CLIENT_ID` (web OAuth client). Optional `vars.JULEP_IOS_BUNDLE_ID` overrides the bundle id.
 
 ### Installing on your phone
 
 1. Install **TestFlight** from the App Store and sign in with the same Apple ID.
 2. After the first successful workflow run, the build appears in App Store Connect → TestFlight (a few minutes of processing). Add yourself as an internal tester on the same page.
-3. Open TestFlight on the phone → install RecipeDB. Subsequent merges to `main` push new builds automatically and TestFlight notifies you.
+3. Open TestFlight on the phone → install Julep. Subsequent merges to `main` push new builds automatically and TestFlight notifies you.
 
 Each run also attaches the raw `.ipa` as a workflow artifact for ad-hoc installs.
 
@@ -102,7 +102,7 @@ Each run also attaches the raw `.ipa` as a workflow artifact for ad-hoc installs
 The login screen shows Apple's native sign-in button on iOS devices. Two requirements:
 
 1. The App ID (bundle ID) must have the **Sign in with Apple** capability enabled: [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list) → select the bundle ID → check *Sign In with Apple* → Save. (If CI created the App ID automatically, edit it there.) The entitlement itself is added by `expo prebuild` via the `expo-apple-authentication` plugin.
-2. The server verifies identity tokens against the app's bundle ID — set `APPLE_APP_BUNDLE_ID` in the server `.env` only if you override the default `com.joelyoung.recipedb`.
+2. The server verifies identity tokens against the app's bundle ID — set `APPLE_APP_BUNDLE_ID` in the server `.env` only if you override the default `com.joelyoung.julep`.
 
 No extra secret is needed: verification uses Apple's public keys.
 
@@ -114,7 +114,7 @@ Account → Security → **Face ID unlock** gates the app behind Face ID / Touch
 
 Password login works out of the box. For the Google button:
 
-1. In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **iOS** with bundle ID `com.joelyoung.recipedb`.
+1. In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **iOS** with bundle ID `com.joelyoung.julep`.
 2. Set the client id as the `GOOGLE_IOS_CLIENT_ID` GitHub secret (baked into the app) **and** in the server's `.env` (`GOOGLE_IOS_CLIENT_ID=...`) so the API accepts tokens minted for the iOS client.
 
 ## Project layout

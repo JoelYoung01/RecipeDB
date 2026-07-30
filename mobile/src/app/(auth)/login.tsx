@@ -58,7 +58,7 @@ export default function LoginScreen() {
             style={{ width: 80, height: 80 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-3xl tracking-tight">RecipeDB</Text>
+          <Text className="font-sans-bold text-3xl tracking-tight">Julep</Text>
         </View>
 
         {oauthPending ? (

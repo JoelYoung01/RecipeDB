@@ -359,7 +359,7 @@ def get_or_create_user_from_apple_token(
         return db_user
 
     # Apple only omits the email claim when the app didn't request the email
-    # scope; RecipeDB always requests it.
+    # scope; Julep always requests it.
     raw_email = apple_token.get("email")
     if not raw_email:
         raise HTTPException(
