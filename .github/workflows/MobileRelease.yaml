@@ -4,6 +4,10 @@ name: Mobile Release (iOS)
 # lands on main. Requires the Apple credentials documented in mobile/README.md
 # (App Store Connect API key + team id); until those secrets exist the signed
 # build is skipped with a warning so the workflow stays green.
+#
+# NOTE: the ASC API key must have the ADMIN role — cloud signing (creating the
+# distribution certificate/profile during export) is not permitted for App
+# Manager keys and fails with "Cloud signing permission error".
 
 on:
   push:
