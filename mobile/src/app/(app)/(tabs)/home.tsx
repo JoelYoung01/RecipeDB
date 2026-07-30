@@ -34,6 +34,7 @@ export default function HomeScreen() {
     start: addDays(thisWeekStart, -7),
     end: addDays(thisWeekStart, 13)
   }));
+  const [weekStripDragging, setWeekStripDragging] = useState(false);
 
   const plansQuery = usePlansRange(range.start, range.end);
   const recipeCount = useRecipeCount();
@@ -81,7 +82,11 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-6">
+    <ScrollView
+      className="flex-1 bg-background"
+      contentContainerClassName="pb-6"
+      scrollEnabled={!weekStripDragging}
+    >
       {/* Tonight hero */}
       <View className="h-[300px] overflow-hidden">
         {tonight ? (
@@ -166,6 +171,7 @@ export default function HomeScreen() {
           plannedKeys={plannedKeys}
           onWeekChange={onWeekChange}
           onSelectDay={openDay}
+          onHorizontalDragChange={setWeekStripDragging}
         />
         <View className="mt-2 flex-row items-center justify-between">
           <Text className="text-xs text-muted-foreground">

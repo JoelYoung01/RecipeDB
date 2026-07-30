@@ -23,7 +23,7 @@ Layout: `layouts/AppShell.vue` (tab bar + add sheet). Children render in the she
 | `/` | — | — | — | Redirect → `/home` |
 | `/home` | `home` | `views/HomeView.vue` | Home | Tonight hero, week strip, action rows |
 | `/recipes` | `recipes` | `views/recipes/RecipesView.vue` | Recipes | Results start at top; search floats at the bottom above the tab bar; swipe a row left to delete (owned), right to schedule (next open night preselected) |
-| `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Sliding week calendar (current week at top) |
+| `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Sliding week calendar; empty night opens recipe search + Create wizard CTA; filled night opens recipe detail |
 | `/planner/fill` | `planner-fill` | `views/planner/MealPlanWizardView.vue` | Planner | Fill-gaps / plan-week LLM wizard (stubbed) |
 | `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days) |
 | `/account` | `account` | `views/AccountView.vue` | — | Profile; opened from home avatar |

@@ -31,6 +31,8 @@ const viewportWidth = ref(0);
 const translateX = ref(0);
 const animating = ref(false);
 const dragging = ref(false);
+/** True once the gesture locks to horizontal — used to set touch-action: none. */
+const axisLockedX = ref(false);
 
 let startX = 0;
 let startY = 0;
@@ -40,6 +42,7 @@ let axis: "x" | "y" | null = null;
 let activePointerId: number | null = null;
 let pressedDayKey: string | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let scrollLocked = false;
 
 const centerWeekStart = computed(() => addDays(thisWeekStart, weekOffset.value * 7));
 
@@ -108,6 +111,41 @@ function dayFromKey(key: string | null): Date | null {
   return null;
 }
 
+function scrollParent(): HTMLElement | null {
+  const el = document.querySelector("[data-app-scroll]");
+  return el instanceof HTMLElement ? el : null;
+}
+
+function lockPageScroll() {
+  if (scrollLocked) return;
+  const parent = scrollParent();
+  if (!parent) return;
+  parent.dataset.weekStripScrollLock = parent.style.overflowY || "";
+  parent.style.overflowY = "hidden";
+  scrollLocked = true;
+}
+
+function unlockPageScroll() {
+  if (!scrollLocked) return;
+  const parent = scrollParent();
+  if (parent) {
+    parent.style.overflowY = parent.dataset.weekStripScrollLock ?? "";
+    delete parent.dataset.weekStripScrollLock;
+  }
+  scrollLocked = false;
+}
+
+function releaseCapture() {
+  const pid = activePointerId;
+  if (pid !== null && viewportEl.value?.hasPointerCapture?.(pid)) {
+    try {
+      viewportEl.value.releasePointerCapture(pid);
+    } catch {
+      /* already released */
+    }
+  }
+}
+
 async function snapTo(delta: -1 | 0 | 1) {
   if (!viewportWidth.value) return;
 
@@ -152,6 +190,7 @@ function onPointerDown(event: PointerEvent) {
   if (event.button !== 0 || animating.value) return;
   dragging.value = true;
   axis = null;
+  axisLockedX.value = false;
   activePointerId = event.pointerId;
   startX = event.clientX;
   startY = event.clientY;
@@ -161,13 +200,18 @@ function onPointerDown(event: PointerEvent) {
   const target = event.target;
   const el = target instanceof Element ? target.closest("[data-day-key]") : null;
   pressedDayKey = el?.getAttribute("data-day-key") ?? null;
-
-  viewportEl.value?.setPointerCapture?.(event.pointerId);
+  // Defer setPointerCapture until the axis locks horizontal (matches SwipeRow)
+  // so vertical page scrolls aren't stolen by an early capture.
 }
 
 function onPointerMove(event: PointerEvent) {
   if (!dragging.value) return;
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  // Stale mouse drag: released outside before capture engaged.
+  if (event.buttons === 0 && event.pointerType === "mouse") {
+    cancelDrag();
+    return;
+  }
 
   const dx = event.clientX - startX;
   const dy = event.clientY - startY;
@@ -179,6 +223,9 @@ function onPointerMove(event: PointerEvent) {
       cancelDrag();
       return;
     }
+    axisLockedX.value = true;
+    lockPageScroll();
+    viewportEl.value?.setPointerCapture?.(event.pointerId);
   }
 
   if (axis !== "x") return;
@@ -195,9 +242,12 @@ function finishDrag() {
   const wasHorizontal = axis === "x";
 
   dragging.value = false;
+  releaseCapture();
   activePointerId = null;
   pressedDayKey = null;
   axis = null;
+  axisLockedX.value = false;
+  unlockPageScroll();
 
   const width = viewportWidth.value || 1;
   const distanceCommit = Math.abs(dx) >= width * SWIPE_THRESHOLD_RATIO;
@@ -205,6 +255,7 @@ function finishDrag() {
   const shouldFlip = wasHorizontal && (distanceCommit || velocityCommit);
 
   if (shouldFlip) {
+    // Finger left (dx < 0) → future week; finger right → past week.
     void snapTo(dx < 0 ? 1 : -1);
     return;
   }
@@ -228,15 +279,23 @@ function finishDrag() {
 
 function cancelDrag() {
   dragging.value = false;
+  releaseCapture();
   activePointerId = null;
   axis = null;
+  axisLockedX.value = false;
   pressedDayKey = null;
   translateX.value = restingTranslate.value;
+  unlockPageScroll();
 }
 
 function onPointerUp(event: PointerEvent) {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   finishDrag();
+}
+
+function onPointerCancel(event: PointerEvent) {
+  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  cancelDrag();
 }
 
 onMounted(() => {
@@ -247,6 +306,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
+  unlockPageScroll();
 });
 
 defineExpose({
@@ -273,11 +333,12 @@ defineExpose({
 
     <div
       ref="viewportEl"
-      class="touch-pan-y overflow-hidden"
+      class="overflow-hidden"
+      :class="axisLockedX ? 'touch-none' : 'touch-pan-y'"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
-      @pointercancel="cancelDrag"
+      @pointercancel="onPointerCancel"
       @lostpointercapture="finishDrag"
     >
       <div ref="trackEl" class="flex will-change-transform" :style="trackStyle">

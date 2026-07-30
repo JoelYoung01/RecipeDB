@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PlanNightSearchDialog from "@/components/planner/PlanNightSearchDialog.vue";
 import RecipeCard from "@/components/RecipeCard.vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,7 @@ import { syncAfterPlanMutation } from "@/stores/sync";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
 import { del, post, toast } from "@/utils";
 import { ChevronRight, Sparkles, Trash2 } from "@lucide/vue";
-import { computed, onActivated, onMounted, watch } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 defineOptions({ name: "PlannerView" });
@@ -41,6 +42,7 @@ function fromQueryOrToday(): Date {
 
 const selectedDate = ref(fromQueryOrToday());
 const showRecipeDialog = ref(false);
+const nightSearchOpen = ref(false);
 const selectedIds = ref<number[]>([]);
 const dialogLoading = ref(false);
 
@@ -102,7 +104,20 @@ function weekLabel(weekStart: Date, weekIndex: number): string {
 }
 
 function selectDay(date: Date) {
-  selectedDate.value = startOfDay(date);
+  const day = startOfDay(date);
+  selectedDate.value = day;
+  const plans = plannedByDay.value.get(toDateKey(day)) ?? [];
+  if (plans.length) {
+    const recipeId = plans[0]?.recipe.id;
+    if (recipeId != null) {
+      void router.push({
+        path: paths.recipeDetail(recipeId),
+        query: { returnUrl: route.fullPath }
+      });
+    }
+    return;
+  }
+  nightSearchOpen.value = true;
 }
 
 function openFillGaps(days?: Date[]) {
@@ -345,7 +360,10 @@ onActivated(() => {
       <p v-else class="mt-3 text-sm text-muted-foreground">No recipes planned for this date</p>
 
       <div class="mt-4 grid grid-cols-2 gap-2">
-        <Button variant="outline" @click="openAssign">
+        <Button
+          variant="outline"
+          @click="currentPlannedRecipes.length ? openAssign() : (nightSearchOpen = true)"
+        >
           {{ currentPlannedRecipes.length ? "Change" : "Add recipes" }}
         </Button>
         <Button variant="secondary" class="gap-1.5" @click="openFillGaps([selectedDate])">
@@ -354,6 +372,8 @@ onActivated(() => {
         </Button>
       </div>
     </div>
+
+    <PlanNightSearchDialog v-model:open="nightSearchOpen" :date="selectedDate" />
 
     <Dialog v-model:open="showRecipeDialog">
       <DialogContent class="max-h-[80dvh] max-w-sm overflow-hidden border-border bg-card">

@@ -1,5 +1,6 @@
 import { createPlan, deletePlan } from "@/api/planner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -9,12 +10,12 @@ import { tapHaptic } from "@/lib/haptics";
 import { mediaSource } from "@/lib/media";
 import { syncAfterPlanMutation } from "@/hooks/sync";
 import { groupPlansByDay, usePlansRange } from "@/hooks/use-planner";
-import { useRecipeList } from "@/hooks/use-recipes";
+import { useRecipeList, useRecipeSearch } from "@/hooks/use-recipes";
 import { toast } from "@/stores/toast";
-import type { PlannedRecipeDetail } from "@/types";
+import type { PlannedRecipeDetail, RecipeCard } from "@/types";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronRight, Sparkles, Trash2 } from "lucide-react-native";
+import { ChevronRight, Search, Sparkles, Trash2 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -100,11 +101,55 @@ export default function PlannerScreen() {
     router.push((keys ? `/planner/fill?days=${keys}` : "/planner/fill") as never);
   };
 
-  // ---- Assign sheet ----
+  // ---- Assign sheet (multi-select "Change") ----
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [assigning, setAssigning] = useState(false);
   const recipeList = useRecipeList();
+
+  // ---- Empty-night search sheet ----
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [pickingId, setPickingId] = useState<number | null>(null);
+  const recipeSearch = useRecipeSearch(searchText);
+  const searchResults: RecipeCard[] = useMemo(() => {
+    if (searchText.trim()) return [...(recipeSearch.data ?? [])].sort(
+      (a, b) => new Date(b.created_on).getTime() - new Date(a.created_on).getTime()
+    );
+    return recipeList.data ?? [];
+  }, [searchText, recipeSearch.data, recipeList.data]);
+
+  const openNightSearch = () => {
+    tapHaptic();
+    setSearchText("");
+    setSearchSheetOpen(true);
+  };
+
+  const onDayPress = (day: Date, dayPlans: PlannedRecipeDetail[]) => {
+    tapHaptic();
+    const next = startOfDay(day);
+    setSelectedDate(next);
+    if (dayPlans.length) {
+      router.push(`/recipes/${dayPlans[0]!.recipe.id}` as never);
+      return;
+    }
+    openNightSearch();
+  };
+
+  const pickRecipeForNight = async (recipe: RecipeCard) => {
+    if (pickingId !== null) return;
+    setPickingId(recipe.id);
+    try {
+      await createPlan(recipe.id, selectedDate);
+      syncAfterPlanMutation();
+      setSearchSheetOpen(false);
+      toast.success("Added to plan.");
+    } catch (error) {
+      toast.fromError(error, "Couldn’t add that recipe to the plan.");
+    } finally {
+      setPickingId(null);
+    }
+  };
 
   const openAssign = () => {
     tapHaptic();
@@ -207,10 +252,7 @@ export default function PlannerScreen() {
                       <Pressable
                         key={key}
                         accessibilityRole="button"
-                        onPress={() => {
-                          tapHaptic();
-                          setSelectedDate(startOfDay(day));
-                        }}
+                        onPress={() => onDayPress(day, dayPlans)}
                         className={
                           isSelected
                             ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/10 px-3 py-2.5"
@@ -337,7 +379,11 @@ export default function PlannerScreen() {
           )}
 
           <View className="mt-4 flex-row gap-2">
-            <Button variant="outline" className="flex-1" onPress={openAssign}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onPress={currentPlannedRecipes.length ? openAssign : openNightSearch}
+            >
               {currentPlannedRecipes.length ? "Change" : "Add recipes"}
             </Button>
             <Button variant="secondary" className="flex-1" onPress={() => openFill([selectedDate])}>
@@ -347,6 +393,100 @@ export default function PlannerScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Empty-night search sheet */}
+      <Sheet
+        visible={searchSheetOpen}
+        onClose={() => {
+          setSearchSheetOpen(false);
+          setSearchText("");
+        }}
+      >
+        <Text className="px-1 pb-1 font-sans-semibold text-lg">Plan this night</Text>
+        <Text className="px-1 pb-3 text-sm text-muted-foreground">
+          Search your recipes, or create a new one with the wizard.
+        </Text>
+        <View className="relative mb-3">
+          <View className="absolute left-3 top-0 z-10 h-11 justify-center">
+            <Search size={16} color={colors.faint} />
+          </View>
+          <Input
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Search recipes…"
+            className="h-11 rounded-xl bg-secondary/40 pl-10"
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+        </View>
+        <ScrollView className="max-h-80" contentContainerClassName="gap-2 pb-2">
+          {recipeList.isPending || (searchText.trim() && recipeSearch.isFetching && !searchResults.length) ? (
+            [0, 1, 2, 3].map((n) => (
+              <View
+                key={n}
+                className="flex-row items-center gap-3 rounded-xl border border-border px-2 py-2"
+              >
+                <Skeleton className="h-12 w-12 rounded-lg" />
+                <View className="flex-1 gap-1.5">
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <Skeleton className="h-2.5 w-full" />
+                </View>
+              </View>
+            ))
+          ) : searchResults.length ? (
+            searchResults.map((recipe) => (
+              <Pressable
+                key={recipe.id}
+                accessibilityRole="button"
+                disabled={pickingId !== null}
+                onPress={() => void pickRecipeForNight(recipe)}
+                className="flex-row items-center gap-3 rounded-xl border border-border bg-secondary/40 px-2 py-2 active:opacity-80"
+              >
+                <Image
+                  source={mediaSource(recipe.cover_image?.url)}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 10,
+                    backgroundColor: colors.muted
+                  }}
+                  contentFit="cover"
+                />
+                <View className="min-w-0 flex-1">
+                  <Text className="font-sans-semibold text-sm" numberOfLines={1}>
+                    {recipe.name}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                    {recipe.description}
+                  </Text>
+                </View>
+              </Pressable>
+            ))
+          ) : (
+            <Text className="py-6 text-center text-sm text-muted-foreground">
+              {searchText.trim()
+                ? "No recipes matched that search."
+                : "No recipes yet — create one below."}
+            </Text>
+          )}
+        </ScrollView>
+        <View className="mt-2 gap-2">
+          <Button
+            className="w-full"
+            onPress={() => {
+              setSearchSheetOpen(false);
+              openFill([selectedDate]);
+            }}
+          >
+            <Sparkles size={14} color={colors.foreground} />
+            Create with wizard
+          </Button>
+          <Button variant="outline" className="w-full" onPress={() => setSearchSheetOpen(false)}>
+            Cancel
+          </Button>
+        </View>
+      </Sheet>
 
       {/* Recipe select sheet */}
       <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
