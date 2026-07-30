@@ -24,8 +24,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "dark",
   backgroundColor: "#090b09",
   ios: {
-    bundleIdentifier: process.env.JUNKET_IOS_BUNDLE_ID ?? "com.joelyoung.junket",
-    buildNumber: process.env.JUNKET_IOS_BUILD_NUMBER ?? "1",
+    // `||` (not `??`): CI passes unset GitHub vars through as empty strings.
+    bundleIdentifier: process.env.JUNKET_IOS_BUNDLE_ID || "com.joelyoung.junket",
+    buildNumber: process.env.JUNKET_IOS_BUILD_NUMBER || "1",
     supportsTablet: false,
     // Sign in with Apple entitlement (the App ID must have the capability
     // enabled in the Apple Developer portal).

@@ -58,7 +58,7 @@ CI runs all three plus `expo prebuild` / `expo export` sanity checks on every PR
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | API base URL | `http://localhost:8000/api` in dev, production URL in release |
+| `EXPO_PUBLIC_API_URL` | API base URL (must be absolute; empty/relative values are ignored) | `http://localhost:8000/api` in dev, production URL in release |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client for native Google sign-in | empty → Google button hidden |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web OAuth client (used by the web preview) | empty |
 
@@ -87,7 +87,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 | `ASC_PRIVATE_KEY` | Full contents of the `.p8` file (multiline is fine) |
 | `GOOGLE_IOS_CLIENT_ID` | Optional — iOS OAuth client id for Google sign-in |
 
-Also uses existing repo config: `vars.API_URL` (JS bundle API base) and `secrets.GOOGLE_CLIENT_ID` (web OAuth client). Optional `vars.JUNKET_IOS_BUNDLE_ID` overrides the bundle id.
+Also uses `secrets.GOOGLE_CLIENT_ID` (existing web OAuth client). Optional GitHub **variables**: `MOBILE_API_URL` (absolute API base override — do NOT reuse the web app's relative `API_URL`) and `JUNKET_IOS_BUNDLE_ID` (bundle id override).
 
 ### Installing on your phone
 
