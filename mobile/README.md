@@ -73,7 +73,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 ### One-time Apple setup
 
 1. Join the [Apple Developer Program](https://developer.apple.com/programs/) ($99/year) with your Apple ID.
-2. In [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api), create a **Team key** with the **App Manager** role. Note the **Key ID** and **Issuer ID**, and download the `.p8` file (only downloadable once).
+2. In [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api), create a **Team key** with the **Admin** role. Note the **Key ID** and **Issuer ID**, and download the `.p8` file (only downloadable once). Admin is required: Xcode's cloud signing can only create the distribution certificate/profile with an Admin (or Account Holder) key — App Manager keys fail at export with "Cloud signing permission error", and a key's role cannot be changed after creation.
 3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, any name (e.g. Junket), bundle ID `com.joelyoung.junket` (register it on the same page if prompted; must match `JUNKET_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `junket`).
 4. Find your **Team ID** in [Apple Developer → Membership](https://developer.apple.com/account#MembershipDetailsCard) (10-character string).
 
