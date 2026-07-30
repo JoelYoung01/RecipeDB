@@ -21,7 +21,9 @@ concurrency:
 jobs:
   BuildIOS:
     name: Build, sign & upload to TestFlight
-    runs-on: [macos-15]
+    # macos-26: Expo SDK 57 needs Xcode 26.4+ (Swift 6.3 `weak let`, see
+    # expo/expo#46242); the macos-15 image tops out at Xcode 26.3.
+    runs-on: [macos-26]
     defaults:
       run:
         working-directory: mobile
@@ -44,17 +46,22 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Expo SDK 57's prebuilt ExpoModulesJSI resolves a Swift package that
-      # requires Swift tools 6.2, which ships with Xcode 26. The macos-15
-      # image defaults to Xcode 16.4 (Swift 6.1), so select the newest
-      # installed Xcode 26 explicitly.
-      - name: Select Xcode 26
+      # Expo SDK 57 (via expo-modules-jsi) requires Xcode 26.4+ — its Swift
+      # sources use Swift 6.3 syntax such as `weak let` (expo/expo#46242).
+      # Select the newest stable Xcode 26.x on the runner and fail loudly if
+      # it is older than 26.4.
+      - name: Select Xcode (26.4+)
         if: steps.creds.outputs.configured == 'true'
         run: |
           XCODE_APP=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)
           echo "Selecting $XCODE_APP"
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
           xcodebuild -version
+          VERSION=$(xcodebuild -version | awk 'NR==1 {print $2}')
+          if [ "$(printf '%s\n' "26.4" "$VERSION" | sort -V | head -n1)" != "26.4" ]; then
+            echo "::error::Xcode $VERSION selected but Expo SDK 57 needs 26.4+. Update the runner image."
+            exit 1
+          fi
 
       - name: Setup Node.js
         if: steps.creds.outputs.configured == 'true'
