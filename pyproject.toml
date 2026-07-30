@@ -5,6 +5,7 @@ description = "RecipeDB - FastAPI backend"
 requires-python = ">=3.12"
 dependencies = [
     "alembic==1.14.1",
+    "cryptography>=49.0.0",
     "email-validator>=2.3.0",
     "fastapi[standard]==0.115.6",
     "google-auth==2.38.0",

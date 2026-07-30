@@ -15,6 +15,11 @@ VITE_GOOGLE_CLIENT_ID=
 # When set, the API also accepts Google id_tokens issued to this client.
 # GOOGLE_IOS_CLIENT_ID=
 
+# Sign in with Apple audience: the iOS app's bundle identifier. Only set
+# when overriding the default (com.joelyoung.recipedb). No secret needed —
+# tokens are verified against Apple's public keys.
+# APPLE_APP_BUNDLE_ID=com.joelyoung.recipedb
+
 
 # =======================================================
 #               Only needed at Runtime
