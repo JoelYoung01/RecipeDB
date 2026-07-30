@@ -147,6 +147,7 @@ function releaseCapture() {
 }
 
 async function snapTo(delta: -1 | 0 | 1) {
+  if (!viewportWidth.value) measure();
   if (!viewportWidth.value) return;
 
   if (delta === 0) {
@@ -218,7 +219,9 @@ function onPointerMove(event: PointerEvent) {
 
   if (axis === null) {
     if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-    axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    // Prefer horizontal on near-ties so slight vertical jitter doesn’t
+    // abort a week flip (common with mouse / imprecise touch).
+    axis = Math.abs(dx) >= Math.abs(dy) * 0.85 ? "x" : "y";
     if (axis === "y") {
       cancelDrag();
       return;
@@ -333,8 +336,7 @@ defineExpose({
 
     <div
       ref="viewportEl"
-      class="overflow-hidden"
-      :class="axisLockedX ? 'touch-none' : 'touch-pan-y'"
+      class="touch-none overflow-hidden"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"

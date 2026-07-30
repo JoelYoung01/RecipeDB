@@ -117,7 +117,11 @@ function selectDay(date: Date) {
     }
     return;
   }
-  nightSearchOpen.value = true;
+  // Defer so the row’s pointerup isn’t treated as an outside-dismiss on the
+  // dialog that is about to open (Reka Dialog listens for pointer events).
+  window.setTimeout(() => {
+    nightSearchOpen.value = true;
+  }, 0);
 }
 
 function openFillGaps(days?: Date[]) {
