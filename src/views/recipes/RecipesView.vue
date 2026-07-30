@@ -123,23 +123,10 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="px-4 pt-5 pb-2">
-    <h1 class="text-xl font-bold">Recipes</h1>
-    <p class="mt-1 text-sm text-muted-foreground">Your library and public finds</p>
+  <div class="px-4 pt-4 pb-16">
+    <h1 class="sr-only">Recipes</h1>
 
-    <div class="relative mt-4">
-      <Search
-        class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint"
-      />
-      <Input
-        v-model="searchText"
-        type="search"
-        placeholder="Search recipes…"
-        class="h-11 rounded-xl border-border bg-card pl-10"
-      />
-    </div>
-
-    <div class="mt-4 flex flex-col gap-2">
+    <div class="flex flex-col gap-2">
       <template v-if="showSkeleton">
         <RecipeCardSkeleton v-for="n in 4" :key="n" />
       </template>
@@ -196,6 +183,25 @@ onActivated(() => {
           {{ recipesStore.refreshing ? "Loading…" : "Load more" }}
         </button>
       </template>
+    </div>
+
+    <!-- Search docked above the tab bar (clear of the raised FAB), floating over the list -->
+    <div class="pointer-events-none fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2">
+      <div
+        class="bg-gradient-to-t from-background via-background/80 to-transparent px-4 pt-10 pb-[calc(5.75rem+env(safe-area-inset-bottom))]"
+      >
+        <div class="pointer-events-auto relative">
+          <Search
+            class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint"
+          />
+          <Input
+            v-model="searchText"
+            type="search"
+            placeholder="Search recipes…"
+            class="h-11 rounded-xl border-border bg-card pl-10"
+          />
+        </div>
+      </div>
     </div>
 
     <ScheduleRecipeDialog v-model:open="scheduleOpen" :recipe="scheduleTarget" />
