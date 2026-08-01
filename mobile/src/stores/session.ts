@@ -3,8 +3,8 @@ import { secureStorage as storage } from "@/lib/secure-storage";
 import type { UserResponse } from "@/types";
 import { create } from "zustand";
 
-const TOKEN_KEY = "junket.access_token";
-const USER_KEY = "junket.session_user";
+const TOKEN_KEY = "souskit.access_token";
+const USER_KEY = "souskit.session_user";
 
 export type SessionStatus = "loading" | "authed" | "anon";
 
