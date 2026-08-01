@@ -47,14 +47,14 @@ describe("app lock store", () => {
 
   it("persists the preference when enabling, without locking the current session", async () => {
     await useAppLockStore.getState().setEnabled(true);
-    expect(mockedStorage.set).toHaveBeenCalledWith("junket.app_lock", "1");
+    expect(mockedStorage.set).toHaveBeenCalledWith("souskit.app_lock", "1");
     expect(useAppLockStore.getState()).toMatchObject({ enabled: true, locked: false });
   });
 
   it("removes the preference when disabling", async () => {
     await useAppLockStore.getState().setEnabled(true);
     await useAppLockStore.getState().setEnabled(false);
-    expect(mockedStorage.remove).toHaveBeenCalledWith("junket.app_lock");
+    expect(mockedStorage.remove).toHaveBeenCalledWith("souskit.app_lock");
     expect(useAppLockStore.getState()).toMatchObject({ enabled: false, locked: false });
   });
 

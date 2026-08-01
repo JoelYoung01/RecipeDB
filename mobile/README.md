@@ -62,7 +62,7 @@ CI runs all three plus `expo prebuild` / `expo export` sanity checks on every PR
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client for native Google sign-in | empty → Google button hidden |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web OAuth client (used by the web preview) | empty |
 
-Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `JUNKET_IOS_BUNDLE_ID`, `JUNKET_IOS_BUILD_NUMBER` (legacy env names kept so existing GitHub vars keep working).
+Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `SOUSKIT_IOS_BUNDLE_ID`, `SOUSKIT_IOS_BUILD_NUMBER`. Default bundle id is `com.joelyoung.souskit`.
 
 ## Releasing to your phone (TestFlight)
 
@@ -74,7 +74,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 
 1. Join the [Apple Developer Program](https://developer.apple.com/programs/) ($99/year) with your Apple ID.
 2. In [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api), create a **Team key** with the **Admin** role. Note the **Key ID** and **Issuer ID**, and download the `.p8` file (only downloadable once). Admin is required: Xcode's cloud signing can only create the distribution certificate/profile with an Admin (or Account Holder) key — App Manager keys fail at export with "Cloud signing permission error", and a key's role cannot be changed after creation.
-3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, name **Sous Kit**, bundle ID `com.joelyoung.junket` (register it on the same page if prompted; must match `JUNKET_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `sous-kit`). If the app already exists as Junket, rename it in App Store Connect — the bundle id stays the same.
+3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, name **Sous Kit** / **SousKit**, bundle ID `com.joelyoung.souskit` (register it on the same page if prompted; must match `SOUSKIT_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `sous-kit`).
 4. Find your **Team ID** in [Apple Developer → Membership](https://developer.apple.com/account#MembershipDetailsCard) (10-character string).
 
 ### GitHub repository secrets
@@ -87,7 +87,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 | `ASC_PRIVATE_KEY` | Full contents of the `.p8` file (multiline is fine) |
 | `GOOGLE_IOS_CLIENT_ID` | Optional — iOS OAuth client id for Google sign-in |
 
-Also uses `secrets.GOOGLE_CLIENT_ID` (existing web OAuth client). Optional GitHub **variables**: `MOBILE_API_URL` (absolute API base override — do NOT reuse the web app's relative `API_URL`) and `JUNKET_IOS_BUNDLE_ID` (bundle id override).
+Also uses `secrets.GOOGLE_CLIENT_ID` (existing web OAuth client). Optional GitHub **variables**: `MOBILE_API_URL` (absolute API base override — do NOT reuse the web app's relative `API_URL`) and `SOUSKIT_IOS_BUNDLE_ID` (bundle id override; defaults to `com.joelyoung.souskit`).
 
 ### Installing on your phone
 
@@ -102,7 +102,7 @@ Each run also attaches the raw `.ipa` as a workflow artifact for ad-hoc installs
 The login screen shows Apple's native sign-in button on iOS devices. Two requirements:
 
 1. The App ID (bundle ID) must have the **Sign in with Apple** capability enabled: [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list) → select the bundle ID → check *Sign In with Apple* → Save. (If CI created the App ID automatically, edit it there.) The entitlement itself is added by `expo prebuild` via the `expo-apple-authentication` plugin.
-2. The server verifies identity tokens against the app's bundle ID — set `APPLE_APP_BUNDLE_ID` in the server `.env` only if you override the default `com.joelyoung.junket`.
+2. The server verifies identity tokens against the app's bundle ID — set `APPLE_APP_BUNDLE_ID` in the server `.env` only if you override the default `com.joelyoung.souskit`.
 
 No extra secret is needed: verification uses Apple's public keys.
 
@@ -114,7 +114,7 @@ Account → Security → **Face ID unlock** gates the app behind Face ID / Touch
 
 Password login works out of the box. For the Google button:
 
-1. In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **iOS** with bundle ID `com.joelyoung.junket`.
+1. In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **iOS** with bundle ID `com.joelyoung.souskit`.
 2. Set the client id as the `GOOGLE_IOS_CLIENT_ID` GitHub secret (baked into the app) **and** in the server's `.env` (`GOOGLE_IOS_CLIENT_ID=...`) so the API accepts tokens minted for the iOS client.
 
 ## Project layout

@@ -16,10 +16,9 @@ VITE_GOOGLE_CLIENT_ID=
 # GOOGLE_IOS_CLIENT_ID=
 
 # Sign in with Apple audience: the iOS app's bundle identifier. Only set
-# when overriding the default (com.joelyoung.junket — legacy id kept so
-# existing App Store / Apple Sign In setup keeps working). No secret needed —
+# when overriding the default (com.joelyoung.souskit). No secret needed —
 # tokens are verified against Apple's public keys.
-# APPLE_APP_BUNDLE_ID=com.joelyoung.junket
+# APPLE_APP_BUNDLE_ID=com.joelyoung.souskit
 
 
 # =======================================================

@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     GOOGLE_IOS_CLIENT_ID: str | None = None
     # Sign in with Apple: identity tokens minted by the iOS app carry its
     # bundle identifier as `aud`. Must match `ios.bundleIdentifier` in
-    # mobile/app.config.ts (JUNKET_IOS_BUNDLE_ID override).
-    APPLE_APP_BUNDLE_ID: str = "com.joelyoung.junket"
+    # mobile/app.config.ts (SOUSKIT_IOS_BUNDLE_ID override).
+    APPLE_APP_BUNDLE_ID: str = "com.joelyoung.souskit"
     VUE_STATIC_DIR: str = "dist"
     UPLOAD_DIR: str = "data/uploads"
     LOGS_DIR: str = "data/logs"
