@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { APP_NAME } from "@/config";
 import { stashDevOtp } from "@/lib/dev-otp";
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
@@ -68,7 +69,7 @@ export default function RegisterScreen() {
             style={{ width: 64, height: 64 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-3xl tracking-tight">Junket</Text>
+          <Text className="font-sans-bold text-3xl tracking-tight">{APP_NAME}</Text>
           <Text className="max-w-xs text-center text-sm text-muted-foreground">
             Create an account to save and plan recipes.
           </Text>

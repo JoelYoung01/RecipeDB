@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { APP_NAME } from "@/config";
 import { authenticateBiometric, getBiometricSupport } from "@/lib/biometrics";
 import { colors } from "@/lib/colors";
 import { queryClient } from "@/lib/query-client";
@@ -30,7 +31,7 @@ export function LockScreen() {
     setPrompting(true);
     setFailed(false);
     try {
-      const ok = await authenticateBiometric("Unlock Junket");
+      const ok = await authenticateBiometric(`Unlock ${APP_NAME}`);
       if (ok) useAppLockStore.getState().unlock();
       else setFailed(true);
     } catch {
@@ -68,7 +69,7 @@ export function LockScreen() {
             style={{ width: 72, height: 72 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-2xl tracking-tight">Junket</Text>
+          <Text className="font-sans-bold text-2xl tracking-tight">{APP_NAME}</Text>
           <Text className="text-sm text-muted-foreground">Locked</Text>
         </View>
 

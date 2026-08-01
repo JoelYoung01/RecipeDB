@@ -103,7 +103,7 @@
         "-f",
         "'Dockerfile'",
         "-t",
-        "'junket:latest'",
+        "'sous-kit:latest'",
         "'.'"
       ],
       "options": {
@@ -124,7 +124,7 @@
         "-d",
         "-p",
         "8000:8000/tcp",
-        "'junket:latest'",
+        "'sous-kit:latest'",
       ],
       "options": {
         "cwd": "${workspaceFolder}"

@@ -26,7 +26,7 @@ describe("LockScreen", () => {
     mockedAuth.mockResolvedValue(true);
     await render(<LockScreen />);
     await waitFor(() => expect(useAppLockStore.getState().locked).toBe(false));
-    expect(mockedAuth).toHaveBeenCalledWith("Unlock Junket");
+    expect(mockedAuth).toHaveBeenCalledWith("Unlock Sous Kit");
   });
 
   it("stays locked and offers a retry when biometrics fail", async () => {

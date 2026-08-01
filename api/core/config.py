@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api"
-    PROJECT_NAME: str = "Junket"
+    PROJECT_NAME: str = "Sous Kit"
     # Deployed git SHA (or "dev" locally). Used by /api/health/ for release checks.
     APP_VERSION: str = "dev"
     SECRET_KEY: str = secrets.token_urlsafe(32)

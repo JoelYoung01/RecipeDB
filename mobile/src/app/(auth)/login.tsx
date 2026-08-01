@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { APP_NAME } from "@/config";
 import { colors } from "@/lib/colors";
 import { stashDevOtp } from "@/lib/dev-otp";
 import { useSessionStore } from "@/stores/session";
@@ -58,7 +59,7 @@ export default function LoginScreen() {
             style={{ width: 80, height: 80 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-3xl tracking-tight">Junket</Text>
+          <Text className="font-sans-bold text-3xl tracking-tight">{APP_NAME}</Text>
         </View>
 
         {oauthPending ? (

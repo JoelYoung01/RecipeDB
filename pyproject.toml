@@ -1,7 +1,7 @@
 [project]
-name = "junket"
+name = "sous-kit"
 version = "0.0.1"
-description = "Junket - FastAPI backend"
+description = "Sous Kit - FastAPI backend"
 requires-python = ">=3.12"
 dependencies = [
     "alembic==1.14.1",

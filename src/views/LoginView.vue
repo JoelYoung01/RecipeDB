@@ -15,6 +15,7 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 const session = useSessionStore();
 const route = useRoute();
 const router = useRouter();
+const appTitle = import.meta.env.VITE_APP_TITLE;
 const submitting = ref(false);
 const googlePending = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -82,7 +83,7 @@ async function onSubmit() {
   >
     <div class="flex flex-col items-center gap-3 text-center">
       <img :src="chefHat" alt="" class="size-20 object-contain" />
-      <h1 class="text-3xl font-bold tracking-tighter text-foreground">Junket</h1>
+      <h1 class="text-3xl font-bold tracking-tighter text-foreground">{{ appTitle }}</h1>
     </div>
 
     <!--
