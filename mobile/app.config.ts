@@ -7,10 +7,9 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  * `expo prebuild` (locally or in CI) and is never committed.
  *
  * CI / environment overrides:
- * - JUNKET_IOS_BUNDLE_ID    — Apple bundle identifier (must match the
- *   provisioning profile used to sign release builds). Legacy env name kept
- *   so existing GitHub vars / Apple App IDs keep working.
- * - JUNKET_IOS_BUILD_NUMBER — CFBundleVersion; unique per TestFlight upload.
+ * - SOUSKIT_IOS_BUNDLE_ID    — Apple bundle identifier (must match the
+ *   provisioning profile used to sign release builds).
+ * - SOUSKIT_IOS_BUILD_NUMBER — CFBundleVersion; unique per TestFlight upload.
  * - EXPO_PUBLIC_API_URL    — API base URL baked into the JS bundle
  *   (see src/config.ts for defaults).
  */
@@ -26,10 +25,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: "#090b09",
   ios: {
     // `||` (not `??`): CI passes unset GitHub vars through as empty strings.
-    // Bundle id stays on the legacy junket identifier so App Store Connect,
-    // Sign in with Apple, and Google iOS OAuth keep matching.
-    bundleIdentifier: process.env.JUNKET_IOS_BUNDLE_ID || "com.joelyoung.junket",
-    buildNumber: process.env.JUNKET_IOS_BUILD_NUMBER || "1",
+    bundleIdentifier: process.env.SOUSKIT_IOS_BUNDLE_ID || "com.joelyoung.souskit",
+    buildNumber: process.env.SOUSKIT_IOS_BUILD_NUMBER || "1",
     supportsTablet: false,
     // Sign in with Apple entitlement (the App ID must have the capability
     // enabled in the Apple Developer portal).

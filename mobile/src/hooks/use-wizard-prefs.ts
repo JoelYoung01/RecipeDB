@@ -2,7 +2,7 @@ import { emptyWizardPrefs, type MealPlanWizardPrefs } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = "junket.meal-plan-wizard-prefs.v1";
+const STORAGE_KEY = "souskit.meal-plan-wizard-prefs.v1";
 
 /** Wizard preferences persisted on-device across sessions. */
 export function useWizardPrefs() {

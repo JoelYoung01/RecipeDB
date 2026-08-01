@@ -86,8 +86,8 @@ jobs:
       - name: Generate native iOS project (expo prebuild)
         if: steps.creds.outputs.configured == 'true'
         env:
-          JUNKET_IOS_BUNDLE_ID: ${{ vars.JUNKET_IOS_BUNDLE_ID }}
-          JUNKET_IOS_BUILD_NUMBER: ${{ github.run_number }}
+          SOUSKIT_IOS_BUNDLE_ID: ${{ vars.SOUSKIT_IOS_BUNDLE_ID }}
+          SOUSKIT_IOS_BUILD_NUMBER: ${{ github.run_number }}
           # Optional override; must be absolute. Unset -> the app's production default.
           EXPO_PUBLIC_API_URL: ${{ vars.MOBILE_API_URL }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -110,13 +110,6 @@ jobs:
       # runtime). Distribution signing happens in the export step.
       - name: Archive (ad-hoc signed)
         if: steps.creds.outputs.configured == 'true'
-        env:
-          JUNKET_IOS_BUNDLE_ID: ${{ vars.JUNKET_IOS_BUNDLE_ID }}
-          JUNKET_IOS_BUILD_NUMBER: ${{ github.run_number }}
-          # Optional override; must be absolute. Unset -> the app's production default.
-          EXPO_PUBLIC_API_URL: ${{ vars.MOBILE_API_URL }}
-          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
         run: |
           xcodebuild -version
           xcodebuild archive \
