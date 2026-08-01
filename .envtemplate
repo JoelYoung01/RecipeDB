@@ -3,7 +3,7 @@
 # =======================================================
 
 # Display Name for the app
-VITE_APP_TITLE=Junket
+VITE_APP_TITLE=Sous Kit
 
 # Api Url
 VITE_API_URL=http://localhost:8000/api
@@ -11,12 +11,13 @@ VITE_API_URL=http://localhost:8000/api
 # Google Auth
 VITE_GOOGLE_CLIENT_ID=
 
-# Optional: iOS OAuth client for the Junket iOS app (mobile/).
+# Optional: iOS OAuth client for the Sous Kit iOS app (mobile/).
 # When set, the API also accepts Google id_tokens issued to this client.
 # GOOGLE_IOS_CLIENT_ID=
 
 # Sign in with Apple audience: the iOS app's bundle identifier. Only set
-# when overriding the default (com.joelyoung.junket). No secret needed —
+# when overriding the default (com.joelyoung.junket — legacy id kept so
+# existing App Store / Apple Sign In setup keeps working). No secret needed —
 # tokens are verified against Apple's public keys.
 # APPLE_APP_BUNDLE_ID=com.joelyoung.junket
 
@@ -71,4 +72,4 @@ SUPERUSER_GID=
 # SMTP_USER=
 # SMTP_PASSWORD=
 # EMAILS_FROM_EMAIL=
-# EMAILS_FROM_NAME=Junket
+# EMAILS_FROM_NAME=Sous Kit

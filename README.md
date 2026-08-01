@@ -1,6 +1,6 @@
-# Junket
+# Sous Kit
 
-Personal recipe box, meal planner, and grocery list. (Formerly RecipeDB — the GitHub repo keeps the old name for now.)
+Personal recipe box, meal planner, and grocery list. (Formerly Junket / RecipeDB — the GitHub repo keeps the old name for now.)
 
 **The iOS app is the primary product** — a native Expo / React Native app in [`mobile/`](./mobile/README.md) with the full experience: recipe library, AI meal-plan wizard, week planner, swipeable grocery list. The FastAPI server (`api/`) and the Vue web app (`src/`) support it: the server is the system of record; the web app is a companion UI that shares the same API and design system.
 

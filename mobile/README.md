@@ -1,6 +1,6 @@
-# Junket iOS app
+# Sous Kit iOS app
 
-Native iOS app for Junket, built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
+Native iOS app for Sous Kit, built with [Expo](https://expo.dev) / React Native. It mirrors the web UI feature-for-feature — same dark zinc + green design system, same API — with native navigation, gestures, haptics, and secure keychain sessions.
 
 ## Stack
 
@@ -39,7 +39,7 @@ pnpm start   # scan the QR code from Expo Go
 The app talks to the FastAPI backend. For local development start it from the repo root (see the root README), and the app's default `http://localhost:8000/api` will reach it. Point a device/simulator elsewhere with an env var:
 
 ```bash
-EXPO_PUBLIC_API_URL="https://junket.example.dev/api" pnpm web
+EXPO_PUBLIC_API_URL="https://sous-kit.example.dev/api" pnpm web
 ```
 
 ### Quality gates
@@ -62,7 +62,7 @@ CI runs all three plus `expo prebuild` / `expo export` sanity checks on every PR
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client for native Google sign-in | empty → Google button hidden |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web OAuth client (used by the web preview) | empty |
 
-Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `JUNKET_IOS_BUNDLE_ID`, `JUNKET_IOS_BUILD_NUMBER`.
+Native project settings (bundle id, build number) come from env vars read in `app.config.ts`: `JUNKET_IOS_BUNDLE_ID`, `JUNKET_IOS_BUILD_NUMBER` (legacy env names kept so existing GitHub vars keep working).
 
 ## Releasing to your phone (TestFlight)
 
@@ -74,7 +74,7 @@ Until the secrets below exist, the workflow skips the signed build with a warnin
 
 1. Join the [Apple Developer Program](https://developer.apple.com/programs/) ($99/year) with your Apple ID.
 2. In [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api), create a **Team key** with the **Admin** role. Note the **Key ID** and **Issuer ID**, and download the `.p8` file (only downloadable once). Admin is required: Xcode's cloud signing can only create the distribution certificate/profile with an Admin (or Account Holder) key — App Manager keys fail at export with "Cloud signing permission error", and a key's role cannot be changed after creation.
-3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, any name (e.g. Junket), bundle ID `com.joelyoung.junket` (register it on the same page if prompted; must match `JUNKET_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `junket`).
+3. In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), click **+ → New App**: platform iOS, name **Sous Kit**, bundle ID `com.joelyoung.junket` (register it on the same page if prompted; must match `JUNKET_IOS_BUNDLE_ID` if you override it), SKU anything (e.g. `sous-kit`). If the app already exists as Junket, rename it in App Store Connect — the bundle id stays the same.
 4. Find your **Team ID** in [Apple Developer → Membership](https://developer.apple.com/account#MembershipDetailsCard) (10-character string).
 
 ### GitHub repository secrets
@@ -93,7 +93,7 @@ Also uses `secrets.GOOGLE_CLIENT_ID` (existing web OAuth client). Optional GitHu
 
 1. Install **TestFlight** from the App Store and sign in with the same Apple ID.
 2. After the first successful workflow run, the build appears in App Store Connect → TestFlight (a few minutes of processing). Add yourself as an internal tester on the same page.
-3. Open TestFlight on the phone → install Junket. Subsequent merges to `main` push new builds automatically and TestFlight notifies you.
+3. Open TestFlight on the phone → install Sous Kit. Subsequent merges to `main` push new builds automatically and TestFlight notifies you.
 
 Each run also attaches the raw `.ipa` as a workflow artifact for ad-hoc installs.
 
@@ -121,21 +121,13 @@ Password login works out of the box. For the Google button:
 
 ```
 mobile/
-├── app.config.ts          # Expo config (bundle id, splash, plugins)
-├── src/
-│   ├── app/               # expo-router routes
-│   │   ├── (auth)/        # login, register, verify-email
-│   │   └── (app)/         # authed area
-│   │       ├── (tabs)/    # home, recipes, planner, list (grocery)
-│   │       ├── recipes/   # detail, new, edit, import
-│   │       ├── planner/   # fill (meal-plan wizard)
-│   │       └── account.tsx
-│   ├── api/               # fetch client, SSE, per-resource API modules
-│   ├── components/        # screens' building blocks + ui/ primitives
-│   ├── hooks/             # react-query hooks per resource
-│   ├── stores/            # zustand: session (SecureStore), toasts, app lock
-│   ├── lib/               # dates, colors, media, haptics, biometrics, sitemap
-│   └── types/             # API contracts (mirrors api/schemas.py)
-├── assets/                # icon, splash, fonts, images
-└── test/                  # jest setup
+  app.config.ts          Expo config (name, bundle id, plugins)
+  src/
+    app/                 expo-router screens (auth + tabs)
+    components/          UI + feature components
+    api/                 API client wrappers
+    stores/              zustand stores
+    lib/                 colors, query client, biometrics, …
+    types/               shared API types (mirror web `src/types/`)
+  assets/images/         icon, splash, chef-hat
 ```

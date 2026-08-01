@@ -8,7 +8,7 @@
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 /**
- * Base URL of the Junket API, e.g. https://recipe-db.joelyoung.dev/api.
+ * Base URL of the Sous Kit API, e.g. https://recipe-db.joelyoung.dev/api.
  * A native app needs an absolute URL, so ignore empty or relative values
  * (CI passes unset GitHub vars through as empty strings, and the web app's
  * API_URL var is the relative `/api`).
@@ -30,4 +30,4 @@ export const API_ORIGIN: string = API_URL.replace(/\/api\/?$/, "");
 export const GOOGLE_IOS_CLIENT_ID: string = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 export const GOOGLE_WEB_CLIENT_ID: string = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 
-export const APP_NAME = "Junket";
+export const APP_NAME = "Sous Kit";

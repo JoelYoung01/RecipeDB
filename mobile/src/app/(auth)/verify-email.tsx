@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { APP_NAME } from "@/config";
 import { clearDevOtp, readDevOtp, stashDevOtp } from "@/lib/dev-otp";
 import { useSessionStore } from "@/stores/session";
 import { Image } from "expo-image";
@@ -86,7 +87,7 @@ export default function VerifyEmailScreen() {
             style={{ width: 64, height: 64 }}
             contentFit="contain"
           />
-          <Text className="font-sans-bold text-3xl tracking-tight">Junket</Text>
+          <Text className="font-sans-bold text-3xl tracking-tight">{APP_NAME}</Text>
           <Text className="max-w-sm text-center text-sm text-muted-foreground">
             Enter the 6-digit code we sent to your email to finish creating your account.
           </Text>
