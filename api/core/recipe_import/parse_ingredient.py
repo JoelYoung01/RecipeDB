@@ -48,9 +48,6 @@ _UNITS = (
     r"sticks?",
     r"cubes?",
     r"handfuls?",
-    r"large",
-    r"medium",
-    r"small",
 )
 
 _UNIT_RE = "|".join(_UNITS)

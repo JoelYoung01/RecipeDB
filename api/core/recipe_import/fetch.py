@@ -14,8 +14,10 @@ MAX_HTML_BYTES = 2_000_000
 FETCH_TIMEOUT = 20.0
 MAX_REDIRECTS = 5
 
+# Browser-like UA — many recipe CDNs return 402/403 to overt bot strings.
 _USER_AGENT = (
-    "SousKitRecipeBot/1.0 (+https://github.com/JoelYoung01/RecipeDB; recipe import)"
+    "Mozilla/5.0 (compatible; SousKit/1.0; +https://github.com/JoelYoung01/RecipeDB) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
 
 # Social / short-video hosts — not supported in v1 (no reliable recipe HTML).
