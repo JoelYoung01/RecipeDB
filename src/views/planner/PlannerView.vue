@@ -11,7 +11,6 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { trackIntent } from "@/lib/intent";
 import { addDays, endOfDay, mediaUrl, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import { usePlannerStore } from "@/stores/planner";
@@ -145,15 +144,9 @@ const selectedWeekDays = computed(() => {
 });
 
 function openPlanWeekFab() {
-  const days = selectedWeekDays.value.map(toDateKey);
   void router.push({
     path: paths.plannerFill,
-    query: { days: days.join(",") }
-  });
-  // Track after navigation kickoff so analytics never blocks the CTA.
-  trackIntent("planner.plan_week_fab", {
-    weekStart: days[0] ?? "",
-    source: "floating_fab"
+    query: { days: selectedWeekDays.value.map(toDateKey).join(",") }
   });
 }
 
@@ -429,9 +422,10 @@ onActivated(() => {
     </div>
 
     <!--
-      Thumb-reach Plan week CTA. Cleared above the raised tab-bar "+" so center
-      taps aren't swallowed by Add (z-60). Not teleported — KeepAlive would
-      otherwise leave a body portal mounted on sibling routes (e.g. fill wizard).
+      Prefer primary planner actions low on the screen for thumb reach —
+      don’t bury Plan week in week-section headers. Cleared above the raised
+      tab-bar "+" so center taps aren’t swallowed by Add (z-60). Keep
+      route-gated (not teleported) so KeepAlive doesn’t leave it on fill.
     -->
     <div
       v-show="route.name === 'planner'"
@@ -441,7 +435,6 @@ onActivated(() => {
         <Button
           class="w-full gap-1.5"
           aria-label="Plan week"
-          data-testid="plan-week-fab"
           @click="openPlanWeekFab()"
         >
           <CalendarDays class="size-4" />

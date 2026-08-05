@@ -8,7 +8,6 @@ import { Text } from "@/components/ui/text";
 import { colors } from "@/lib/colors";
 import { addDays, endOfDay, parseDateKey, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/dates";
 import { tapHaptic } from "@/lib/haptics";
-import { trackIntent } from "@/lib/intent";
 import { mediaSource } from "@/lib/media";
 import { syncAfterPlanMutation } from "@/hooks/sync";
 import { groupPlansByDay, usePlansRange } from "@/hooks/use-planner";
@@ -109,13 +108,7 @@ export default function PlannerScreen() {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [selectedDate]);
 
-  const openPlanWeekFab = () => {
-    void trackIntent("planner.plan_week_fab", {
-      weekStart: toDateKey(selectedWeekDays[0]!),
-      source: "floating_fab"
-    });
-    openFill(selectedWeekDays);
-  };
+  const openPlanWeekFab = () => openFill(selectedWeekDays);
 
   // ---- Assign sheet (multi-select "Change") ----
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -426,16 +419,12 @@ export default function PlannerScreen() {
       </ScrollView>
 
       {/*
-        Thumb-reach Plan week CTA. Lifted above the raised tab-bar "+"
-        (-mt-5 ≈ 20px into the scene) so center taps hit this button.
+        Prefer primary planner actions low on the screen for thumb reach —
+        don’t bury Plan week in week-section headers. Lifted above the raised
+        tab-bar "+" (-mt-5 ≈ 20px into the scene) so center taps hit this button.
       */}
       <View pointerEvents="box-none" className="absolute inset-x-0 bottom-7 z-50 px-4">
-        <Button
-          accessibilityLabel="Plan week"
-          testID="plan-week-fab"
-          className="w-full"
-          onPress={openPlanWeekFab}
-        >
+        <Button accessibilityLabel="Plan week" className="w-full" onPress={openPlanWeekFab}>
           <CalendarDays size={16} color={colors.foreground} />
           Plan week
         </Button>
