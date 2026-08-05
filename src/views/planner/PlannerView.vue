@@ -145,13 +145,15 @@ const selectedWeekDays = computed(() => {
 });
 
 function openPlanWeekFab() {
-  trackIntent("planner.plan_week_fab", {
-    weekStart: toDateKey(selectedWeekDays.value[0]!),
-    source: "floating_fab"
-  });
-  router.push({
+  const days = selectedWeekDays.value.map(toDateKey);
+  void router.push({
     path: paths.plannerFill,
-    query: { days: selectedWeekDays.value.map(toDateKey).join(",") }
+    query: { days: days.join(",") }
+  });
+  // Track after navigation kickoff so analytics never blocks the CTA.
+  trackIntent("planner.plan_week_fab", {
+    weekStart: days[0] ?? "",
+    source: "floating_fab"
   });
 }
 
@@ -260,7 +262,7 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="px-4 pt-5 pb-20">
+  <div class="px-4 pt-5 pb-28">
     <div class="flex items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-bold">Planner</h1>
@@ -426,18 +428,26 @@ onActivated(() => {
       </div>
     </div>
 
-    <!-- Thumb-reach Plan week CTA — docked above the tab bar -->
+    <!--
+      Thumb-reach Plan week CTA. Cleared above the raised tab-bar "+" so center
+      taps aren't swallowed by Add (z-60). Not teleported — KeepAlive would
+      otherwise leave a body portal mounted on sibling routes (e.g. fill wizard).
+    -->
     <div
-      class="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-full max-w-md -translate-x-1/2 px-4"
+      v-show="route.name === 'planner'"
+      class="pointer-events-none fixed bottom-[calc(7.25rem+env(safe-area-inset-bottom))] left-1/2 z-[70] w-full max-w-md -translate-x-1/2 px-4"
     >
-      <Button
-        class="pointer-events-auto w-full gap-1.5"
-        aria-label="Plan week"
-        @click="openPlanWeekFab()"
-      >
-        <CalendarDays class="size-4" />
-        Plan week
-      </Button>
+      <div class="pointer-events-auto">
+        <Button
+          class="w-full gap-1.5"
+          aria-label="Plan week"
+          data-testid="plan-week-fab"
+          @click="openPlanWeekFab()"
+        >
+          <CalendarDays class="size-4" />
+          Plan week
+        </Button>
+      </div>
     </div>
 
     <PlanNightSearchDialog v-model:open="nightSearchOpen" :date="selectedDate" />

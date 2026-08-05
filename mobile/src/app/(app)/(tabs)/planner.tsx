@@ -425,9 +425,17 @@ export default function PlannerScreen() {
         </View>
       </ScrollView>
 
-      {/* Thumb-reach Plan week CTA — docked above the tab bar */}
-      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-8">
-        <Button accessibilityLabel="Plan week" className="w-full" onPress={openPlanWeekFab}>
+      {/*
+        Thumb-reach Plan week CTA. Lifted above the raised tab-bar "+"
+        (-mt-5 ≈ 20px into the scene) so center taps hit this button.
+      */}
+      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-7 z-50 px-4">
+        <Button
+          accessibilityLabel="Plan week"
+          testID="plan-week-fab"
+          className="w-full"
+          onPress={openPlanWeekFab}
+        >
           <CalendarDays size={16} color={colors.foreground} />
           Plan week
         </Button>

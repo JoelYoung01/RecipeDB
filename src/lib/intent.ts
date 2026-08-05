@@ -48,7 +48,6 @@ export function trackIntent(name: IntentName, props?: IntentProps): void {
   writeStore(store);
 
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
     console.info(`[intent] ${name}`, { ...props, count: next.count });
   }
 }

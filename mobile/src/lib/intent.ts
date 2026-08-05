@@ -50,7 +50,6 @@ export async function trackIntent(name: IntentName, props?: IntentProps): Promis
   await writeStore(store);
 
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.info(`[intent] ${name}`, { ...props, count: next.count });
   }
 }
