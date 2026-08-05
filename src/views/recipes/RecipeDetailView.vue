@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { splitInstructionSteps } from "@/lib/instructions";
 import { formatPrepTime, mediaUrl } from "@/lib/media";
 import { useSessionStore } from "@/stores/session";
 import { syncAfterRecipeMutation } from "@/stores/sync";
@@ -165,10 +166,11 @@ onMounted(getRecipeDetails);
 
       <section class="mt-5">
         <h2 class="mb-1 text-sm font-semibold">Instructions</h2>
-        <pre
-          class="font-sans text-base leading-relaxed whitespace-pre-wrap text-muted-foreground"
-          >{{ recipe.instructions }}</pre
-        >
+        <div class="space-y-2.5 font-sans text-base leading-relaxed text-muted-foreground">
+          <p v-for="(step, idx) in splitInstructionSteps(recipe.instructions)" :key="idx">
+            {{ step }}
+          </p>
+        </div>
       </section>
 
       <section v-if="recipe.notes" class="mt-5">
