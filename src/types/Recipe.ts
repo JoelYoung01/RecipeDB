@@ -10,6 +10,7 @@ export interface RecipeSlim {
   notes?: string;
   created_on: string;
   created_by_id: number;
+  household_id: number;
   public: boolean;
   prep_time?: number;
   cover_image_id?: number;
@@ -32,6 +33,7 @@ export interface RecipeCard {
   description: string;
   created_on: string;
   created_by_id: number;
+  household_id: number;
   public: boolean;
   prep_time?: number;
   cover_image_id?: number;

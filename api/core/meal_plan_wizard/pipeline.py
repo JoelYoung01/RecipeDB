@@ -12,6 +12,7 @@ from typing import Any
 from sqlmodel import select
 
 from api.core.database import SessionDep
+from api.core.household import ensure_user_household
 from api.core.image_gen.client import ImageGenClient, get_image_gen_client
 from api.core.image_gen.service import generate_recipe_cover_upload
 from api.core.llm.client import ChatMessage, LlmClient, get_llm_client
@@ -558,8 +559,10 @@ class MealPlanWizardPipeline:
         for day, built in pairs:
             recipe_id = built.existing_recipe_id or built.created_recipe_id
             if recipe_id is None:
+                household = ensure_user_household(db, user)
                 db_recipe = Recipe(
                     created_by_id=user.id,
+                    household_id=household.id,
                     created_on=datetime.now(UTC),
                     name=built.title,
                     description=built.description,
@@ -604,10 +607,11 @@ class MealPlanWizardPipeline:
                 tzinfo=UTC
             )
             planned_for = datetime.fromisoformat(f"{day}T12:00:00").replace(tzinfo=UTC)
-            # Replace any existing plan for that day by this user (one dinner slot)
+            household = ensure_user_household(db, user)
+            # Replace any existing plan for that day in the household (one dinner slot)
             existing = db.exec(
                 select(PlannedRecipe).where(
-                    PlannedRecipe.created_by_id == user.id,
+                    PlannedRecipe.household_id == household.id,
                     PlannedRecipe.planned_for >= day_start,
                     PlannedRecipe.planned_for <= day_end,
                 )
@@ -617,6 +621,7 @@ class MealPlanWizardPipeline:
             pr = PlannedRecipe(
                 recipe_id=recipe_id,
                 created_by_id=user.id,
+                household_id=household.id,
                 created_on=datetime.now(UTC),
                 planned_for=planned_for,
             )

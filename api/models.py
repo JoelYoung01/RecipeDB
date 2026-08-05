@@ -99,6 +99,7 @@ class Upload(BaseIndexedDbModel, table=True):
 
 class Recipe(BaseIndexedDbModel, table=True):
     created_by_id: int = Field(foreign_key="user.id")
+    household_id: int = Field(foreign_key="household.id", index=True)
     created_on: datetime = Field(sa_type=UTCDateTime)
     name: str
     description: str
@@ -109,6 +110,7 @@ class Recipe(BaseIndexedDbModel, table=True):
     cover_image_id: int | None = Field(foreign_key="upload.id", default=None)
 
     created_by: "User" = Relationship()
+    household: "Household" = Relationship()
     ingredients: list["Ingredient"] = Relationship(
         back_populates="recipe",
         cascade_delete=True,
@@ -136,10 +138,12 @@ class Ingredient(BaseIndexedDbModel, table=True):
 class PlannedRecipe(BaseIndexedDbModel, table=True):
     recipe_id: int = Field(foreign_key="recipe.id")
     created_by_id: int = Field(foreign_key="user.id")
+    household_id: int = Field(foreign_key="household.id", index=True)
     created_on: datetime = Field(sa_type=UTCDateTime)
     planned_for: datetime = Field(sa_type=UTCDateTime)
 
     created_by: "User" = Relationship()
+    household: "Household" = Relationship()
     recipe: "Recipe" = Relationship(back_populates="planned")
 
 
@@ -148,12 +152,65 @@ class GroceryItemStatus(str, Enum):
     deleted = "deleted"
 
 
+class HouseholdRole(str, Enum):
+    owner = "owner"
+    member = "member"
+
+
+class HouseholdInviteStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    revoked = "revoked"
+    expired = "expired"
+
+
+class Household(BaseIndexedDbModel, table=True):
+    name: str
+    created_by_id: int = Field(foreign_key="user.id")
+    created_on: datetime = Field(sa_type=UTCDateTime)
+
+    created_by: "User" = Relationship()
+    members: list["HouseholdMember"] = Relationship(
+        back_populates="household",
+        cascade_delete=True,
+    )
+    invites: list["HouseholdInvite"] = Relationship(
+        back_populates="household",
+        cascade_delete=True,
+    )
+
+
+class HouseholdMember(BaseIndexedDbModel, table=True):
+    household_id: int = Field(foreign_key="household.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True, unique=True)
+    role: str  # HouseholdRole value
+    joined_on: datetime = Field(sa_type=UTCDateTime)
+
+    household: Household = Relationship(back_populates="members")
+    user: "User" = Relationship()
+
+
+class HouseholdInvite(BaseIndexedDbModel, table=True):
+    household_id: int = Field(foreign_key="household.id", index=True)
+    email: str = Field(index=True)
+    invited_by_id: int = Field(foreign_key="user.id")
+    token: str = Field(index=True, unique=True)
+    status: str = HouseholdInviteStatus.pending.value
+    created_on: datetime = Field(sa_type=UTCDateTime)
+    expires_on: datetime = Field(sa_type=UTCDateTime)
+
+    household: Household = Relationship(back_populates="invites")
+    invited_by: "User" = Relationship()
+
+
 class GroceryItemState(BaseIndexedDbModel, table=True):
-    """Per-user grocery list state for a derived ingredient key."""
+    """Per-household grocery list state for a derived ingredient key."""
 
     created_by_id: int = Field(foreign_key="user.id", index=True)
+    household_id: int = Field(foreign_key="household.id", index=True)
     item_key: str = Field(index=True)
     status: str  # GroceryItemStatus value
     updated_on: datetime = Field(sa_type=UTCDateTime)
 
     created_by: "User" = Relationship()
+    household: Household = Relationship()

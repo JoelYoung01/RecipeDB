@@ -15,6 +15,7 @@ function plan(id: number, plannedFor: string): PlannedRecipeDetail {
   return {
     id,
     created_by_id: user.id,
+    household_id: 1,
     created_on: "2026-01-01T00:00:00",
     planned_for: plannedFor,
     created_by: user,
@@ -24,6 +25,7 @@ function plan(id: number, plannedFor: string): PlannedRecipeDetail {
       description: "",
       created_on: "2026-01-01T00:00:00",
       created_by_id: user.id,
+      household_id: 1,
       public: false
     }
   };

@@ -174,6 +174,10 @@ def register_password_user(
     session.commit()
     session.refresh(user)
 
+    from api.core.household import ensure_user_household
+
+    ensure_user_household(session, user)
+
     otp = issue_email_otp(user, session)
     return user, otp
 
@@ -297,14 +301,19 @@ def get_or_create_user_from_google_token(google_token, session: SessionDep):
             }
             db_user = User.model_validate(new_user)
             session.add(db_user)
+            session.commit()
+            session.refresh(db_user)
+            from api.core.household import ensure_user_household
+
+            ensure_user_household(session, db_user)
         else:
             db_user.google_user_id = google_token["sub"]
             db_user.email_verified = True
             if not db_user.avatar_url and google_token.get("picture"):
                 db_user.avatar_url = google_token["picture"]
             session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+            session.commit()
+            session.refresh(db_user)
     elif not db_user.email_verified:
         db_user.email_verified = True
         session.add(db_user)
@@ -385,10 +394,16 @@ def get_or_create_user_from_apple_token(
             }
         )
         session.add(db_user)
-    else:
-        db_user.apple_user_id = apple_token["sub"]
-        db_user.email_verified = True
-        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+        from api.core.household import ensure_user_household
+
+        ensure_user_household(session, db_user)
+        return db_user
+
+    db_user.apple_user_id = apple_token["sub"]
+    db_user.email_verified = True
+    session.add(db_user)
     session.commit()
     session.refresh(db_user)
     return db_user
