@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/text";
 import { colors } from "@/lib/colors";
 import { addDays, endOfDay, parseDateKey, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/dates";
 import { tapHaptic } from "@/lib/haptics";
+import { trackIntent } from "@/lib/intent";
 import { mediaSource } from "@/lib/media";
 import { syncAfterPlanMutation } from "@/hooks/sync";
 import { groupPlansByDay, usePlansRange } from "@/hooks/use-planner";
@@ -16,7 +17,7 @@ import { toast } from "@/stores/toast";
 import type { PlannedRecipeDetail, RecipeCard } from "@/types";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronRight, Search, Sparkles, Trash2 } from "lucide-react-native";
+import { CalendarDays, Search, Sparkles, Trash2 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -100,6 +101,20 @@ export default function PlannerScreen() {
     tapHaptic();
     const keys = days.map(toDateKey).join(",");
     router.push((keys ? `/planner/fill?days=${keys}` : "/planner/fill") as never);
+  };
+
+  /** Week containing the selected day — target for the thumb-reach Plan week FAB. */
+  const selectedWeekDays = useMemo(() => {
+    const weekStart = startOfWeekMonday(selectedDate);
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  }, [selectedDate]);
+
+  const openPlanWeekFab = () => {
+    void trackIntent("planner.plan_week_fab", {
+      weekStart: toDateKey(selectedWeekDays[0]!),
+      source: "floating_fab"
+    });
+    openFill(selectedWeekDays);
   };
 
   // ---- Assign sheet (multi-select "Change") ----
@@ -206,13 +221,14 @@ export default function PlannerScreen() {
   };
 
   return (
-    <>
+    <View className="flex-1 bg-background">
       <ScrollView
-        className="flex-1 bg-background"
+        className="flex-1"
         contentContainerStyle={{
           paddingTop: insets.top + 20,
           paddingHorizontal: 16,
-          paddingBottom: 24
+          // Clear the floating Plan week CTA above the tab bar.
+          paddingBottom: 88
         }}
       >
         <View className="flex-row items-start justify-between gap-3">
@@ -235,23 +251,11 @@ export default function PlannerScreen() {
             ).length;
             return (
               <View key={week.weekIndex} className="gap-2">
-                <View className="flex-row items-center justify-between gap-2 border-b border-border/80 py-2">
-                  <View>
-                    <Text className="font-sans-semibold text-sm">
-                      {weekLabel(week.weekStart, week.weekIndex)}
-                    </Text>
-                    <Text className="text-[11px] text-faint">{plannedCount} / 7 planned</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => openFill(week.days)}
-                    hitSlop={8}
-                    className="flex-row items-center gap-0.5 active:opacity-70"
-                  >
-                    <Text className="font-sans-semibold text-[12.5px] text-[#22c55e]">
-                      Plan week
-                    </Text>
-                    <ChevronRight size={14} color={colors.green500} />
-                  </Pressable>
+                <View className="border-b border-border/80 py-2">
+                  <Text className="font-sans-semibold text-sm">
+                    {weekLabel(week.weekStart, week.weekIndex)}
+                  </Text>
+                  <Text className="text-[11px] text-faint">{plannedCount} / 7 planned</Text>
                 </View>
 
                 <View className="overflow-hidden rounded-xl border border-border bg-card">
@@ -421,6 +425,14 @@ export default function PlannerScreen() {
         </View>
       </ScrollView>
 
+      {/* Thumb-reach Plan week CTA — docked above the tab bar */}
+      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-8">
+        <Button accessibilityLabel="Plan week" className="w-full" onPress={openPlanWeekFab}>
+          <CalendarDays size={16} color={colors.foreground} />
+          Plan week
+        </Button>
+      </View>
+
       {/* Empty-night search sheet */}
       <Sheet
         visible={searchSheetOpen}
@@ -587,6 +599,6 @@ export default function PlannerScreen() {
           </Button>
         </View>
       </Sheet>
-    </>
+    </View>
   );
 }

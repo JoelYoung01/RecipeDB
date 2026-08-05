@@ -70,7 +70,7 @@ Column: **full-bleed Tonight hero** → **week-at-a-glance** → **action rows**
 
 - Hero (~300px): recipe photo, gradient scrim, weekday + profile avatar overlay, “TONIGHT” + title + meta + **Cook** CTA. Empty state: prompt to plan tonight.
 - Week strip: swipeable weeks (past + future) with weekday + date; green dot = planned, zinc gap = unplanned; today tinted/outlined. Tap a day → that day’s plan in the planner. “Fill the gaps →” → planner fill wizard for the visible week.
-- Planner: vertical sliding weeks with **this week sticky at top**; day rows (not a month grid). “Plan week” / “Fill gaps” open the wizard.
+- Planner: vertical sliding weeks with **this week sticky at top**; day rows (not a month grid). “Fill gaps” (header) and a floating **Plan week** CTA above the tab bar open the wizard — Plan week is thumb-reach so it gets used more; taps are tracked as intent `planner.plan_week_fab`.
 - Action rows (not a recent-feed): Import a recipe · Find a recipe · Grocery (7-day chip / count when available).
 
 ### Add sheet
