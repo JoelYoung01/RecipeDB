@@ -6,7 +6,8 @@ from sqlmodel import select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
-from api.models import Ingredient
+from api.core.household import user_can_edit_recipe
+from api.models import Ingredient, Recipe
 from api.schemas import IngredientCreate, IngredientDetail, IngredientUpdate
 
 router = APIRouter(
@@ -16,6 +17,13 @@ router = APIRouter(
 )
 
 
+def _recipe_for_ingredient(session: SessionDep, recipe_id: int) -> Recipe:
+    recipe = session.get(Recipe, recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="That recipe couldn’t be found.")
+    return recipe
+
+
 @router.post(
     "/",
     response_model=IngredientDetail,
@@ -23,6 +31,13 @@ router = APIRouter(
 def create_ingredient(
     ingredient: IngredientCreate, currentUser: CurrentUserDep, session: SessionDep
 ):
+    recipe = _recipe_for_ingredient(session, ingredient.recipe_id)
+    if not user_can_edit_recipe(session, currentUser, recipe):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only change ingredients on household recipes.",
+        )
+
     ingredient_data = ingredient.model_dump()
     ingredient_data["created_on"] = datetime.now(timezone.utc)
     ingredient_data["created_by_id"] = currentUser.id
@@ -53,10 +68,11 @@ def update_ingredient(
             detail="That ingredient couldn’t be found.",
         )
 
-    if currentUser.id != existing_ingredient.created_by_id:
+    recipe = _recipe_for_ingredient(session, existing_ingredient.recipe_id)
+    if not user_can_edit_recipe(session, currentUser, recipe):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only change ingredients on your own recipes.",
+            detail="You can only change ingredients on household recipes.",
         )
 
     update_stmt = (
@@ -84,10 +100,11 @@ def delete_ingredient(
             detail="That ingredient couldn’t be found.",
         )
 
-    if existing_ingredient.created_by_id != current_user.id:
+    recipe = _recipe_for_ingredient(session, existing_ingredient.recipe_id)
+    if not user_can_edit_recipe(session, current_user, recipe):
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "You can only remove ingredients from your own recipes.",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only remove ingredients from household recipes.",
         )
 
     session.delete(existing_ingredient)

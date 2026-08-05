@@ -8,6 +8,13 @@ from sqlmodel import and_, or_, select
 
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
+from api.core.household import (
+    ensure_user_household,
+    recipe_access_filter,
+    require_membership,
+    user_can_access_recipe,
+    user_can_edit_recipe,
+)
 from api.core.image_gen.service import generate_recipe_cover_upload
 from api.core.recipe_import import import_recipe_from_url
 from api.core.recipe_import.fetch import RecipeImportError
@@ -34,6 +41,14 @@ unauth_router = APIRouter(
 )
 
 
+def _recipe_detail_options():
+    return (
+        selectinload(Recipe.cover_image),
+        selectinload(Recipe.created_by),
+        selectinload(Recipe.ingredients),
+    )
+
+
 @router.post("/import-from-url/", response_model=RecipeDetail)
 async def import_recipe_from_url_route(
     body: RecipeImportFromUrlRequest,
@@ -50,9 +65,11 @@ async def import_recipe_from_url_route(
     except RecipeImportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
+    household = ensure_user_household(session, current_user)
     now = datetime.now(UTC)
     db_recipe = Recipe(
         created_by_id=current_user.id,
+        household_id=household.id,
         created_on=now,
         name=draft.name,
         description=draft.description,
@@ -94,11 +111,7 @@ async def import_recipe_from_url_route(
     recipe = session.exec(
         select(Recipe)
         .where(Recipe.id == db_recipe.id)
-        .options(
-            selectinload(Recipe.cover_image),
-            selectinload(Recipe.created_by),
-            selectinload(Recipe.ingredients),
-        )
+        .options(*_recipe_detail_options())
     ).first()
     return recipe
 
@@ -126,9 +139,8 @@ def generate_recipe_cover(
     )
     if upload is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No suitable cover image found. Try a clearer recipe name, "
-            "or upload a photo instead.",
+            status_code=404,
+            detail="Couldn’t find a suitable cover image. Try again or upload your own.",
         )
     return upload
 
@@ -136,18 +148,14 @@ def generate_recipe_cover(
 @unauth_router.get("/public/", response_model=list[RecipeDetail])
 def get_public_recipes(
     session: SessionDep,
-    user: int = None,
+    user: int | None = None,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
 ):
     stmt = (
         select(Recipe)
         .where(Recipe.public)
-        .options(
-            selectinload(Recipe.cover_image),
-            selectinload(Recipe.created_by),
-            selectinload(Recipe.ingredients),
-        )
+        .options(*_recipe_detail_options())
         .offset(offset)
         .limit(limit)
     )
@@ -166,9 +174,10 @@ def get_all_recipes(
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 50,
 ):
+    household, _ = require_membership(session, current_user)
     recipes = session.exec(
         select(Recipe)
-        .where(or_(Recipe.public, Recipe.created_by == current_user))
+        .where(recipe_access_filter(household.id))
         .options(selectinload(Recipe.cover_image))
         .offset(offset)
         .limit(limit)
@@ -183,9 +192,11 @@ def get_users_recipes(
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 50,
 ):
+    """Recipes in the current user's household (shared library)."""
+    household, _ = require_membership(session, current_user)
     recipes = session.exec(
         select(Recipe)
-        .where(Recipe.created_by == current_user)
+        .where(Recipe.household_id == household.id)
         .options(selectinload(Recipe.cover_image))
         .order_by(Recipe.created_on.desc())
         .offset(offset)
@@ -196,19 +207,21 @@ def get_users_recipes(
 
 @router.get("/user/count/", response_model=CountResponse)
 def get_users_recipe_count(current_user: CurrentUserDep, session: SessionDep):
+    household, _ = require_membership(session, current_user)
     count = session.exec(
         select(func.count())
         .select_from(Recipe)
-        .where(Recipe.created_by == current_user)
+        .where(Recipe.household_id == household.id)
     ).one()
     return CountResponse(count=count)
 
 
 @router.get("/user/recent/", response_model=list[RecipeCard])
 def get_users_recently_added_recipes(current_user: CurrentUserDep, session: SessionDep):
+    household, _ = require_membership(session, current_user)
     recipes = session.exec(
         select(Recipe)
-        .where(Recipe.created_by == current_user)
+        .where(Recipe.household_id == household.id)
         .options(selectinload(Recipe.cover_image))
         .order_by(Recipe.created_on.desc())
         .limit(5)
@@ -222,18 +235,20 @@ def get_users_recently_added_recipes(current_user: CurrentUserDep, session: Sess
 )
 def get_recipe_by_id(
     recipe_id: int,
+    current_user: CurrentUserDep,
     session: SessionDep,
 ):
     recipe = session.exec(
         select(Recipe)
         .where(Recipe.id == recipe_id)
-        .options(
-            selectinload(Recipe.cover_image),
-            selectinload(Recipe.created_by),
-            selectinload(Recipe.ingredients),
-        )
+        .options(*_recipe_detail_options())
     ).first()
     if not recipe:
+        raise HTTPException(
+            status_code=404,
+            detail="That recipe couldn’t be found. It may have been deleted.",
+        )
+    if not user_can_access_recipe(session, current_user, recipe):
         raise HTTPException(
             status_code=404,
             detail="That recipe couldn’t be found. It may have been deleted.",
@@ -249,6 +264,9 @@ def search_recipes(
     offset=0,
     limit: Annotated[int, Query(le=100)] = 50,
 ):
+    household, _ = require_membership(session, current_user)
+    access = recipe_access_filter(household.id)
+
     if not searchText:
         recipes = session.exec(
             select(Recipe)
@@ -264,7 +282,7 @@ def search_recipes(
         .join(Recipe.ingredients, isouter=True)
         .where(
             and_(
-                or_(Recipe.public, Recipe.created_by == current_user),
+                access,
                 or_(
                     Recipe.name.ilike(f"%{searchText}%"),
                     Recipe.description.ilike(f"%{searchText}%"),
@@ -295,9 +313,11 @@ def search_recipes(
 def create_recipe(
     recipe: RecipeCreate, currentUser: CurrentUserDep, session: SessionDep
 ):
+    household = ensure_user_household(session, currentUser)
     rec_dict = recipe.model_dump()
     rec_dict["created_on"] = datetime.now(UTC)
     rec_dict["created_by_id"] = currentUser.id
+    rec_dict["household_id"] = household.id
 
     db_recipe = Recipe.model_validate(rec_dict)
     session.add(db_recipe)
@@ -324,10 +344,10 @@ def update_recipe(
             detail="That recipe couldn’t be found. It may have been deleted.",
         )
 
-    if currentUser.id != existing_recipe.created_by_id:
+    if not user_can_edit_recipe(session, currentUser, existing_recipe):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only edit recipes you created.",
+            detail="You can only edit recipes in your household.",
         )
 
     update_stmt = (
@@ -352,10 +372,10 @@ def delete_recipe(recipe_id: int, currentUser: CurrentUserDep, session: SessionD
             detail="That recipe couldn’t be found. It may have already been deleted.",
         )
 
-    if existing_recipe.created_by_id != currentUser.id:
+    if not user_can_edit_recipe(session, currentUser, existing_recipe):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete recipes you created.",
+            detail="You can only delete recipes in your household.",
         )
 
     # Cascades remove ingredients + planned meal entries for this recipe.

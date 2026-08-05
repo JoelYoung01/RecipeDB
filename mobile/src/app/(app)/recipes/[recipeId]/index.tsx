@@ -10,6 +10,7 @@ import { tapHaptic } from "@/lib/haptics";
 import { splitInstructionSteps } from "@/lib/instructions";
 import { mediaSource } from "@/lib/media";
 import { syncAfterRecipeMutation } from "@/hooks/sync";
+import { useHousehold } from "@/hooks/use-household";
 import { useRecipe } from "@/hooks/use-recipes";
 import { useSessionStore } from "@/stores/session";
 import { toast } from "@/stores/toast";
@@ -26,10 +27,13 @@ export default function RecipeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { recipeId } = useLocalSearchParams<{ recipeId: string }>();
   const user = useSessionStore((s) => s.user);
+  const householdId = useHousehold().data?.id;
 
   const recipeQuery = useRecipe(recipeId);
   const recipe = recipeQuery.data;
-  const owned = !!recipe && recipe.created_by.id === user?.id;
+  const canEdit =
+    !!recipe &&
+    (recipe.household_id === householdId || recipe.created_by.id === user?.id);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -43,7 +47,7 @@ export default function RecipeDetailScreen() {
   };
 
   const onDelete = async () => {
-    if (!owned || deleting) return;
+    if (!canEdit || deleting) return;
     setDeleting(true);
     try {
       await deleteRecipe(recipeId!);
@@ -109,7 +113,7 @@ export default function RecipeDetailScreen() {
             >
               <ArrowLeft size={16} color={colors.foreground} />
             </Pressable>
-            {owned ? (
+            {canEdit ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Edit"
@@ -214,7 +218,7 @@ export default function RecipeDetailScreen() {
                 </View>
               ) : null}
 
-              {owned ? (
+              {canEdit ? (
                 <Button
                   variant="destructive"
                   size="sm"

@@ -15,8 +15,9 @@ import { syncAfterRecipeMutation } from "@/stores/sync";
 import { paths } from "@/sitemap";
 import type { RecipeDetail } from "@/types";
 import { ApiError, del, get, toast } from "@/utils";
+import { fetchHousehold } from "@/utils/household";
 import { ArrowLeft, Pencil } from "@lucide/vue";
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 const sessionStore = useSessionStore();
@@ -26,8 +27,17 @@ const route = useRoute();
 const recipe = ref<RecipeDetail>();
 const deleteOpen = ref(false);
 const loading = ref(false);
+const householdId = ref<number | null>(null);
 
-const owned = computed(() => recipe.value?.created_by.id === sessionStore.currentUser?.id);
+const authored = computed(() => recipe.value?.created_by.id === sessionStore.currentUser?.id);
+const canEdit = computed(() => {
+  if (!recipe.value) return false;
+  if (householdId.value != null && recipe.value.household_id === householdId.value) {
+    return true;
+  }
+  return authored.value;
+});
+const owned = canEdit;
 const returnUrl = computed(() => {
   const param = Array.isArray(route.query.returnUrl)
     ? route.query.returnUrl.at(-1)
@@ -72,7 +82,14 @@ function scrollToIngredients() {
   document.getElementById("ingredients")?.scrollIntoView({ behavior: "smooth" });
 }
 
-onMounted(getRecipeDetails);
+onMounted(async () => {
+  try {
+    householdId.value = (await fetchHousehold()).id;
+  } catch {
+    householdId.value = null;
+  }
+  await getRecipeDetails();
+});
 </script>
 
 <template>
@@ -116,8 +133,8 @@ onMounted(getRecipeDetails);
         <Button size="sm" class="shrink-0" @click="scrollToIngredients">Cook</Button>
       </div>
 
-      <p v-if="!owned" class="mt-2 text-sm text-muted-foreground">
-        Created by
+      <p v-if="!authored" class="mt-2 text-sm text-muted-foreground">
+        Added by
         <RouterLink
           :to="paths.publicUser(recipe.created_by_id)"
           class="font-medium text-[#22c55e] hover:underline"
