@@ -1,5 +1,6 @@
 import { deleteRecipe } from "@/api/recipes";
 import { EmptyState } from "@/components/EmptyState";
+import { RecipeAiEditSheet } from "@/components/RecipeAiEditSheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +18,7 @@ import { toast } from "@/stores/toast";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Pencil } from "lucide-react-native";
+import { ArrowLeft, Pencil, Sparkles } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,6 +38,7 @@ export default function RecipeDetailScreen() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const ingredientsY = useRef(0);
@@ -96,10 +98,11 @@ export default function RecipeDetailScreen() {
           <LinearGradient
             colors={["rgba(9,11,9,0.55)", "rgba(9,11,9,0)", "rgba(9,11,9,1)"]}
             locations={[0, 0.5, 1]}
+            pointerEvents="none"
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
           <View
-            className="absolute inset-x-0 flex-row items-center justify-between px-3"
+            className="absolute inset-x-0 z-10 flex-row items-center justify-between px-3"
             style={{ top: insets.top + 4 }}
           >
             <Pressable
@@ -114,17 +117,30 @@ export default function RecipeDetailScreen() {
               <ArrowLeft size={16} color={colors.foreground} />
             </Pressable>
             {canEdit ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Edit"
-                onPress={() => {
-                  tapHaptic();
-                  router.push(`/recipes/${recipeId}/edit` as never);
-                }}
-                className="h-9 w-9 items-center justify-center rounded-full bg-primary active:opacity-80"
-              >
-                <Pencil size={16} color={colors.foreground} />
-              </Pressable>
+              <View className="flex-row items-center gap-2">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit with AI"
+                  onPress={() => {
+                    tapHaptic();
+                    setAiEditOpen(true);
+                  }}
+                  className="h-9 w-9 items-center justify-center rounded-full bg-background/50 active:opacity-80"
+                >
+                  <Sparkles size={16} color={colors.green500} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit"
+                  onPress={() => {
+                    tapHaptic();
+                    router.push(`/recipes/${recipeId}/edit` as never);
+                  }}
+                  className="h-9 w-9 items-center justify-center rounded-full bg-primary active:opacity-80"
+                >
+                  <Pencil size={16} color={colors.foreground} />
+                </Pressable>
+              </View>
             ) : null}
           </View>
         </View>
@@ -254,6 +270,14 @@ export default function RecipeDetailScreen() {
         onConfirm={onDelete}
         onCancel={() => setDeleteOpen(false)}
       />
+
+      {recipeId ? (
+        <RecipeAiEditSheet
+          visible={aiEditOpen}
+          recipeId={recipeId}
+          onClose={() => setAiEditOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

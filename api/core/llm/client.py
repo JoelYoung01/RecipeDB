@@ -102,6 +102,14 @@ class StubLlmClient(LlmClient):
         last_user = next(
             (m.content for m in reversed(messages) if m.role == "user"), ""
         )
+        if "EDIT_RECIPE" in last_user:
+            edited = self._edit_recipe(last_user, rng)
+            return LlmTurnResult(
+                content="Stub-edited recipe",
+                parsed=edited,
+                stubbed=True,
+            )
+
         mode = "build" if "BUILD_RECIPES" in last_user else "ideate"
         if mode == "ideate":
             count = self._extract_count(last_user, default=8)
@@ -136,6 +144,75 @@ class StubLlmClient(LlmClient):
             if line.startswith("- "):
                 titles.append(line[2:].strip())
         return titles or ["Stubbed Weeknight Bowl"]
+
+    def _edit_recipe(self, text: str, rng: random.Random) -> dict[str, Any]:
+        """Deterministic patch for AI-edit when no OpenRouter key is set."""
+        instruction = ""
+        if "INSTRUCTION:" in text:
+            instruction = text.split("INSTRUCTION:", 1)[1]
+            if "CURRENT_RECIPE:" in instruction:
+                instruction = instruction.split("CURRENT_RECIPE:", 1)[0]
+            instruction = instruction.strip()
+
+        current: dict[str, Any] = {}
+        if "CURRENT_RECIPE:" in text:
+            raw = text.split("CURRENT_RECIPE:", 1)[1].strip()
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    current = parsed
+            except json.JSONDecodeError:
+                current = {}
+
+        name = str(current.get("name") or "Stub Recipe").strip()
+        description = str(current.get("description") or "").strip()
+        instructions = str(current.get("instructions") or "1. Cook and serve.").strip()
+        notes = current.get("notes")
+        prep_time = current.get("prep_time")
+        try:
+            prep_f = (
+                float(prep_time) if prep_time is not None and prep_time != "" else None
+            )
+        except (TypeError, ValueError):
+            prep_f = None
+
+        ingredients = current.get("ingredients")
+        if not isinstance(ingredients, list) or not ingredients:
+            ingredients = self._recipe(rng, name)["ingredients"]
+
+        lower = instruction.lower()
+        if "double" in lower or "2x" in lower:
+            scaled: list[dict[str, Any]] = []
+            for item in ingredients:
+                if not isinstance(item, dict):
+                    continue
+                copy = dict(item)
+                amount = copy.get("amount")
+                try:
+                    if amount is not None and amount != "":
+                        copy["amount"] = float(amount) * 2
+                except (TypeError, ValueError):
+                    pass
+                scaled.append(copy)
+            ingredients = scaled or ingredients
+            if prep_f is not None:
+                prep_f = prep_f * 1.25
+            name = f"{name} (doubled)"
+        elif not name.endswith("(AI edit)"):
+            name = f"{name} (AI edit)"
+
+        note_line = f"Stub AI edit: {instruction}" if instruction else "Stub AI edit."
+        notes_str = str(notes).strip() if notes else ""
+        notes_out = f"{notes_str}\n{note_line}".strip() if notes_str else note_line
+
+        return {
+            "name": name[:200],
+            "description": description or f"Edited stub of {name}.",
+            "instructions": instructions,
+            "notes": notes_out[:2000],
+            "prep_time": prep_f,
+            "ingredients": ingredients,
+        }
 
     def _idea(self, rng: random.Random, index: int) -> dict[str, str]:
         protein = rng.choice(self.PROTEINS)
@@ -265,6 +342,13 @@ def _extract_json_payload(text: str) -> Any:
 
 def _normalize_parsed(parsed: Any, *, mode: str) -> dict[str, Any]:
     """Coerce common model shapes into {ideas: [...]} or {recipes: [...]}."""
+    if mode == "edit":
+        if isinstance(parsed, dict):
+            if "recipe" in parsed and isinstance(parsed["recipe"], dict):
+                return parsed["recipe"]
+            return parsed
+        raise ValueError(f"Unexpected LLM JSON type for edit: {type(parsed).__name__}")
+
     if isinstance(parsed, dict):
         if mode == "ideate":
             if isinstance(parsed.get("ideas"), list):
@@ -295,6 +379,8 @@ def _normalize_parsed(parsed: Any, *, mode: str) -> dict[str, Any]:
 
 def _infer_mode(messages: list[ChatMessage]) -> str:
     last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+    if "EDIT_RECIPE" in last_user:
+        return "edit"
     return "build" if "BUILD_RECIPES" in last_user else "ideate"
 
 

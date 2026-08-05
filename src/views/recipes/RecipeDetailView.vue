@@ -8,16 +8,17 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { splitInstructionSteps } from "@/lib/instructions";
 import { formatPrepTime, mediaUrl } from "@/lib/media";
 import { useSessionStore } from "@/stores/session";
 import { syncAfterRecipeMutation } from "@/stores/sync";
 import { paths } from "@/sitemap";
 import type { RecipeDetail } from "@/types";
-import { ApiError, del, get, toast } from "@/utils";
+import { ApiError, del, get, post, toast } from "@/utils";
 import { fetchHousehold } from "@/utils/household";
-import { ArrowLeft, Pencil } from "@lucide/vue";
-import { computed, onMounted, ref } from "vue";
+import { ArrowLeft, LoaderCircle, Pencil, Sparkles } from "@lucide/vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 const sessionStore = useSessionStore();
@@ -26,6 +27,9 @@ const route = useRoute();
 
 const recipe = ref<RecipeDetail>();
 const deleteOpen = ref(false);
+const aiEditOpen = ref(false);
+const aiInstruction = ref("");
+const aiSaving = ref(false);
 const loading = ref(false);
 const householdId = ref<number | null>(null);
 
@@ -46,6 +50,14 @@ const returnUrl = computed(() => {
 });
 const imageUrl = computed(() => mediaUrl(recipe.value?.cover_image?.url));
 const formattedTime = computed(() => formatPrepTime(recipe.value?.prep_time) || "—");
+const canAiSave = computed(() => aiInstruction.value.trim().length > 0 && !aiSaving.value);
+
+watch(aiEditOpen, (open) => {
+  if (open) {
+    aiInstruction.value = "";
+    aiSaving.value = false;
+  }
+});
 
 async function getRecipeDetails() {
   loading.value = true;
@@ -76,6 +88,23 @@ async function deleteRecipe() {
     toast.fromError(er, "Couldn’t delete this recipe.");
   }
   loading.value = false;
+}
+
+async function applyAiEdit() {
+  if (!owned.value || !canAiSave.value) return;
+  aiSaving.value = true;
+  try {
+    recipe.value = await post<RecipeDetail>(`/recipe/${route.params.recipeId}/ai-edit/`, {
+      instruction: aiInstruction.value.trim()
+    });
+    syncAfterRecipeMutation();
+    toast.success("Recipe updated with AI.");
+    aiEditOpen.value = false;
+  } catch (er) {
+    console.error(er);
+    toast.fromError(er, "Couldn’t apply that AI edit.");
+  }
+  aiSaving.value = false;
 }
 
 function scrollToIngredients() {
@@ -109,20 +138,30 @@ onMounted(async () => {
         >
           <ArrowLeft class="size-4 opacity-80" />
         </Button>
-        <Button
-          v-if="owned"
-          size="icon-sm"
-          class="rounded-full"
-          :aria-label="'Edit'"
-          @click="
-            router.push({
-              path: paths.recipeEdit(String(route.params.recipeId)),
-              query: { detailReturnUrl: returnUrl }
-            })
-          "
-        >
-          <Pencil class="size-4" />
-        </Button>
+        <div v-if="owned" class="flex items-center gap-2">
+          <Button
+            size="icon-sm"
+            variant="secondary"
+            class="rounded-full bg-background/50 text-foreground backdrop-blur"
+            :aria-label="'Edit with AI'"
+            @click="aiEditOpen = true"
+          >
+            <Sparkles class="size-4 text-[#22c55e]" />
+          </Button>
+          <Button
+            size="icon-sm"
+            class="rounded-full"
+            :aria-label="'Edit'"
+            @click="
+              router.push({
+                path: paths.recipeEdit(String(route.params.recipeId)),
+                query: { detailReturnUrl: returnUrl }
+              })
+            "
+          >
+            <Pencil class="size-4" />
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -212,6 +251,33 @@ onMounted(async () => {
         <DialogFooter class="gap-2">
           <Button variant="outline" :disabled="loading" @click="deleteOpen = false">Cancel</Button>
           <Button variant="destructive" :disabled="loading" @click="deleteRecipe">Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="aiEditOpen">
+      <DialogContent class="max-w-md border-border bg-card">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            <Sparkles class="size-4 text-[#22c55e]" />
+            Edit with AI
+          </DialogTitle>
+          <DialogDescription>
+            Describe what to change — ingredients, servings, style, etc.
+          </DialogDescription>
+        </DialogHeader>
+        <Textarea
+          v-model="aiInstruction"
+          :disabled="aiSaving"
+          placeholder="e.g. Make it dairy-free and cut prep time in half"
+          class="min-h-28 rounded-xl bg-card"
+        />
+        <DialogFooter class="gap-2">
+          <Button variant="outline" :disabled="aiSaving" @click="aiEditOpen = false">Cancel</Button>
+          <Button :disabled="!canAiSave" @click="applyAiEdit">
+            <LoaderCircle v-if="aiSaving" class="size-4 animate-spin" />
+            {{ aiSaving ? "Updating…" : "Apply edit" }}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
