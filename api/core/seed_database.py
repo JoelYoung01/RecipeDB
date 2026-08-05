@@ -96,6 +96,15 @@ def init_users(session: Session):
         session.commit()
 
 
+def init_households(session: Session):
+    from api.core.household import ensure_user_household
+
+    users = list(session.exec(select(User)).all())
+    for user in users:
+        ensure_user_household(session, user)
+    logger.info("Ensured households for %s users", len(users))
+
+
 def init_recipes(session: Session):
     existing_count = len(session.exec(select(Recipe)).all())
     if existing_count > 0:
@@ -111,11 +120,16 @@ def init_recipes(session: Session):
     if user is None:
         raise RuntimeError("No users available to attach seed recipes to.")
 
+    from api.core.household import ensure_user_household
+
+    household = ensure_user_household(session, user)
+
     import random
 
     recipes_source = [
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Classic Chocolate Chip Cookies",
             "description": "Soft and chewy chocolate chip cookies that are perfect for any occasion",
@@ -126,6 +140,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Spaghetti Carbonara",
             "description": "Classic Italian pasta dish with eggs, cheese, pancetta and black pepper",
@@ -136,6 +151,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Chicken Stir Fry",
             "description": "Quick and healthy chicken stir fry with vegetables",
@@ -146,6 +162,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Banana Bread",
             "description": "Moist and delicious banana bread using overripe bananas",
@@ -156,6 +173,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Greek Salad",
             "description": "Fresh and crisp traditional Greek salad",
@@ -166,6 +184,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Beef Tacos",
             "description": "Simple and delicious ground beef tacos",
@@ -176,6 +195,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Vegetable Soup",
             "description": "Hearty homemade vegetable soup",
@@ -186,6 +206,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Blueberry Pancakes",
             "description": "Fluffy pancakes studded with fresh blueberries",
@@ -196,6 +217,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Guacamole",
             "description": "Fresh homemade guacamole with ripe avocados",
@@ -206,6 +228,7 @@ def init_recipes(session: Session):
         },
         {
             "created_by_id": user.id,
+            "household_id": household.id,
             "created_on": datetime.now(),
             "name": "Chicken Noodle Soup",
             "description": "Comforting homemade chicken noodle soup",
@@ -229,6 +252,7 @@ def seed_database(session: Session):
     )
 
     init_users(session)
+    init_households(session)
     init_recipes(session)
     ensure_sample_ingredients(session)
     ensure_sample_planned_meals(session)

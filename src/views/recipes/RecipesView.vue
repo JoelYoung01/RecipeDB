@@ -18,6 +18,7 @@ import { useSessionStore } from "@/stores/session";
 import { syncAfterRecipeMutation } from "@/stores/sync";
 import type { RecipeCard as RecipeCardType } from "@/types";
 import { del, toast } from "@/utils";
+import { fetchHousehold } from "@/utils/household";
 import { CalendarPlus, Search, Trash2 } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 
@@ -29,6 +30,7 @@ const sessionStore = useSessionStore();
 const searchText = ref("");
 const searchResults = ref<RecipeCardType[] | null>(null);
 const searching = ref(false);
+const householdId = ref<number | null>(null);
 
 const scheduleTarget = ref<RecipeCardType | null>(null);
 const scheduleOpen = ref(false);
@@ -51,8 +53,11 @@ const showSkeleton = computed(
     (searching.value && !searchResults.value?.length && !!searchText.value.trim())
 );
 
-/** Search can surface public recipes from other users — those can’t be deleted. */
+/** Household recipes (and ones you authored) can be deleted; public outsiders can’t. */
 function owned(recipe: RecipeCardType) {
+  if (householdId.value != null && recipe.household_id === householdId.value) {
+    return true;
+  }
   return recipe.created_by_id === sessionStore.currentUser?.id;
 }
 
@@ -87,6 +92,11 @@ async function confirmDelete() {
 }
 
 async function loadMine() {
+  try {
+    householdId.value = (await fetchHousehold()).id;
+  } catch {
+    householdId.value = null;
+  }
   await recipesStore.ensureLoaded();
 }
 

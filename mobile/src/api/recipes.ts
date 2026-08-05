@@ -31,6 +31,11 @@ export function createRecipe(body: RecipeCreate): Promise<RecipeDetail> {
   return post<RecipeDetail>("/recipe/", body);
 }
 
+/** Fetch a recipe website URL, extract structured data, and save a private recipe. */
+export function importRecipeFromUrl(url: string): Promise<RecipeDetail> {
+  return post<RecipeDetail>("/recipe/import-from-url/", { url });
+}
+
 export function updateRecipe(
   recipeId: number | string,
   body: Partial<RecipeCreate>

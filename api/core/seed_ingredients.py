@@ -166,6 +166,7 @@ def ensure_sample_planned_meals(session: Session) -> None:
             PlannedRecipe(
                 recipe_id=recipe.id,
                 created_by_id=user.id,
+                household_id=recipe.household_id,
                 created_on=datetime.now(UTC),
                 planned_for=today + timedelta(days=offset),
             )

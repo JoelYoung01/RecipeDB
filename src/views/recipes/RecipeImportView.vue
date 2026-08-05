@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { paths } from "@/sitemap";
-import { Camera, Link2, PenLine } from "@lucide/vue";
-import { computed } from "vue";
+import { syncAfterRecipeMutation } from "@/stores/sync";
+import type { RecipeDetail } from "@/types";
+import { getErrorMessage, post, toast } from "@/utils";
+import { Camera, Link2, LoaderCircle, PenLine } from "@lucide/vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
@@ -16,13 +19,39 @@ const method = computed(() => {
 });
 
 const url = ref("");
+const importing = ref(false);
+const error = ref("");
+
+const canImport = computed(() => {
+  const value = url.value.trim();
+  return Boolean(value) && !importing.value;
+});
+
+async function importFromUrl() {
+  if (!canImport.value) return;
+  importing.value = true;
+  error.value = "";
+  try {
+    const recipe = await post<RecipeDetail>("/recipe/import-from-url/", {
+      url: url.value.trim()
+    });
+    syncAfterRecipeMutation();
+    toast.success("Recipe imported — review and save any edits.");
+    router.push(paths.recipeEdit(recipe.id));
+  } catch (er) {
+    console.error(er);
+    error.value = getErrorMessage(er, "Couldn’t import that recipe.");
+    toast.fromError(er, "Couldn’t import that recipe.");
+  }
+  importing.value = false;
+}
 </script>
 
 <template>
   <div class="px-4 pt-5">
     <h1 class="text-xl font-bold">Import a recipe</h1>
     <p class="mt-1 text-sm text-muted-foreground">
-      Import tooling isn’t wired to the API yet — use these entry points or write from scratch.
+      Paste a link to a recipe website and we’ll pull ingredients and steps.
     </p>
 
     <div class="mt-5 flex gap-2">
@@ -53,12 +82,22 @@ const url = ref("");
           id="import-url"
           v-model="url"
           type="url"
+          inputmode="url"
+          autocomplete="url"
           placeholder="https://…"
           class="mt-2 h-11 rounded-xl border-border bg-secondary"
-          disabled
+          :disabled="importing"
+          @keydown.enter.prevent="importFromUrl"
         />
-        <Button class="mt-4 w-full" disabled>Import from link</Button>
-        <p class="mt-3 text-xs text-faint">Coming soon — paste a URL and we’ll pull the recipe.</p>
+        <Button class="mt-4 w-full" :disabled="!canImport" @click="importFromUrl">
+          <LoaderCircle v-if="importing" class="size-4 animate-spin" />
+          {{ importing ? "Importing…" : "Import from link" }}
+        </Button>
+        <p v-if="error" class="mt-3 text-xs text-destructive">{{ error }}</p>
+        <p v-else class="mt-3 text-xs text-faint">
+          Works best with recipe blogs and sites that list ingredients in writing. Social video
+          links aren’t supported yet.
+        </p>
       </template>
       <template v-else>
         <div

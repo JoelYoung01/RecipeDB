@@ -7,6 +7,7 @@ from sqlmodel import select
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.core.grocery import aggregate_grocery_items, normalize_item_key, window_bounds
+from api.core.household import ensure_user_household, require_membership
 from api.models import GroceryItemState, GroceryItemStatus, PlannedRecipe, Recipe
 from api.schemas import (
     GroceryItem,
@@ -29,11 +30,12 @@ def _build_grocery_items(
     include_deleted: bool = False,
 ) -> tuple[datetime, datetime, list[GroceryItem]]:
     start, end = window_bounds(datetime.now(UTC))
+    household, _ = require_membership(session, current_user)
 
     planned = session.exec(
         select(PlannedRecipe)
         .where(
-            PlannedRecipe.created_by_id == current_user.id,
+            PlannedRecipe.household_id == household.id,
             PlannedRecipe.planned_for >= start,
             PlannedRecipe.planned_for <= end,
         )
@@ -44,7 +46,7 @@ def _build_grocery_items(
 
     states = session.exec(
         select(GroceryItemState).where(
-            GroceryItemState.created_by_id == current_user.id
+            GroceryItemState.household_id == household.id
         )
     ).all()
     state_by_key = {s.item_key: s for s in states}
@@ -119,9 +121,11 @@ def update_grocery_item_state(
             detail="That grocery status isn’t valid. Refresh and try again.",
         )
 
+    household = ensure_user_household(session, current_user)
+
     existing = session.exec(
         select(GroceryItemState).where(
-            GroceryItemState.created_by_id == current_user.id,
+            GroceryItemState.household_id == household.id,
             GroceryItemState.item_key == key,
         )
     ).first()
@@ -140,6 +144,7 @@ def update_grocery_item_state(
             session.add(
                 GroceryItemState(
                     created_by_id=current_user.id,
+                    household_id=household.id,
                     item_key=key,
                     status=status_value,
                     updated_on=datetime.now(UTC),

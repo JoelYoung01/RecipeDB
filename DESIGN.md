@@ -66,12 +66,17 @@ Map these to shadcn CSS variables (`--primary`, `--background`, etc.) in `src/as
 
 ### Home (landed direction)
 
-Column: **full-bleed Tonight hero** → **week-at-a-glance** → **action rows** → tab bar.
+Column: **full-bleed Tonight hero** → **week-at-a-glance** → **action card grid** → tab bar.
 
 - Hero (~300px): recipe photo, gradient scrim, weekday + profile avatar overlay, “TONIGHT” + title + meta + **Cook** CTA. Empty state: prompt to plan tonight.
 - Week strip: swipeable weeks (past + future) with weekday + date; green dot = planned, zinc gap = unplanned; today tinted/outlined. Tap a day → that day’s plan in the planner. “Fill the gaps →” → planner fill wizard for the visible week.
+<<<<<<< HEAD
 - Planner: vertical sliding weeks with **this week sticky at top**; day rows (not a month grid). “Fill gaps” (header) and a floating **Plan week** CTA above the tab bar open the wizard. Prefer primary actions like Plan week low on the screen for thumb reach — don’t bury them in section headers.
 - Action rows (not a recent-feed): Import a recipe · Find a recipe · Grocery (7-day chip / count when available).
+=======
+- Planner: vertical sliding weeks with **this week sticky at top**; day rows (not a month grid). “Plan week” / “Fill gaps” open the wizard.
+- Action cards (2×2, not a recent-feed): **Create** (AI recipe wizard) · **Import** · **Find** · **Grocery** (count chip when available).
+>>>>>>> origin/main
 
 ### Add sheet
 
@@ -81,7 +86,7 @@ Bottom sheet over dimmed scrim:
 2. Divider
 3. **Quick adds** — Add meal to plan, Grocery list.
 
-Wire only to existing features; stub unavailable import flows in UI without inventing backend behavior.
+Wire link import to `POST /recipe/import-from-url/`; keep photo scan stubbed until a backend exists.
 
 ## Motion
 
