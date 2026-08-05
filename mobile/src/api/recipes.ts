@@ -43,6 +43,14 @@ export function updateRecipe(
   return put<RecipeDetail>(`/recipe/${recipeId}/`, body);
 }
 
+/** Ask the LLM to patch a recipe from a free-text instruction and save it. */
+export function aiEditRecipe(
+  recipeId: number | string,
+  instruction: string
+): Promise<RecipeDetail> {
+  return post<RecipeDetail>(`/recipe/${recipeId}/ai-edit/`, { instruction });
+}
+
 export function deleteRecipe(recipeId: number | string): Promise<void> {
   return del(`/recipe/${recipeId}/`);
 }

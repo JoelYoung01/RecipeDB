@@ -175,6 +175,12 @@ class RecipeImportFromUrlRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
 
 
+class RecipeAiEditRequest(BaseModel):
+    """Free-text instruction for LLM-assisted recipe editing."""
+
+    instruction: str = Field(min_length=1, max_length=4000)
+
+
 class RecipeUpdate(BaseModel):
     name: str | None = None
     description: str | None = None

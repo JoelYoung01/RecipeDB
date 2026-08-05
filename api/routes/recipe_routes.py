@@ -9,11 +9,17 @@ from sqlmodel import and_, or_, select
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.core.image_gen.service import generate_recipe_cover_upload
+from api.core.recipe_ai_edit import (
+    RecipeAiEditError,
+    apply_recipe_patch,
+    patch_recipe_with_llm,
+)
 from api.core.recipe_import import import_recipe_from_url
 from api.core.recipe_import.fetch import RecipeImportError
 from api.models import Ingredient, Recipe
 from api.schemas import (
     CountResponse,
+    RecipeAiEditRequest,
     RecipeCard,
     RecipeCoverGenerateRequest,
     RecipeCreate,
@@ -340,6 +346,66 @@ def update_recipe(
     session.commit()
     session.refresh(existing_recipe)
     return existing_recipe
+
+
+@router.post(
+    "/{recipe_id:int}/ai-edit/",
+    response_model=RecipeDetail,
+)
+async def ai_edit_recipe(
+    recipe_id: int,
+    body: RecipeAiEditRequest,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+):
+    """Apply a free-text edit instruction via the configured LLM and save."""
+    existing_recipe = session.exec(
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .options(
+            selectinload(Recipe.ingredients),
+            selectinload(Recipe.cover_image),
+            selectinload(Recipe.created_by),
+        )
+    ).first()
+
+    if not existing_recipe:
+        raise HTTPException(
+            status_code=404,
+            detail="That recipe couldn’t be found. It may have been deleted.",
+        )
+
+    if current_user.id != existing_recipe.created_by_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only edit recipes you created.",
+        )
+
+    try:
+        patch = await patch_recipe_with_llm(
+            recipe=existing_recipe,
+            instruction=body.instruction,
+        )
+    except RecipeAiEditError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    apply_recipe_patch(
+        recipe=existing_recipe,
+        patch=patch,
+        user_id=current_user.id,
+        session=session,
+    )
+
+    recipe = session.exec(
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .options(
+            selectinload(Recipe.cover_image),
+            selectinload(Recipe.created_by),
+            selectinload(Recipe.ingredients),
+        )
+    ).first()
+    return recipe
 
 
 @router.delete("/{recipe_id:int}/", status_code=status.HTTP_204_NO_CONTENT)
