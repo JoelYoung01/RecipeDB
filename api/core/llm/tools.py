@@ -7,6 +7,7 @@ from typing import Any
 from sqlmodel import or_, select
 
 from api.core.database import SessionDep
+from api.core.household import get_membership, recipe_access_filter, user_can_access_recipe
 from api.models import Recipe, User
 
 
@@ -18,7 +19,7 @@ def tool_definitions() -> list[dict[str, Any]]:
             "function": {
                 "name": "search_user_recipes",
                 "description": (
-                    "Search recipes the user can access (owned or public) "
+                    "Search recipes the user can access (household or public) "
                     "by name/description/ingredient text."
                 ),
                 "parameters": {
@@ -53,7 +54,12 @@ def search_user_recipes(
     limit: int = 8,
 ) -> list[dict[str, Any]]:
     q = (query or "").strip()
-    stmt = select(Recipe).where(or_(Recipe.public, Recipe.created_by_id == user.id))
+    membership = get_membership(session, user.id)
+    if membership:
+        access = recipe_access_filter(membership.household_id)
+    else:
+        access = or_(Recipe.public, Recipe.created_by_id == user.id)
+    stmt = select(Recipe).where(access)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -64,13 +70,14 @@ def search_user_recipes(
             )
         )
     recipes = session.exec(stmt.limit(max(1, min(limit, 25)))).all()
+    household_id = membership.household_id if membership else None
     return [
         {
             "id": r.id,
             "name": r.name,
             "description": r.description,
             "prep_time": r.prep_time,
-            "owned": r.created_by_id == user.id,
+            "owned": household_id is not None and r.household_id == household_id,
         }
         for r in recipes
     ]
@@ -84,8 +91,10 @@ def get_accessible_recipe(
     recipe = session.get(Recipe, recipe_id)
     if not recipe:
         return None
-    if not recipe.public and recipe.created_by_id != user.id:
+    if not user_can_access_recipe(session, user, recipe):
         return None
+    membership = get_membership(session, user.id)
+    household_id = membership.household_id if membership else None
     return {
         "id": recipe.id,
         "name": recipe.name,
@@ -102,5 +111,5 @@ def get_accessible_recipe(
             }
             for i in (recipe.ingredients or [])
         ],
-        "owned": recipe.created_by_id == user.id,
+        "owned": household_id is not None and recipe.household_id == household_id,
     }

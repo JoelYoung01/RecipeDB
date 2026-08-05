@@ -9,7 +9,7 @@ import { usePlannerStore } from "@/stores/planner";
 import { useRecipesStore } from "@/stores/recipes";
 import { useSessionStore } from "@/stores/session";
 import { toast } from "@/utils";
-import { Plus, Search, ShoppingCart, User } from "@lucide/vue";
+import { Plus, Search, ShoppingCart, Sparkles, User } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -234,45 +234,63 @@ watch(
       </div>
     </section>
 
-    <!-- Action rows: heaviest label first; icons muted so they don't overpower text -->
-    <section class="flex flex-1 flex-col gap-2 overflow-hidden px-5 pt-4">
+    <!-- Action cards: Create / Import / Find / Grocery — icons muted so labels lead -->
+    <section class="grid grid-cols-2 gap-2 px-5 pt-4">
       <button
         type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
-        @click="router.push(`${paths.recipeImport}?method=link`)"
+        class="flex min-h-[104px] flex-col items-start justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-opacity active:opacity-80"
+        @click="router.push(paths.recipeGenerate)"
       >
-        <Plus class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
-        <span class="flex-1 text-sm font-semibold">Import a recipe</span>
-        <span class="text-[11.5px] text-faint">link · photo · manual</span>
-      </button>
-
-      <button
-        type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
-        @click="router.push(paths.recipes)"
-      >
-        <Search class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
-        <span class="flex-1 text-sm font-semibold">Find a recipe</span>
-        <span class="text-[11.5px] text-faint">
-          <template v-if="recipesStore.count === null">
-            <Skeleton class="inline-block h-3 w-10 align-middle" />
-          </template>
-          <template v-else>{{ recipeCount }} saved</template>
+        <Sparkles class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
+        <span class="mt-3">
+          <span class="block text-sm font-semibold">Create</span>
+          <span class="mt-0.5 block text-[11.5px] text-faint">AI recipe</span>
         </span>
       </button>
 
       <button
         type="button"
-        class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-opacity active:opacity-80"
+        class="flex min-h-[104px] flex-col items-start justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-opacity active:opacity-80"
+        @click="router.push(`${paths.recipeImport}?method=link`)"
+      >
+        <Plus class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
+        <span class="mt-3">
+          <span class="block text-sm font-semibold">Import</span>
+          <span class="mt-0.5 block text-[11.5px] text-faint">link · photo</span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="flex min-h-[104px] flex-col items-start justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-opacity active:opacity-80"
+        @click="router.push(paths.recipes)"
+      >
+        <Search class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
+        <span class="mt-3">
+          <span class="block text-sm font-semibold">Find</span>
+          <span class="mt-0.5 block text-[11.5px] text-faint">
+            <template v-if="recipesStore.count === null">
+              <Skeleton class="inline-block h-3 w-10 align-middle" />
+            </template>
+            <template v-else>{{ recipeCount }} saved</template>
+          </span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="flex min-h-[104px] flex-col items-start justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-opacity active:opacity-80"
         @click="router.push(paths.list)"
       >
         <ShoppingCart class="size-[18px] shrink-0 text-[#22c55e]/55" :stroke-width="2" />
-        <span class="flex-1 text-sm font-semibold">Grocery</span>
-        <span
-          class="rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"
-        >
-          <template v-if="groceryStore.activeCount === null">·</template>
-          <template v-else>{{ groceryCount }}</template>
+        <span class="mt-3">
+          <span class="block text-sm font-semibold">Grocery</span>
+          <span
+            class="mt-0.5 inline-flex rounded-full border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.12)] px-2 py-0.5 text-[11px] font-bold text-[#4ade80]"
+          >
+            <template v-if="groceryStore.activeCount === null">·</template>
+            <template v-else>{{ groceryCount }}</template>
+          </span>
         </span>
       </button>
     </section>

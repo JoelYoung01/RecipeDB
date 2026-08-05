@@ -14,7 +14,7 @@ import { toast } from "@/stores/toast";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Plus, Search, ShoppingCart, User } from "lucide-react-native";
+import { Plus, Search, ShoppingCart, Sparkles, User } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -185,52 +185,77 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Action rows */}
-      <View className="gap-2 px-5 pt-4">
+      {/* Action cards — 2×2 grid */}
+      <View className="flex-row flex-wrap justify-between gap-y-2 px-5 pt-4">
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Create a recipe"
+          onPress={() => {
+            tapHaptic();
+            router.push("/planner/fill?mode=recipe" as never);
+          }}
+          className="min-h-[104px] w-[48.5%] items-start justify-between rounded-xl border border-border bg-card p-3.5 active:opacity-80"
+        >
+          <Sparkles size={18} color="rgba(34,197,94,0.55)" strokeWidth={2} />
+          <View className="mt-3 gap-0.5">
+            <Text className="font-sans-semibold text-sm">Create</Text>
+            <Text className="text-[11.5px] text-faint">AI recipe</Text>
+          </View>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Import a recipe"
           onPress={() => {
             tapHaptic();
             router.push("/recipes/import?method=link" as never);
           }}
-          className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-80"
+          className="min-h-[104px] w-[48.5%] items-start justify-between rounded-xl border border-border bg-card p-3.5 active:opacity-80"
         >
           <Plus size={18} color="rgba(34,197,94,0.55)" strokeWidth={2} />
-          <Text className="flex-1 font-sans-semibold text-sm">Import a recipe</Text>
-          <Text className="text-[11.5px] text-faint">link · photo · manual</Text>
+          <View className="mt-3 gap-0.5">
+            <Text className="font-sans-semibold text-sm">Import</Text>
+            <Text className="text-[11.5px] text-faint">link · photo</Text>
+          </View>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Find a recipe"
           onPress={() => {
             tapHaptic();
             router.push("/recipes");
           }}
-          className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-80"
+          className="min-h-[104px] w-[48.5%] items-start justify-between rounded-xl border border-border bg-card p-3.5 active:opacity-80"
         >
           <Search size={18} color="rgba(34,197,94,0.55)" strokeWidth={2} />
-          <Text className="flex-1 font-sans-semibold text-sm">Find a recipe</Text>
-          {recipeCount.data === undefined ? (
-            <Skeleton className="h-3 w-10" />
-          ) : (
-            <Text className="text-[11.5px] text-faint">{recipeCount.data} saved</Text>
-          )}
+          <View className="mt-3 gap-0.5">
+            <Text className="font-sans-semibold text-sm">Find</Text>
+            {recipeCount.data === undefined ? (
+              <Skeleton className="mt-1 h-3 w-10" />
+            ) : (
+              <Text className="text-[11.5px] text-faint">{recipeCount.data} saved</Text>
+            )}
+          </View>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Grocery list"
           onPress={() => {
             tapHaptic();
             router.push("/list");
           }}
-          className="flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-80"
+          className="min-h-[104px] w-[48.5%] items-start justify-between rounded-xl border border-border bg-card p-3.5 active:opacity-80"
         >
           <ShoppingCart size={18} color="rgba(34,197,94,0.55)" strokeWidth={2} />
-          <Text className="flex-1 font-sans-semibold text-sm">Grocery</Text>
-          <View className="rounded-full border border-[#22c55e]/35 bg-[#22c55e]/10 px-2 py-0.5">
-            <Text className="font-sans-bold text-[11px] text-[#4ade80]">
-              {groceryCount.data === undefined ? "·" : groceryCount.data}
-            </Text>
+          <View className="mt-3 gap-0.5">
+            <Text className="font-sans-semibold text-sm">Grocery</Text>
+            <View className="mt-0.5 self-start rounded-full border border-[#22c55e]/35 bg-[#22c55e]/10 px-2 py-0.5">
+              <Text className="font-sans-bold text-[11px] text-[#4ade80]">
+                {groceryCount.data === undefined ? "·" : groceryCount.data}
+              </Text>
+            </View>
           </View>
         </Pressable>
       </View>

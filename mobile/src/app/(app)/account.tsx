@@ -1,5 +1,6 @@
 import { updateUser } from "@/api/users";
 import { AppLockToggle } from "@/components/AppLockToggle";
+import { HouseholdSection } from "@/components/HouseholdSection";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,6 +134,8 @@ export default function AccountScreen() {
             <Field label="Email" value={user?.email ?? ""} />
             <Field label="Last login" value={lastLogin} />
           </View>
+
+          <HouseholdSection />
 
           <AppLockToggle />
 
