@@ -84,8 +84,7 @@ export const addMenuActions: AddMenuAction[] = [
     description: "Paste a URL, we pull the recipe",
     href: `${paths.recipeImport}?method=link`,
     group: "create",
-    highlighted: true,
-    stub: true
+    highlighted: true
   },
   {
     id: "import-photo",

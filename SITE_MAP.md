@@ -34,7 +34,7 @@ Opened by the raised **+** control. Items:
 
 | Action | Target | Status |
 |--------|--------|--------|
-| Import from link | `/recipes/import?method=link` | UI stub (no import API) |
+| Import from link | `/recipes/import?method=link` | Live (`POST /recipe/import-from-url/`) |
 | Scan a photo | `/recipes/import?method=photo` | UI stub |
 | Generate a recipe | `/planner/fill?mode=recipe` | Live (LLM wizard; saves recipe only, no plan) |
 | Write from scratch | `/recipes/new` | Live |
@@ -46,7 +46,7 @@ Opened by the raised **+** control. Items:
 | Path | Name | Page | Auth | Notes |
 |------|------|------|------|-------|
 | `/recipes/new` | `recipe-new` | `views/recipes/RecipeEditView.vue` | Required | Create |
-| `/recipes/import` | `recipe-import` | `views/recipes/RecipeImportView.vue` | Required | Stub UI for link/photo import |
+| `/recipes/import` | `recipe-import` | `views/recipes/RecipeImportView.vue` | Required | Link import live; photo still stub |
 | `/recipes/:recipeId` | `recipe-detail` | `views/recipes/RecipeDetailView.vue` | Required | `:recipeId` = `\d+` |
 | `/recipes/:recipeId/edit` | `recipe-edit` | `views/recipes/RecipeEditView.vue` | Required | Edit owned recipe |
 
@@ -76,5 +76,5 @@ Preserve bookmarks from the Vuetify app:
 
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
 - **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; OpenRouter when `OPENROUTER_API_KEY` is set, else stub LLM)
-- **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
+- **Import recipe** — paste a recipe website URL (`POST /recipe/import-from-url/`); schema.org scrape first, OpenRouter LLM fallback when configured; photo scan still stubbed; social video links out of scope for v1
 - **Grocery list** — ingredients for planned meals in a sliding 7-day window; tap to cross off with a short undo window before hide; dismiss/delete state persisted per user
