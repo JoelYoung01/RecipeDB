@@ -18,7 +18,7 @@ import { useRecipesStore } from "@/stores/recipes";
 import { syncAfterPlanMutation } from "@/stores/sync";
 import type { PlannedRecipeDetail } from "@/types/PlannedRecipe";
 import { del, post, toast } from "@/utils";
-import { ChevronRight, Sparkles, Trash2 } from "@lucide/vue";
+import { CalendarDays, Sparkles, Trash2 } from "@lucide/vue";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -137,10 +137,16 @@ function openFillGaps(days?: Date[]) {
   });
 }
 
-function openPlanWeek(weekDays: Date[]) {
-  router.push({
+/** Week containing the selected day — target for the thumb-reach Plan week FAB. */
+const selectedWeekDays = computed(() => {
+  const weekStart = startOfWeekMonday(selectedDate.value);
+  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+});
+
+function openPlanWeekFab() {
+  void router.push({
     path: paths.plannerFill,
-    query: { days: weekDays.map(toDateKey).join(",") }
+    query: { days: selectedWeekDays.value.map(toDateKey).join(",") }
   });
 }
 
@@ -249,7 +255,7 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="px-4 pt-5 pb-4">
+  <div class="px-4 pt-5 pb-28">
     <div class="flex items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-bold">Planner</h1>
@@ -269,23 +275,13 @@ onActivated(() => {
     <div class="mt-4 space-y-5">
       <section v-for="week in weeks" :key="week.weekIndex" class="space-y-2">
         <div
-          class="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-2 border-b border-border/80 bg-background/95 px-4 py-2 backdrop-blur-sm"
+          class="sticky top-0 z-10 -mx-4 border-b border-border/80 bg-background/95 px-4 py-2 backdrop-blur-sm"
         >
-          <div>
-            <h2 class="text-sm font-semibold">{{ weekLabel(week.weekStart, week.weekIndex) }}</h2>
-            <p class="text-[11px] text-faint">
-              {{ week.days.filter((d) => (plannedByDay.get(toDateKey(d)) ?? []).length).length }}
-              / 7 planned
-            </p>
-          </div>
-          <button
-            type="button"
-            class="inline-flex items-center gap-0.5 text-[12.5px] font-semibold text-[#22c55e] transition-opacity active:opacity-70"
-            @click="openPlanWeek(week.days)"
-          >
-            Plan week
-            <ChevronRight class="size-3.5" />
-          </button>
+          <h2 class="text-sm font-semibold">{{ weekLabel(week.weekStart, week.weekIndex) }}</h2>
+          <p class="text-[11px] text-faint">
+            {{ week.days.filter((d) => (plannedByDay.get(toDateKey(d)) ?? []).length).length }}
+            / 7 planned
+          </p>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border bg-card">
@@ -421,6 +417,24 @@ onActivated(() => {
         <Button variant="secondary" class="gap-1.5" @click="openFillGaps([selectedDate])">
           <Sparkles class="size-3.5" />
           Autofill
+        </Button>
+      </div>
+    </div>
+
+    <!--
+      Prefer primary planner actions low on the screen for thumb reach —
+      don’t bury Plan week in week-section headers. Cleared above the raised
+      tab-bar "+" so center taps aren’t swallowed by Add (z-60). Keep
+      route-gated (not teleported) so KeepAlive doesn’t leave it on fill.
+    -->
+    <div
+      v-show="route.name === 'planner'"
+      class="pointer-events-none fixed bottom-[calc(7.25rem+env(safe-area-inset-bottom))] left-1/2 z-[70] w-full max-w-md -translate-x-1/2 px-4"
+    >
+      <div class="pointer-events-auto">
+        <Button class="w-full gap-1.5" aria-label="Plan week" @click="openPlanWeekFab()">
+          <CalendarDays class="size-4" />
+          Plan week
         </Button>
       </div>
     </div>
