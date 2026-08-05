@@ -8,7 +8,7 @@ import { colors } from "@/lib/colors";
 import { syncAfterRecipeMutation } from "@/hooks/sync";
 import { toast } from "@/stores/toast";
 import { Sparkles } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
 type Props = {
@@ -22,14 +22,13 @@ export function RecipeAiEditSheet({ visible, recipeId, onClose, onApplied }: Pro
   const [instruction, setInstruction] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (visible) {
-      setInstruction("");
-      setSaving(false);
-    }
-  }, [visible]);
-
   const canSave = instruction.trim().length > 0 && !saving;
+
+  const handleClose = () => {
+    setInstruction("");
+    setSaving(false);
+    onClose();
+  };
 
   const onSave = async () => {
     if (!canSave) return;
@@ -39,16 +38,15 @@ export function RecipeAiEditSheet({ visible, recipeId, onClose, onApplied }: Pro
       syncAfterRecipeMutation();
       toast.success("Recipe updated with AI.");
       onApplied?.();
-      onClose();
+      handleClose();
     } catch (er) {
       toast.fromError(er, "Couldn’t apply that AI edit.");
-    } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose}>
+    <Sheet visible={visible} onClose={handleClose}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View className="gap-3 pb-2">
           <View className="flex-row items-center gap-2">
@@ -73,7 +71,7 @@ export function RecipeAiEditSheet({ visible, recipeId, onClose, onApplied }: Pro
           />
 
           <View className="flex-row gap-2 pt-1">
-            <Button variant="outline" className="flex-1" disabled={saving} onPress={onClose}>
+            <Button variant="outline" className="flex-1" disabled={saving} onPress={handleClose}>
               Cancel
             </Button>
             <Button className="flex-1" disabled={!canSave} onPress={onSave}>

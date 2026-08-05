@@ -63,7 +63,11 @@ def _normalize_edit_result(
                 parsed = item
                 break
 
-    if isinstance(parsed, dict) and "recipe" in parsed and isinstance(parsed["recipe"], dict):
+    if (
+        isinstance(parsed, dict)
+        and "recipe" in parsed
+        and isinstance(parsed["recipe"], dict)
+    ):
         parsed = parsed["recipe"]
 
     if not isinstance(parsed, dict):
@@ -88,14 +92,18 @@ def _normalize_edit_result(
 
     # Partial responses: merge field-by-field onto the current recipe.
     name = str(parsed.get("name") or parsed.get("title") or fallback["name"]).strip()
-    description = str(parsed.get("description") or fallback["description"] or "").strip()
+    description = str(
+        parsed.get("description") or fallback["description"] or ""
+    ).strip()
     instructions = str(
         parsed.get("instructions") or fallback["instructions"] or ""
     ).strip()
     notes_raw = parsed.get("notes") if "notes" in parsed else fallback.get("notes")
     notes = str(notes_raw).strip() if notes_raw else None
 
-    prep_raw = parsed.get("prep_time") if "prep_time" in parsed else fallback.get("prep_time")
+    prep_raw = (
+        parsed.get("prep_time") if "prep_time" in parsed else fallback.get("prep_time")
+    )
     prep_time: float | None
     try:
         prep_time = float(prep_raw) if prep_raw is not None and prep_raw != "" else None
@@ -120,7 +128,9 @@ def _normalize_edit_result(
                 continue
             amount = item.get("amount")
             try:
-                amount_f = float(amount) if amount is not None and amount != "" else None
+                amount_f = (
+                    float(amount) if amount is not None and amount != "" else None
+                )
             except (TypeError, ValueError):
                 amount_f = None
             units = item.get("units")
@@ -191,7 +201,7 @@ async def patch_recipe_with_llm(
         "Apply the requested changes and keep everything else as close as "
         "possible to the original. Always return the full updated recipe, "
         "including ingredients that did not change. "
-        'If the instruction is impossible or unrelated to cooking, return '
+        "If the instruction is impossible or unrelated to cooking, return "
         '{"error":"cannot_edit","message":"short reason"}.'
     )
     user = (

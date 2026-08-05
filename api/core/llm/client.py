@@ -170,7 +170,9 @@ class StubLlmClient(LlmClient):
         notes = current.get("notes")
         prep_time = current.get("prep_time")
         try:
-            prep_f = float(prep_time) if prep_time is not None and prep_time != "" else None
+            prep_f = (
+                float(prep_time) if prep_time is not None and prep_time != "" else None
+            )
         except (TypeError, ValueError):
             prep_f = None
 

@@ -1,40 +1,36 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { RecipeAiEditSheet } from "@/components/RecipeAiEditSheet";
 
-const aiEditRecipe = jest.fn();
-const syncAfterRecipeMutation = jest.fn();
-const toastSuccess = jest.fn();
-const toastFromError = jest.fn();
+const mockAiEditRecipe = jest.fn();
+const mockSyncAfterRecipeMutation = jest.fn();
+const mockToastSuccess = jest.fn();
+const mockToastFromError = jest.fn();
 
 jest.mock("@/api/recipes", () => ({
-  aiEditRecipe: (...args: unknown[]) => aiEditRecipe(...args)
+  aiEditRecipe: (...args: unknown[]) => mockAiEditRecipe(...args)
 }));
 
 jest.mock("@/hooks/sync", () => ({
-  syncAfterRecipeMutation: () => syncAfterRecipeMutation()
+  syncAfterRecipeMutation: () => mockSyncAfterRecipeMutation()
 }));
 
 jest.mock("@/stores/toast", () => ({
   toast: {
-    success: (...args: unknown[]) => toastSuccess(...args),
-    fromError: (...args: unknown[]) => toastFromError(...args)
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    fromError: (...args: unknown[]) => mockToastFromError(...args)
   }
 }));
 
-jest.mock("@/components/ui/sheet", () => {
-  const React = require("react");
-  const { View } = require("react-native");
-  return {
-    Sheet: ({
-      visible,
-      children
-    }: {
-      visible: boolean;
-      onClose: () => void;
-      children: React.ReactNode;
-    }) => (visible ? <View testID="sheet">{children}</View> : null)
-  };
-});
+jest.mock("@/components/ui/sheet", () => ({
+  Sheet: ({
+    visible,
+    children
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    children: React.ReactNode;
+  }) => (visible ? children : null)
+}));
 
 describe("RecipeAiEditSheet", () => {
   beforeEach(() => {
@@ -42,12 +38,10 @@ describe("RecipeAiEditSheet", () => {
   });
 
   it("submits the instruction and closes on success", async () => {
-    aiEditRecipe.mockResolvedValue({ id: 7, name: "Edited" });
+    mockAiEditRecipe.mockResolvedValue({ id: 7, name: "Edited" });
     const onClose = jest.fn();
 
-    await render(
-      <RecipeAiEditSheet visible recipeId={7} onClose={onClose} />
-    );
+    await render(<RecipeAiEditSheet visible recipeId={7} onClose={onClose} />);
 
     const input = screen.getByPlaceholderText(
       "e.g. Make it dairy-free and cut prep time in half"
@@ -56,20 +50,18 @@ describe("RecipeAiEditSheet", () => {
     await fireEvent.press(screen.getByText("Apply edit"));
 
     await waitFor(() => {
-      expect(aiEditRecipe).toHaveBeenCalledWith(7, "Make it spicy");
-      expect(syncAfterRecipeMutation).toHaveBeenCalled();
-      expect(toastSuccess).toHaveBeenCalled();
+      expect(mockAiEditRecipe).toHaveBeenCalledWith(7, "Make it spicy");
+      expect(mockSyncAfterRecipeMutation).toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
     });
   });
 
   it("surfaces API errors without closing", async () => {
-    aiEditRecipe.mockRejectedValue(new Error("nope"));
+    mockAiEditRecipe.mockRejectedValue(new Error("nope"));
     const onClose = jest.fn();
 
-    await render(
-      <RecipeAiEditSheet visible recipeId={3} onClose={onClose} />
-    );
+    await render(<RecipeAiEditSheet visible recipeId={3} onClose={onClose} />);
 
     await fireEvent.changeText(
       screen.getByPlaceholderText("e.g. Make it dairy-free and cut prep time in half"),
@@ -78,7 +70,7 @@ describe("RecipeAiEditSheet", () => {
     await fireEvent.press(screen.getByText("Apply edit"));
 
     await waitFor(() => {
-      expect(toastFromError).toHaveBeenCalled();
+      expect(mockToastFromError).toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
     });
   });
