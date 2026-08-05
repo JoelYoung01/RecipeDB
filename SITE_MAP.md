@@ -21,10 +21,10 @@ Layout: `layouts/AppShell.vue` (tab bar + add sheet). Children render in the she
 | Path | Name | Page | Tab | Notes |
 |------|------|------|-----|-------|
 | `/` | — | — | — | Redirect → `/home` |
-| `/home` | `home` | `views/HomeView.vue` | Home | Tonight hero, week strip, action rows |
+| `/home` | `home` | `views/HomeView.vue` | Home | Tonight hero, week strip, 2×2 action cards (Create · Import · Find · Grocery) |
 | `/recipes` | `recipes` | `views/recipes/RecipesView.vue` | Recipes | Results start at top; search floats at the bottom above the tab bar; swipe a row left to delete (owned), right to schedule (next open night preselected) |
 | `/planner` | `planner` | `views/planner/PlannerView.vue` | Planner | Sliding week calendar; empty night opens recipe search + Create wizard CTA; filled night opens recipe detail; swipe left on a filled night to unplan |
-| `/planner/fill` | `planner-fill` | `views/planner/MealPlanWizardView.vue` | Planner | Fill-gaps / plan-week LLM wizard; `?mode=recipe` = ad-hoc generate (no plan) |
+| `/planner/fill` | `planner-fill` | `views/planner/MealPlanWizardView.vue` | Planner | Fill-gaps / plan-week LLM wizard; `?mode=recipe` = Create flow (single recipe, optional day assign at the end) |
 | `/list` | `list` | `views/list/ShoppingListView.vue` | Grocery | Auto grocery list from planned meals (next 7 days); tap a row to cross off (2s undo), then it hides; swipe left for view/delete |
 | `/account` | `account` | `views/AccountView.vue` | — | Profile; opened from home avatar |
 
@@ -36,7 +36,7 @@ Opened by the raised **+** control. Items:
 |--------|--------|--------|
 | Import from link | `/recipes/import?method=link` | UI stub (no import API) |
 | Scan a photo | `/recipes/import?method=photo` | UI stub |
-| Generate a recipe | `/planner/fill?mode=recipe` | Live (LLM wizard; saves recipe only, no plan) |
+| Generate a recipe | `/planner/fill?mode=recipe` | Live (LLM wizard; optional day assign after save) |
 | Write from scratch | `/recipes/new` | Live |
 | Add meal to plan | `/planner` | Live |
 | Grocery list | `/list` | Live (derived from planner) |
@@ -76,5 +76,6 @@ Preserve bookmarks from the Vuetify app:
 
 - **Recipe storage** — list, search, detail, create/edit, delete, cover image, public flag
 - **Meal planning** — plan/unplan by day; home week strip + tonight hero; fill-gaps wizard (goals / diet / ingredients → idea shortlist → recipe build → plan commit; OpenRouter when `OPENROUTER_API_KEY` is set, else stub LLM)
+- **Create recipe** — home Create card → `/planner/fill?mode=recipe` (single-recipe LLM flow); optional day assign after review; skip keeps the recipe unplanned
 - **Import recipe** — entry points in UI; link/photo remain stubs until a backend exists
 - **Grocery list** — ingredients for planned meals in a sliding 7-day window; tap to cross off with a short undo window before hide; dismiss/delete state persisted per user

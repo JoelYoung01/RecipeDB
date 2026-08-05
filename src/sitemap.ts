@@ -42,7 +42,7 @@ export const paths = {
   recipeEdit: (id: number | string) => `/recipes/${id}/edit`,
   planner: "/planner",
   plannerFill: "/planner/fill",
-  /** Ad-hoc LLM recipe generate (no planner assignment). */
+  /** Ad-hoc LLM recipe create; optional day assign after save. */
   recipeGenerate: "/planner/fill?mode=recipe",
   list: "/list",
   account: "/account",

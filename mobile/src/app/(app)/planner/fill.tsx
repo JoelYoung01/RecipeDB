@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@/api/errors";
-import { fetchPlansBetween } from "@/api/planner";
+import { createPlan, fetchPlansBetween } from "@/api/planner";
 import {
   commitWizard,
   createWizardSession,
@@ -11,6 +11,7 @@ import {
   updateWizardDays,
   updateWizardPrefs
 } from "@/api/wizard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Text } from "@/components/ui/text";
@@ -45,7 +46,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "rea
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review";
+/** Days offered when optionally assigning a created recipe to a night. */
+const ASSIGN_DAY_COUNT = 14;
+type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review" | "assign";
 
 export default function MealPlanWizardScreen() {
   const router = useRouter();
@@ -54,10 +57,10 @@ export default function MealPlanWizardScreen() {
   const { prefs: savedPrefs, savePrefs, loaded: prefsLoaded } = useWizardPrefs();
 
   const today = useMemo(() => startOfDay(), []);
-  /** Ad-hoc generate from the + menu — one recipe, never assigned to a night. */
+  /** Ad-hoc create from Home / + menu — one recipe; day assign is optional at the end. */
   const recipeMode = params.mode === "recipe";
   const STEP_ORDER: UiStep[] = recipeMode
-    ? ["prefs", "ideate", "select", "build", "review"]
+    ? ["prefs", "ideate", "select", "build", "review", "assign"]
     : ["days", "prefs", "ideate", "select", "build", "review"];
 
   const [uiStep, setUiStep] = useState<UiStep>(recipeMode ? "prefs" : "days");
@@ -77,6 +80,10 @@ export default function MealPlanWizardScreen() {
   const [expandedDays, setExpandedDays] = useState<string[]>([]);
   const [regenIdeaIds, setRegenIdeaIds] = useState<string[]>([]);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  /** Optional night to plan after creating a single recipe (recipeMode only). */
+  const [assignDayKey, setAssignDayKey] = useState<string | null>(null);
+  const [assignPlansByKey, setAssignPlansByKey] = useState<Record<string, string>>({});
+  const [loadingAssignDays, setLoadingAssignDays] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const sessionRef = useRef<MealPlanWizardSession | null>(null);
@@ -139,12 +146,13 @@ export default function MealPlanWizardScreen() {
 
   const headerTitle = recipeMode
     ? {
-        days: "Generate a recipe",
+        days: "Create a recipe",
         prefs: "What are you craving?",
         ideate: "Cooking up ideas",
         select: "Pick one idea",
         build: "Building your recipe",
-        review: "Save your recipe"
+        review: "Review your recipe",
+        assign: "Add to a night?"
       }[uiStep]
     : {
         days: "Which nights?",
@@ -152,8 +160,33 @@ export default function MealPlanWizardScreen() {
         ideate: "Cooking up ideas",
         select: "Pick your dinners",
         build: "Building recipes",
-        review: "Lock the plan"
+        review: "Lock the plan",
+        assign: "Lock the plan"
       }[uiStep];
+
+  const assignDays = useMemo(
+    () =>
+      Array.from({ length: ASSIGN_DAY_COUNT }, (_, i) => {
+        const date = addDays(today, i);
+        const key = toDateKey(date);
+        return {
+          date,
+          key,
+          label:
+            i === 0
+              ? "Tonight"
+              : i === 1
+                ? "Tomorrow"
+                : date.toLocaleDateString(undefined, { weekday: "long" }),
+          dateLabel: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          plannedTitle: assignPlansByKey[key] ?? null
+        };
+      }),
+    [today, assignPlansByKey]
+  );
+
+  const recipeTitle =
+    session?.built_recipes[0]?.title?.trim() || "your recipe";
 
   // ---- bootstrap: load existing dinners for the week, preselect open nights ----
   useEffect(() => {
@@ -410,31 +443,75 @@ export default function MealPlanWizardScreen() {
       leaveWizard();
       return;
     }
+    // Assign is client-only (after review) — just return without rewinding the session.
+    if (uiStep === "assign") {
+      setUiStep("review");
+      return;
+    }
     const previous: Record<UiStep, UiStep> = {
       days: "days",
       prefs: recipeMode ? "prefs" : "days",
       ideate: "prefs",
       select: "prefs",
       build: "select",
-      review: "select"
+      review: "select",
+      assign: "review"
     };
     abortRef.current?.abort();
     setRunning(false);
     await rewindTo(previous[uiStep]);
   };
 
-  const commitPlan = async () => {
+  const openAssignStep = async () => {
+    tapHaptic();
+    setError("");
+    setAssignDayKey(null);
+    setLoadingAssignDays(true);
+    setUiStep("assign");
+    try {
+      const plans = await fetchPlansBetween(today, addDays(today, ASSIGN_DAY_COUNT - 1));
+      const titles: Record<string, string> = {};
+      for (const p of plans) {
+        const key = p.planned_for.slice(0, 10);
+        if (!titles[key]) titles[key] = p.recipe.name;
+      }
+      setAssignPlansByKey(titles);
+      const firstOpen = Array.from({ length: ASSIGN_DAY_COUNT }, (_, i) => toDateKey(addDays(today, i))).find(
+        (key) => !titles[key]
+      );
+      setAssignDayKey(firstOpen ?? null);
+    } catch (e) {
+      console.error(e);
+      toast.fromError(e, "Couldn’t load your meal plan.");
+    } finally {
+      setLoadingAssignDays(false);
+    }
+  };
+
+  const commitPlan = async (opts?: { assignDay?: string | null }) => {
     const current = sessionRef.current;
     if (!current) return;
     setError("");
     setBusy(true);
     try {
+      // Recipe create always persists recipes first; day assign is a separate optional step.
       await commitWizard(current.id, { plan: !recipeMode });
       if (recipeMode) {
         const refreshed = await fetchWizardSession(current.id);
         setSession(refreshed);
         sessionRef.current = refreshed;
         const recipeId = refreshed.built_recipes[0]?.created_recipe_id;
+        const dayKey = opts?.assignDay ?? null;
+        if (dayKey && recipeId != null) {
+          const date = parseDateKey(dayKey);
+          if (date) {
+            await createPlan(recipeId, date);
+            syncAfterPlanMutation({ recipesChanged: true });
+            toast.success("Recipe saved and added to your plan.");
+            router.replace(`/recipes/${recipeId}` as never);
+            return;
+          }
+        }
         syncAfterRecipeMutation();
         toast.success("Recipe saved.");
         if (recipeId != null) router.replace(`/recipes/${recipeId}` as never);
@@ -488,7 +565,7 @@ export default function MealPlanWizardScreen() {
           </Pressable>
           <View className="min-w-0 flex-1">
             <Text className="font-sans-bold text-[11px] uppercase tracking-[1px] text-success-soft">
-              {recipeMode ? "Recipe wizard" : "Meal plan wizard"}
+              {recipeMode ? "Create" : "Meal plan wizard"}
             </Text>
             <Text className="font-sans-bold text-lg" numberOfLines={1}>
               {headerTitle}
@@ -892,7 +969,7 @@ export default function MealPlanWizardScreen() {
                       />
                       <View className="min-w-0 flex-1">
                         <Text className="font-sans-semibold text-[11px] uppercase tracking-wide text-faint">
-                          {dayLabel(row.day)}
+                          {recipeMode ? "New recipe" : dayLabel(row.day)}
                         </Text>
                         <Text className="mt-0.5 font-sans-semibold text-sm leading-5">
                           {row.recipe?.title || "Untitled dinner"}
@@ -1034,8 +1111,86 @@ export default function MealPlanWizardScreen() {
               >
                 Back
               </Button>
-              <Button className="flex-1" disabled={busy} onPress={() => void commitPlan()}>
-                {busy ? "Saving…" : recipeMode ? "Save recipe" : "Save to planner"}
+              <Button
+                className="flex-1"
+                disabled={busy}
+                onPress={() => (recipeMode ? void openAssignStep() : void commitPlan())}
+              >
+                {busy ? "Saving…" : recipeMode ? "Continue" : "Save to planner"}
+              </Button>
+            </View>
+          </View>
+        ) : null}
+
+        {/* ASSIGN (recipeMode only) — optional night after create */}
+        {uiStep === "assign" ? (
+          <View className="mt-5 gap-4">
+            <Text className="text-sm text-muted-foreground">
+              “{recipeTitle}” is ready. Put it on a night if you want — or skip and keep it in your
+              recipes.
+            </Text>
+
+            <View className="overflow-hidden rounded-xl border border-border">
+              {loadingAssignDays
+                ? Array.from({ length: 5 }, (_, n) => (
+                    <View
+                      key={n}
+                      className="flex-row items-center gap-3 border-b border-border px-3 py-3 last:border-b-0"
+                    >
+                      <View className="min-w-0 flex-1 gap-1.5">
+                        <Skeleton className="h-3.5 w-24" />
+                        <Skeleton className="h-2.5 w-14" />
+                      </View>
+                      <Skeleton className="h-3 w-10" />
+                    </View>
+                  ))
+                : assignDays.map((day) => {
+                    const selected = day.key === assignDayKey;
+                    return (
+                      <Pressable
+                        key={day.key}
+                        accessibilityRole="button"
+                        onPress={() => setAssignDayKey(day.key)}
+                        className={
+                          selected
+                            ? "flex-row items-center gap-3 border-b border-border bg-[#22c55e]/10 px-3 py-2.5 last:border-b-0"
+                            : "flex-row items-center gap-3 border-b border-border px-3 py-2.5 last:border-b-0 active:bg-secondary/50"
+                        }
+                      >
+                        <View className="min-w-0 flex-1">
+                          <Text className="font-sans-semibold text-sm">{day.label}</Text>
+                          <Text className="text-[11px] text-faint">{day.dateLabel}</Text>
+                        </View>
+                        {day.plannedTitle ? (
+                          <Text className="max-w-[45%] truncate text-[11px] text-faint">
+                            {day.plannedTitle}
+                          </Text>
+                        ) : (
+                          <Text className="font-sans-semibold text-[11px] text-[#4ade80]">Open</Text>
+                        )}
+                        {selected ? (
+                          <Check size={16} color="#22c55e" strokeWidth={2.5} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+            </View>
+
+            <View className="flex-row gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={busy}
+                onPress={() => void commitPlan({ assignDay: null })}
+              >
+                {busy ? "Saving…" : "Skip"}
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={busy || loadingAssignDays || !assignDayKey}
+                onPress={() => void commitPlan({ assignDay: assignDayKey })}
+              >
+                {busy ? "Saving…" : "Save & plan"}
               </Button>
             </View>
           </View>

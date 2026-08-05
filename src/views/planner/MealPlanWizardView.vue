@@ -2,9 +2,17 @@
 import WizardPrefsFields from "@/components/planner/WizardPrefsFields.vue";
 import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
-import { addDays, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
+import {
+  addDays,
+  endOfDay,
+  formatPrepTime,
+  startOfDay,
+  startOfWeekMonday,
+  toDateKey
+} from "@/lib/media";
 import { paths } from "@/sitemap";
 import { usePlannerStore } from "@/stores/planner";
 import { syncAfterPlanMutation, syncAfterRecipeMutation } from "@/stores/sync";
@@ -26,10 +34,12 @@ const plannerStore = usePlannerStore();
 const { prefs: savedPrefs, save: persistPrefs } = useMealPlanWizardPrefs();
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Days offered when optionally assigning a created recipe to a night. */
+const ASSIGN_DAY_COUNT = 14;
 
-type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review";
+type UiStep = "days" | "prefs" | "ideate" | "select" | "build" | "review" | "assign";
 
-/** Ad-hoc generate from the + menu — one recipe, never assigned to a night. */
+/** Ad-hoc create from Home / + menu — one recipe; day assign is optional at the end. */
 const recipeMode = computed(() => route.query.mode === "recipe");
 
 const uiStep = ref<UiStep>("days");
@@ -49,6 +59,10 @@ const plannedTitles = ref<Record<string, string>>({});
 const expandedDays = ref<string[]>([]);
 /** Idea ids marked for regeneration on refine. */
 const regenIdeaIds = ref<string[]>([]);
+/** Optional night to plan after creating a single recipe (recipeMode only). */
+const assignDayKey = ref<string | null>(null);
+const assignPlansByKey = ref<Record<string, string>>({});
+const loadingAssignDays = ref(false);
 let abortController: AbortController | null = null;
 
 const today = startOfDay();
@@ -125,11 +139,32 @@ function isIdeaDisabled(id: string) {
 
 const STEP_ORDER = computed<UiStep[]>(() =>
   recipeMode.value
-    ? ["prefs", "ideate", "select", "build", "review"]
+    ? ["prefs", "ideate", "select", "build", "review", "assign"]
     : ["days", "prefs", "ideate", "select", "build", "review"]
 );
 
 const stepIndex = computed(() => STEP_ORDER.value.indexOf(uiStep.value));
+
+const assignDays = computed(() =>
+  Array.from({ length: ASSIGN_DAY_COUNT }, (_, i) => {
+    const date = addDays(today, i);
+    const key = toDateKey(date);
+    return {
+      date,
+      key,
+      label:
+        i === 0
+          ? "Tonight"
+          : i === 1
+            ? "Tomorrow"
+            : date.toLocaleDateString(undefined, { weekday: "long" }),
+      dateLabel: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      plannedTitle: assignPlansByKey.value[key] ?? null
+    };
+  })
+);
+
+const recipeTitle = computed(() => session.value?.built_recipes[0]?.title?.trim() || "your recipe");
 
 function previousStep(step: UiStep): UiStep {
   if (step === "prefs") return recipeMode.value ? "prefs" : "days";
@@ -137,6 +172,7 @@ function previousStep(step: UiStep): UiStep {
   if (step === "select") return "prefs";
   if (step === "build") return "select";
   if (step === "review") return "select";
+  if (step === "assign") return "review";
   return recipeMode.value ? "prefs" : "days";
 }
 
@@ -147,6 +183,11 @@ async function leaveWizard() {
 async function goBack() {
   if (uiStep.value === "days" || (recipeMode.value && uiStep.value === "prefs")) {
     await leaveWizard();
+    return;
+  }
+  // Assign is client-only (after review) — just return without rewinding the session.
+  if (uiStep.value === "assign") {
+    uiStep.value = "review";
     return;
   }
   const target = previousStep(uiStep.value);
@@ -168,9 +209,11 @@ const headerTitle = computed(() => {
       case "build":
         return "Building your recipe";
       case "review":
-        return "Save your recipe";
+        return "Review your recipe";
+      case "assign":
+        return "Add to a night?";
       default:
-        return "Generate a recipe";
+        return "Create a recipe";
     }
   }
   switch (uiStep.value) {
@@ -516,18 +559,59 @@ async function rewindTo(step: UiStep) {
   }
 }
 
-async function commitPlan() {
+async function openAssignStep() {
+  error.value = "";
+  assignDayKey.value = null;
+  loadingAssignDays.value = true;
+  uiStep.value = "assign";
+  try {
+    const rangeEnd = endOfDay(addDays(today, ASSIGN_DAY_COUNT - 1));
+    await plannerStore.ensureRange(today, rangeEnd);
+    const titles: Record<string, string> = {};
+    for (const p of plannerStore.plansInRange(today, rangeEnd)) {
+      const key = p.planned_for.slice(0, 10);
+      if (!titles[key]) titles[key] = p.recipe.name;
+    }
+    assignPlansByKey.value = titles;
+    assignDayKey.value =
+      Array.from({ length: ASSIGN_DAY_COUNT }, (_, i) => toDateKey(addDays(today, i))).find(
+        (key) => !titles[key]
+      ) ?? null;
+  } catch (e) {
+    console.error(e);
+    toast.fromError(e, "Couldn’t load your meal plan.");
+  } finally {
+    loadingAssignDays.value = false;
+  }
+}
+
+async function commitPlan(opts?: { assignDay?: string | null }) {
   if (!session.value) return;
   error.value = "";
   busy.value = true;
   try {
-    // Zip order: day[i] ↔ built_recipes[i]. recipeMode skips PlannedRecipe rows.
+    // Zip order: day[i] ↔ built_recipes[i]. Recipe create skips PlannedRecipe here;
+    // optional day assign is a follow-up POST when the user picks a night.
     await post(`/meal-plan-wizard/sessions/${session.value.id}/commit/`, {
       plan: !recipeMode.value
     });
     if (recipeMode.value) {
       await refreshSession();
       const recipeId = session.value?.built_recipes[0]?.created_recipe_id;
+      const dayKey = opts?.assignDay ?? null;
+      if (dayKey && recipeId != null) {
+        const date = parseDateKey(dayKey);
+        if (date) {
+          await post("/planned-recipe/", {
+            recipe_id: recipeId,
+            planned_for: date.toISOString()
+          });
+          syncAfterPlanMutation({ recipesChanged: true });
+          toast.success("Recipe saved and added to your plan.");
+          router.push(paths.recipeDetail(recipeId));
+          return;
+        }
+      }
       syncAfterRecipeMutation();
       toast.success("Recipe saved.");
       if (recipeId != null) {
@@ -598,7 +682,7 @@ onUnmounted(() => {
       </button>
       <div class="min-w-0 flex-1">
         <p class="text-[11px] font-bold uppercase tracking-[0.08em] text-success-soft">
-          {{ recipeMode ? "Recipe wizard" : "Meal plan wizard" }}
+          {{ recipeMode ? "Create" : "Meal plan wizard" }}
         </p>
         <h1 class="truncate text-lg font-bold">{{ headerTitle }}</h1>
       </div>
@@ -933,7 +1017,7 @@ onUnmounted(() => {
             />
             <div class="min-w-0 flex-1">
               <p class="text-[11px] font-semibold uppercase tracking-wide text-faint">
-                {{ dayLabel(row.day) }}
+                {{ recipeMode ? "New recipe" : dayLabel(row.day) }}
               </p>
               <p class="mt-0.5 text-sm font-semibold leading-snug">
                 {{ row.recipe?.title || "Untitled dinner" }}
@@ -1044,8 +1128,72 @@ onUnmounted(() => {
 
       <div class="grid grid-cols-2 gap-2">
         <Button variant="outline" :disabled="busy" @click="rewindTo('select')">Back</Button>
-        <Button :disabled="busy" @click="commitPlan">
-          {{ recipeMode ? "Save recipe" : "Save to planner" }}
+        <Button :disabled="busy" @click="recipeMode ? openAssignStep() : commitPlan()">
+          {{ busy ? "Saving…" : recipeMode ? "Continue" : "Save to planner" }}
+        </Button>
+      </div>
+    </section>
+
+    <!-- ASSIGN (recipeMode only) — optional night after create -->
+    <section v-else-if="uiStep === 'assign'" class="mt-5 space-y-4">
+      <p class="text-sm text-muted-foreground">
+        “{{ recipeTitle }}” is ready. Put it on a night if you want — or skip and keep it in your
+        recipes.
+      </p>
+
+      <div class="max-h-[45dvh] overflow-y-auto rounded-xl border border-border">
+        <template v-if="loadingAssignDays">
+          <div
+            v-for="n in 5"
+            :key="n"
+            class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0"
+          >
+            <div class="min-w-0 flex-1 space-y-1.5">
+              <Skeleton class="h-3.5 w-24" />
+              <Skeleton class="h-2.5 w-14" />
+            </div>
+            <Skeleton class="h-3 w-10" />
+          </div>
+        </template>
+        <template v-else>
+          <button
+            v-for="day in assignDays"
+            :key="day.key"
+            type="button"
+            class="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-b-0"
+            :class="
+              day.key === assignDayKey ? 'bg-[rgba(34,197,94,0.1)]' : 'active:bg-secondary/50'
+            "
+            @click="assignDayKey = day.key"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold">{{ day.label }}</p>
+              <p class="text-[11px] text-faint">{{ day.dateLabel }}</p>
+            </div>
+            <span v-if="!day.plannedTitle" class="text-[11px] font-semibold text-[#4ade80]">
+              Open
+            </span>
+            <span v-else class="max-w-[45%] truncate text-[11px] text-faint">
+              {{ day.plannedTitle }}
+            </span>
+            <Check
+              v-if="day.key === assignDayKey"
+              class="size-4 shrink-0 text-[#22c55e]"
+              :stroke-width="2.5"
+            />
+          </button>
+        </template>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <Button variant="outline" :disabled="busy" @click="commitPlan({ assignDay: null })">
+          {{ busy ? "Saving…" : "Skip" }}
+        </Button>
+        <Button
+          :disabled="busy || loadingAssignDays || !assignDayKey"
+          @click="commitPlan({ assignDay: assignDayKey })"
+        >
+          {{ busy ? "Saving…" : "Save & plan" }}
         </Button>
       </div>
     </section>
