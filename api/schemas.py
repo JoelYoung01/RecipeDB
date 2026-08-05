@@ -116,6 +116,7 @@ class RecipeSlim(BaseModel):
     notes: str | None = None
     created_on: datetime
     created_by_id: int
+    household_id: int
     public: bool
     prep_time: float | None = None
     cover_image_id: int | None = None
@@ -144,6 +145,7 @@ class RecipeCard(BaseModel):
     description: str
     created_on: datetime
     created_by_id: int
+    household_id: int
     public: bool
     prep_time: float | None = None
     cover_image_id: int | None = None
@@ -167,6 +169,12 @@ class RecipeCreate(BaseModel):
     @classmethod
     def _normalize_instructions(cls, value: str) -> str:
         return normalize_instruction_newlines(value)
+
+
+class RecipeImportFromUrlRequest(BaseModel):
+    """Paste a public recipe-page URL; server fetches and extracts a recipe."""
+
+    url: str = Field(min_length=1, max_length=2048)
 
 
 class RecipeUpdate(BaseModel):
@@ -195,6 +203,7 @@ class TimeFrameRequest(BaseModel):
 class PlannedRecipeSlim(BaseModel):
     id: int
     created_by_id: int
+    household_id: int
     created_on: datetime
     planned_for: datetime
 
@@ -283,6 +292,65 @@ class GrocerySummaryResponse(BaseModel):
 class GroceryItemStateUpdate(BaseModel):
     item_key: str
     status: str | None = None  # "dismissed" | "deleted" | null to clear
+
+
+# --- Household ---
+
+
+class HouseholdMemberResponse(BaseModel):
+    user_id: int
+    role: str
+    joined_on: datetime
+    display_name: str
+    email: str
+    avatar_url: str | None = None
+
+
+class HouseholdInviteResponse(BaseModel):
+    id: int
+    email: str
+    status: str
+    created_on: datetime
+    expires_on: datetime
+    invited_by_id: int
+    # Returned to the owner so they can share the link/code out-of-band.
+    token: str | None = None
+
+
+class HouseholdResponse(BaseModel):
+    id: int
+    name: str
+    created_by_id: int
+    created_on: datetime
+    my_role: str
+    member_count: int
+    max_members: int
+    members: list[HouseholdMemberResponse]
+    pending_invites: list[HouseholdInviteResponse] = Field(default_factory=list)
+
+
+class HouseholdUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class HouseholdInviteCreate(BaseModel):
+    email: EmailStr
+
+
+class HouseholdInviteAccept(BaseModel):
+    token: str = Field(min_length=8, max_length=128)
+
+
+class PendingHouseholdInviteResponse(BaseModel):
+    """Invite addressed to the current user's email (for accept UI)."""
+
+    id: int
+    household_id: int
+    household_name: str
+    invited_by_name: str
+    token: str
+    created_on: datetime
+    expires_on: datetime
 
 
 # --- Meal plan wizard ---

@@ -31,6 +31,7 @@ import {
   toDateKey
 } from "@/lib/dates";
 import { tapHaptic } from "@/lib/haptics";
+import { splitInstructionSteps } from "@/lib/instructions";
 import { toast } from "@/stores/toast";
 import {
   emptyWizardPrefs,
@@ -1045,9 +1046,16 @@ export default function MealPlanWizardScreen() {
                           <Text className="font-sans-semibold text-xs uppercase tracking-wide text-faint">
                             Instructions
                           </Text>
-                          <Text className="mt-1.5 text-sm leading-6 text-foreground/90">
-                            {row.recipe.instructions}
-                          </Text>
+                          <View className="mt-1.5 gap-2.5">
+                            {splitInstructionSteps(row.recipe.instructions).map((step, idx) => (
+                              <Text
+                                key={`${row.recipe!.idea_id}-step-${idx}`}
+                                className="text-sm leading-6 text-foreground/90"
+                              >
+                                {step}
+                              </Text>
+                            ))}
+                          </View>
                         </View>
 
                         {row.recipe.notes ? (

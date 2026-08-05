@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import defaultUser from "@/assets/account-circle.svg";
+import HouseholdSection from "@/components/HouseholdSection.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSessionStore } from "@/stores/session";
 import { paths } from "@/sitemap";
+import { useSessionStore } from "@/stores/session";
 import { put } from "@/utils/api";
 import { toast } from "@/utils/toast";
 import { Pencil } from "@lucide/vue";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -86,6 +87,8 @@ async function updateDisplayName() {
         <p class="mt-1 text-sm">{{ lastLoginDate }}</p>
       </div>
     </div>
+
+    <HouseholdSection />
 
     <Button variant="destructive" class="mt-6 w-full" @click="logOut">Sign out</Button>
   </div>

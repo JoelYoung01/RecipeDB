@@ -1,14 +1,19 @@
+import { getErrorMessage } from "@/api/errors";
+import { importRecipeFromUrl } from "@/api/recipes";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { syncAfterRecipeMutation } from "@/hooks/sync";
 import { colors } from "@/lib/colors";
+import { toast } from "@/stores/toast";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Camera, Link2, PenLine } from "lucide-react-native";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function RecipeImportScreen() {
   const router = useRouter();
@@ -16,14 +21,35 @@ export default function RecipeImportScreen() {
   const params = useLocalSearchParams<{ method?: string }>();
   const method = params.method === "photo" ? "photo" : "link";
   const [url, setUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState("");
+
+  const canImport = useMemo(() => Boolean(url.trim()) && !importing, [url, importing]);
+
+  async function onImport() {
+    if (!canImport) return;
+    setImporting(true);
+    setError("");
+    try {
+      const recipe = await importRecipeFromUrl(url.trim());
+      syncAfterRecipeMutation();
+      toast.success("Recipe imported — review and save any edits.");
+      router.replace(`/recipes/${recipe.id}/edit` as never);
+    } catch (er) {
+      console.error(er);
+      const message = getErrorMessage(er, "Couldn’t import that recipe.");
+      setError(message);
+      toast.fromError(er, "Couldn’t import that recipe.");
+    }
+    setImporting(false);
+  }
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <ScreenHeader title="Import a recipe" />
-      <ScrollView contentContainerClassName="px-4 pb-10 pt-2">
+      <ScrollView contentContainerClassName="px-4 pb-10 pt-2" keyboardShouldPersistTaps="handled">
         <Text className="text-sm text-muted-foreground">
-          Import tooling isn’t wired to the API yet — use these entry points or write from
-          scratch.
+          Paste a link to a recipe website and we’ll pull ingredients and steps.
         </Text>
 
         <View className="mt-5 flex-row gap-2">
@@ -53,15 +79,26 @@ export default function RecipeImportScreen() {
                 value={url}
                 onChangeText={setUrl}
                 placeholder="https://…"
-                editable={false}
-                className="mt-2 h-11 rounded-xl bg-secondary opacity-60"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                editable={!importing}
+                onSubmitEditing={() => void onImport()}
+                returnKeyType="go"
+                className="mt-2 h-11 rounded-xl bg-secondary"
               />
-              <Button className="mt-4 w-full" disabled>
-                Import from link
+              <Button className="mt-4 w-full" disabled={!canImport} onPress={() => void onImport()}>
+                {importing ? <Spinner color={colors.foreground} /> : null}
+                {importing ? "Importing…" : "Import from link"}
               </Button>
-              <Text className="mt-3 text-xs text-faint">
-                Coming soon — paste a URL and we’ll pull the recipe.
-              </Text>
+              {error ? (
+                <Text className="mt-3 text-xs text-destructive">{error}</Text>
+              ) : (
+                <Text className="mt-3 text-xs text-faint">
+                  Works best with recipe blogs and sites that list ingredients in writing.
+                  Social video links aren’t supported yet.
+                </Text>
+              )}
             </>
           ) : (
             <>

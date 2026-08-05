@@ -64,6 +64,13 @@ The admin seed also receives `SUPERUSER_GID` when set.
 - Routes under `/api/meal-plan-wizard/`. Pipeline stages: create session → ideate (SSE) → select → build (SSE) → commit.
 - Without `OPENROUTER_API_KEY`, the backend uses a deterministic stub LLM (`api/core/llm/client.py`). Set the key to call OpenRouter (`api/core/llm/client.py` → `OpenRouterLlmClient`). Optional `OPENROUTER_MODEL` defaults to `inception/mercury-2`. Tool helpers for user-scoped recipe search live in `api/core/llm/tools.py`.
 
+## Recipe import from URL
+
+- `POST /api/recipe/import-from-url/` with `{ "url": "https://..." }` (auth required). Fetches the page (SSRF-safe), extracts via `recipe-scrapers` / schema.org first, then falls back to OpenRouter when structured markup is missing and `OPENROUTER_API_KEY` is set. Creates a private recipe + ingredients (optional cover via `IMAGE_GEN_PROVIDER`) and returns `RecipeDetail`.
+- Social / short-video hosts (Instagram, TikTok, YouTube Shorts, Facebook, etc.) are rejected with a clear 422 — out of scope for v1.
+- UI: web `RecipeImportView` and mobile `recipes/import` — on success navigate to the recipe edit screen for review. Photo scan remains stubbed.
+- Needs outbound HTTPS to the recipe site (and OpenRouter / Openverse when those providers are enabled).
+
 ## Recipe cover images (generated recipes)
 
 - On wizard **commit**, newly created recipes get a cover via `api/core/image_gen/` (ABC + factory, same pattern as the LLM client).

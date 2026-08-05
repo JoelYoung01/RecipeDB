@@ -4,6 +4,7 @@ import type { UserResponse } from "./User";
 export interface PlannedRecipeSlim {
   id: number;
   created_by_id: number;
+  household_id: number;
   created_on: string;
   planned_for: string;
 }
