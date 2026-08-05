@@ -597,7 +597,9 @@ async function commitPlan(opts?: { assignDay?: string | null }) {
     });
     if (recipeMode.value) {
       await refreshSession();
-      const recipeId = session.value?.built_recipes[0]?.created_recipe_id;
+      const built = session.value?.built_recipes[0];
+      // New generates set created_recipe_id; library reuse sets existing_recipe_id.
+      const recipeId = built?.created_recipe_id ?? built?.existing_recipe_id ?? null;
       const dayKey = opts?.assignDay ?? null;
       if (dayKey && recipeId != null) {
         const date = parseDateKey(dayKey);
