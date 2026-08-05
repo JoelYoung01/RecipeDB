@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/text";
 import { colors } from "@/lib/colors";
 import { formatPrepTime } from "@/lib/dates";
 import { tapHaptic } from "@/lib/haptics";
+import { splitInstructionSteps } from "@/lib/instructions";
 import { mediaSource } from "@/lib/media";
 import { syncAfterRecipeMutation } from "@/hooks/sync";
 import { useRecipe } from "@/hooks/use-recipes";
@@ -197,9 +198,13 @@ export default function RecipeDetailScreen() {
 
               <View className="mt-5">
                 <Text className="mb-1 font-sans-semibold text-sm">Instructions</Text>
-                <Text className="text-base leading-6 text-muted-foreground">
-                  {recipe.instructions}
-                </Text>
+                <View className="gap-2.5">
+                  {splitInstructionSteps(recipe.instructions).map((step, idx) => (
+                    <Text key={`step-${idx}`} className="text-base leading-6 text-muted-foreground">
+                      {step}
+                    </Text>
+                  ))}
+                </View>
               </View>
 
               {recipe.notes ? (

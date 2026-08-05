@@ -4,6 +4,7 @@ import WizardProgressPanel from "@/components/planner/WizardProgressPanel.vue";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMealPlanWizardPrefs } from "@/composables/useMealPlanWizardPrefs";
+import { splitInstructionSteps } from "@/lib/instructions";
 import { addDays, formatPrepTime, startOfDay, startOfWeekMonday, toDateKey } from "@/lib/media";
 import { paths } from "@/sitemap";
 import { usePlannerStore } from "@/stores/planner";
@@ -985,9 +986,11 @@ onUnmounted(() => {
 
             <div>
               <p class="text-xs font-semibold uppercase tracking-wide text-faint">Instructions</p>
-              <p class="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                {{ row.recipe.instructions }}
-              </p>
+              <div class="mt-1.5 space-y-2.5 text-sm leading-relaxed text-foreground/90">
+                <p v-for="(step, idx) in splitInstructionSteps(row.recipe.instructions)" :key="idx">
+                  {{ step }}
+                </p>
+              </div>
             </div>
 
             <p v-if="row.recipe.notes" class="text-xs text-muted-foreground">
