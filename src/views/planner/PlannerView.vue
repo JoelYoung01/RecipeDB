@@ -432,11 +432,7 @@ onActivated(() => {
       class="pointer-events-none fixed bottom-[calc(7.25rem+env(safe-area-inset-bottom))] left-1/2 z-[70] w-full max-w-md -translate-x-1/2 px-4"
     >
       <div class="pointer-events-auto">
-        <Button
-          class="w-full gap-1.5"
-          aria-label="Plan week"
-          @click="openPlanWeekFab()"
-        >
+        <Button class="w-full gap-1.5" aria-label="Plan week" @click="openPlanWeekFab()">
           <CalendarDays class="size-4" />
           Plan week
         </Button>
