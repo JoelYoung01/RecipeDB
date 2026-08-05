@@ -47,8 +47,10 @@ SUPERUSER_GID=
 # SEED_TEST_EMAIL=test@example.com
 # SEED_TEST_PASSWORD=testpass123
 
-# Optional OpenRouter credentials for the meal-plan wizard LLM.
-# When unset, the wizard uses a deterministic stub client.
+# Optional OpenRouter credentials for the meal-plan wizard LLM and
+# recipe URL-import fallback (when a page has no schema.org markup).
+# When unset, the wizard uses a deterministic stub client; URL import
+# still works for schema.org / supported recipe sites without a key.
 # OPENROUTER_API_KEY=
 # OPENROUTER_MODEL=inception/mercury-2
 

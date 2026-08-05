@@ -81,7 +81,7 @@ Bottom sheet over dimmed scrim:
 2. Divider
 3. **Quick adds** — Add meal to plan, Grocery list.
 
-Wire only to existing features; stub unavailable import flows in UI without inventing backend behavior.
+Wire link import to `POST /recipe/import-from-url/`; keep photo scan stubbed until a backend exists.
 
 ## Motion
 

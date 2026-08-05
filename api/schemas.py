@@ -169,6 +169,12 @@ class RecipeCreate(BaseModel):
         return normalize_instruction_newlines(value)
 
 
+class RecipeImportFromUrlRequest(BaseModel):
+    """Paste a public recipe-page URL; server fetches and extracts a recipe."""
+
+    url: str = Field(min_length=1, max_length=2048)
+
+
 class RecipeUpdate(BaseModel):
     name: str | None = None
     description: str | None = None

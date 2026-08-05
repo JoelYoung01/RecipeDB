@@ -9,6 +9,8 @@ from sqlmodel import and_, or_, select
 from api.core.authentication import CurrentUserDep, verify_access_token
 from api.core.database import SessionDep
 from api.core.image_gen.service import generate_recipe_cover_upload
+from api.core.recipe_import import import_recipe_from_url
+from api.core.recipe_import.fetch import RecipeImportError
 from api.models import Ingredient, Recipe
 from api.schemas import (
     CountResponse,
@@ -16,6 +18,7 @@ from api.schemas import (
     RecipeCoverGenerateRequest,
     RecipeCreate,
     RecipeDetail,
+    RecipeImportFromUrlRequest,
     RecipeUpdate,
     UploadFileResponse,
 )
@@ -29,6 +32,75 @@ unauth_router = APIRouter(
     prefix="/recipe",
     tags=["Recipe"],
 )
+
+
+@router.post("/import-from-url/", response_model=RecipeDetail)
+async def import_recipe_from_url_route(
+    body: RecipeImportFromUrlRequest,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+):
+    """Fetch a public recipe page, extract structured data, and save a private recipe.
+
+    Prefer schema.org / site scrapers (no LLM). Falls back to OpenRouter when
+    structured markup is missing and ``OPENROUTER_API_KEY`` is configured.
+    """
+    try:
+        draft = await import_recipe_from_url(body.url)
+    except RecipeImportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    now = datetime.now(UTC)
+    db_recipe = Recipe(
+        created_by_id=current_user.id,
+        created_on=now,
+        name=draft.name,
+        description=draft.description,
+        instructions=draft.instructions,
+        notes=draft.notes,
+        public=False,
+        prep_time=draft.prep_time,
+    )
+    session.add(db_recipe)
+    session.commit()
+    session.refresh(db_recipe)
+
+    for ing in draft.ingredients:
+        session.add(
+            Ingredient(
+                created_by_id=current_user.id,
+                created_on=now,
+                name=str(ing.get("name") or "ingredient")[:200],
+                amount=ing.get("amount"),
+                units=(str(ing["units"])[:40] if ing.get("units") else None),
+                details=(str(ing["details"])[:200] if ing.get("details") else None),
+                recipe_id=db_recipe.id,
+            )
+        )
+    session.commit()
+
+    cover = generate_recipe_cover_upload(
+        user=current_user,
+        db=session,
+        title=draft.name,
+        description=draft.description,
+        ingredients=draft.ingredients,
+    )
+    if cover is not None:
+        db_recipe.cover_image_id = cover.id
+        session.add(db_recipe)
+        session.commit()
+
+    recipe = session.exec(
+        select(Recipe)
+        .where(Recipe.id == db_recipe.id)
+        .options(
+            selectinload(Recipe.cover_image),
+            selectinload(Recipe.created_by),
+            selectinload(Recipe.ingredients),
+        )
+    ).first()
+    return recipe
 
 
 @router.post("/generate-cover/", response_model=UploadFileResponse)
